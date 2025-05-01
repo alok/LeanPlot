@@ -1,0 +1,15 @@
+name = "LeanPlot"
+version = "0.1.0"
+defaultTargets = ["leanplot"]
+
+[[lean_lib]]
+name = "LeanPlot"
+
+[[lean_exe]]
+name = "leanplot"
+root = "Main"
+
+[[require]]
+name = "proofwidgets"
+git = "https://github.com/leanprover-community/ProofWidgets4.git"
+rev = "v0.0.57"

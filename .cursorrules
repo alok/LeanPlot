@@ -1,0 +1,13 @@
+Goal: Implement a basic plotting library in the infoview in Lean4 using https://github.com/leanprover-community/ProofWidgets4
+
+Install it (I have npm, so that's not an issue). They have some Recharts integration mentioned, so look at the source code in `.lake/` for a source of truth.
+
+checklist (fill in as you go):
+
+- [ ] y = x
+- [ ] y=x^2
+- [ ] multiple plots in one graph
+ 
+Base everything on floats in the end.
+
+I aspire to a grammar of graphics big plotting library, but gotta start somewhere.
