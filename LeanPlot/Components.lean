@@ -9,7 +9,9 @@ A tiny layer above ProofWidgets4 that lets us sample Lean
 functions and visualise the result in Recharts with one call.
 -/
 
-open Lean ProofWidgets Recharts
+open Lean ProofWidgets
+open ProofWidgets.Recharts (LineChart Line LineType)
+open LeanPlot.Axis
 open scoped ProofWidgets.Jsx
 
 namespace LeanPlot.Components
@@ -59,8 +61,8 @@ Turn an array of JSON rows into a Recharts line chart.
     (xLabel? : Option String := none) (yLabel? : Option String := none)
     (w h : Nat := 400) : Html :=
   <LineChart width={w} height={h} data={data}>
-    <LeanPlot.Axis.XAxis dataKey?="x" label?={xLabel?} />
-    <LeanPlot.Axis.YAxis label?={yLabel?} />
+    <XAxis dataKey?="x" label?={xLabel?} />
+    <YAxis label?={yLabel?} />
     {... seriesStrokes.map (fun (name, colour) =>
       <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
   </LineChart>
