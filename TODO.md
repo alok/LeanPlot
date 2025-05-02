@@ -27,4 +27,16 @@
   - [ ] Scatter
 - [ ] Interactive domain sliders / zooming
 - [ ] `#plot` command macro (syntax sugar)
-- [ ] Grammar-of-graphics style configuration record 
+- [ ] Grammar-of-graphics style configuration record
+  - [ ] `#plot` command macro (acts like #eval/#html)
+  - [ ] `ToFloat` typeclass + default instances (Float, Int, Rat, etc.)
+  - [ ] Generalise sampling helpers to accept `α` with `[ToFloat α]`
+  - [ ] Define `ChartOptions` record (title?, legend?, axis?, tickSize?, colours?)
+  - [ ] Provide combinator style DSL:
+    - [ ] `withTitle : String → PlotSpec → PlotSpec`
+    - [ ] `withLegend : LegendOpts → PlotSpec → PlotSpec`
+    - [ ] `withAxis : AxisOpts → PlotSpec → PlotSpec`
+  - [ ] Use partial application / function composition to layer styles (Haskell-esque)
+  - [ ] Provide infix operator `|>` for forward application in this DSL
+  - [ ] Provide default `ChartOptions` via `Default` instance
+  - [ ] Update demos to use `#plot` and combinators 
