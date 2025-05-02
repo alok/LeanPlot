@@ -3,3 +3,4 @@
 import LeanPlot.Basic
 import LeanPlot.Demos.OverlayPlot
 import LeanPlot.Components
+import LeanPlot.Plot

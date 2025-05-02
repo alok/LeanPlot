@@ -18,3 +18,17 @@
 
 ### Breaking
 - Call-sites of `sample` & `sampleMany` must supply functions returning a type with a `[ToFloat]` instance. Existing `Float` code is unaffected. 
+
+## [0.1.2] – 2025-05-02:08:05
+### Added
+- `LeanPlot.Legend` exposing the Recharts `<Legend>` component.
+- `mkLineChartFull` helper that embeds a legend automatically.
+- `#plot` command (alias of `#html`) via `LeanPlot.PlotCommand`.
+- Demo `LeanPlot.Demos.LinearDemo` now uses `#plot`.
+
+### Changed
+- Root `LeanPlot` module imports new `Plot` command.
+- Updated TODO roadmap with ergonomics and grammar-of-graphics sections.
+
+### Fixed
+- N/A 

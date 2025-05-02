@@ -17,26 +17,29 @@
   - [ ] Provide Justfile recipes
   - [ ] Set up pre-commit git hook: `lake env lean --run Std.Tactic.Lint` (or similar)
 
-## Post-0.1 Roadmap
+## Post-0.1 Roadmap (updated 2025-05-02:08:05 UTC)
 
-- [ ] Axis & legend labels support
+### Ergonomics
+- [x] Axis & legend labels support (`LeanPlot.Axis`, `mkLineChartWithLabels`)
+- [x] Legend component wrapper (`LeanPlot.Legend`) + helper `mkLineChartFull`
+- [ ] Auto colour palette
+- [x] `#plot` command alias for `#html` (LeanPlot.PlotCommand)
+- [ ] Auto domain inference
+
+### More chart types
 - [ ] Log / linear scale toggle
 - [ ] Additional chart types
   - [ ] Area
   - [ ] Bar
   - [ ] Scatter
 - [ ] Interactive domain sliders / zooming
-- [ ] `#plot` command macro (syntax sugar)
-- [ ] Grammar-of-graphics style configuration record
-  - [ ] `#plot` command macro (acts like #eval/#html)
-  - [x] `ToFloat` typeclass + default instances (Float, Int, Rat, etc.)
-  - [x] Generalise sampling helpers to accept `α` with `[ToFloat α]`
-  - [ ] Define `ChartOptions` record (title?, legend?, axis?, tickSize?, colours?)
-  - [ ] Provide combinator style DSL:
-    - [ ] `withTitle : String → PlotSpec → PlotSpec`
-    - [ ] `withLegend : LegendOpts → PlotSpec → PlotSpec`
-    - [ ] `withAxis : AxisOpts → PlotSpec → PlotSpec`
-  - [ ] Use partial application / function composition to layer styles (Haskell-esque)
-  - [ ] Provide infix operator `|>` for forward application in this DSL
-  - [ ] Provide default `ChartOptions` via `Default` instance
-  - [ ] Update demos to use `#plot` and combinators 
+
+### Grammar-of-graphics core
+- [ ] `PlotSpec` record & combinators (`withTitle`, `withLegend`, `withAxis`, ...)
+- [ ] Forward-application DSL (`|>`)
+- [ ] Default instances & renderer
+
+### Tooling & docs
+- [ ] Justfile recipes
+- [ ] Pre-commit lint hook
+- [ ] CHANGELOG & README refresh 
