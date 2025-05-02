@@ -32,3 +32,11 @@
 
 ### Fixed
 - N/A 
+
+## [0.1.3] – 2025-05-02:08:12
+### Added
+- New demo `LeanPlot.Demos.QuadraticDemo` (`y = x²`).
+- New demo `LeanPlot.Demos.OverlayDemo` demonstrating multi-series overlay with legend.
+
+### Changed
+- `Gallery.md` line-chart checklist now ticks off linear and quadratic demos. 

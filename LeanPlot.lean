@@ -4,3 +4,6 @@ import LeanPlot.Basic
 import LeanPlot.Demos.OverlayPlot
 import LeanPlot.Components
 import LeanPlot.Plot
+import LeanPlot.Demos.LinearDemo
+import LeanPlot.Demos.QuadraticDemo
+import LeanPlot.Demos.OverlayDemo

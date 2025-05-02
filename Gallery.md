@@ -5,8 +5,8 @@
 A living checklist of demo/test cases we want LeanPlot to support.  Tick items off as they are implemented.
 
 ## Line charts
-- [ ] 1-variable linear  `y = x`
-- [ ] Quadratic  `y = x²`
+- [x] 1-variable linear  `y = x`
+- [x] Quadratic  `y = x²`
 - [ ] Cubic  `y = x³`
 - [ ] Trig periodic  `y = sin(2πx)`
 - [ ] Trig overlay  `y = sin(2πx)`, `y = cos(2πx)`

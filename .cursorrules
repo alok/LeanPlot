@@ -4,9 +4,9 @@ Install it (I have npm, so that's not an issue). They have some Recharts integra
 
 checklist (fill in as you go):
 
-- [ ] y = x
-- [ ] y=x^2
-- [ ] multiple plots in one graph
+- [x] y = x
+- [x] y=x^2
+- [x] multiple plots in one graph
  
 Base everything on floats in the end.
 
