@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Pre-commit hook for LeanPlot
+# Fails the commit if the Lean build or linter reports errors.
+
+set -euo pipefail
+
+printf "\e[34mLeanPlot pre-commit: running build…\e[0m\n"
+if ! lake build; then
+    printf "\e[31mBuild failed – aborting commit.\e[0m\n"
+    exit 1
+fi
+
+printf "\e[34mLeanPlot pre-commit: running linter…\e[0m\n"
+if ! lake env lean --run Std.Tactic.Lint; then
+    printf "\e[31mLint failed – aborting commit.\e[0m\n"
+    exit 1
+fi
+
+printf "\e[32m✓ Pre-commit checks passed.\e[0m\n"
