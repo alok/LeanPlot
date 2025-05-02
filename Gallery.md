@@ -1,5 +1,7 @@
 # LeanPlot Test-Case Gallery
 
+> **Note:** The long-term plan is to _mirror most of the official [Recharts examples](https://recharts.org/en-US/examples)_ using equivalent Lean code.  Each bullet below can therefore be cross-checked with a counterpart in the upstream gallery — once a Lean demo reproduces the visual & interactive behaviour, tick it off.
+
 A living checklist of demo/test cases we want LeanPlot to support.  Tick items off as they are implemented.
 
 ## Line charts
