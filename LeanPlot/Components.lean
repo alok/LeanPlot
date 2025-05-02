@@ -2,6 +2,7 @@ import ProofWidgets.Component.HtmlDisplay
 import ProofWidgets.Component.Recharts
 import LeanPlot.ToFloat
 import LeanPlot.Axis
+import LeanPlot.Legend
 
 /-! # LeanPlot core components
 
@@ -12,6 +13,7 @@ functions and visualise the result in Recharts with one call.
 open Lean ProofWidgets
 open ProofWidgets.Recharts (LineChart Line LineType)
 open LeanPlot.Axis
+open LeanPlot.Legend (Legend)
 open scoped ProofWidgets.Jsx
 
 namespace LeanPlot.Components
@@ -65,6 +67,25 @@ Turn an array of JSON rows into a Recharts line chart.
     <YAxis label?={yLabel?} />
     {... seriesStrokes.map (fun (name, colour) =>
       <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+  </LineChart>
+
+/--
+`mkLineChartFull` extends `mkLineChartWithLabels` by also including a
+Recharts `<Legend>` block so that each series is labelled with the name
+provided to `sampleMany`.  This is optional but useful for multi-series
+plots.
+-/
+@[inline] def mkLineChartFull (data : Array Json)
+    (seriesStrokes : Array (String × String))
+    (xLabel? : Option String := none) (yLabel? : Option String := none)
+    (w h : Nat := 400) : Html :=
+  <LineChart width={w} height={h} data={data}>
+    <XAxis dataKey?="x" label?={xLabel?} />
+    <YAxis label?={yLabel?} />
+    <Legend />
+    {...
+      seriesStrokes.map (fun (name, colour) =>
+        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
   </LineChart>
 
 end LeanPlot.Components
