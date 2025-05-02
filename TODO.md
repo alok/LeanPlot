@@ -8,7 +8,7 @@
     - [x] `sampleMany` helper (multi-series)
     - [x] `mkLineChart` builder
   - [x] Integrate new module in `LeanPlot.lean`
-  - [x] Rewrite `LeanPlot/Demos/OverlayPlot.lean` to use helpers *(pending)*
+  - [x] Rewrite `LeanPlot/Demos/OverlayPlot.lean` to use helpers
   - [x] `lake build` passes
 - [ ] Documentation
   - [ ] Fill precise timestamp in `CHANGELOG.md`
@@ -29,8 +29,8 @@
 - [ ] `#plot` command macro (syntax sugar)
 - [ ] Grammar-of-graphics style configuration record
   - [ ] `#plot` command macro (acts like #eval/#html)
-  - [ ] `ToFloat` typeclass + default instances (Float, Int, Rat, etc.)
-  - [ ] Generalise sampling helpers to accept `α` with `[ToFloat α]`
+  - [x] `ToFloat` typeclass + default instances (Float, Int, Rat, etc.)
+  - [x] Generalise sampling helpers to accept `α` with `[ToFloat α]`
   - [ ] Define `ChartOptions` record (title?, legend?, axis?, tickSize?, colours?)
   - [ ] Provide combinator style DSL:
     - [ ] `withTitle : String → PlotSpec → PlotSpec`
