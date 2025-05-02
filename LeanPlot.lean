@@ -7,3 +7,4 @@ import LeanPlot.Plot
 import LeanPlot.Demos.LinearDemo
 import LeanPlot.Demos.QuadraticDemo
 import LeanPlot.Demos.OverlayDemo
+import LeanPlot.Palette
