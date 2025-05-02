@@ -1,4 +1,5 @@
 import LeanPlot.Components
+import LeanPlot.Plot
 
 open Lean ProofWidgets Recharts LeanPlot.Components
 open scoped ProofWidgets.Jsx
