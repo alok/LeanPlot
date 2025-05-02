@@ -2,3 +2,4 @@
 -- Import modules here that should be built as part of the library.
 import LeanPlot.Basic
 import LeanPlot.Demos.OverlayPlot
+import LeanPlot.Components

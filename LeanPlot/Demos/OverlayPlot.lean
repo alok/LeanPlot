@@ -1,7 +1,6 @@
-import ProofWidgets.Component.HtmlDisplay
-import ProofWidgets.Component.Recharts
+import LeanPlot.Components
 
-open Lean ProofWidgets Recharts
+open Lean ProofWidgets Recharts LeanPlot.Components
 open scoped ProofWidgets.Jsx
 
 namespace LeanPlot.Demos
@@ -18,13 +17,8 @@ private def samplePair (steps : Nat := 200) : Array Json :=
 
 /-- Interactive overlay of `y = x` and `y = x²`. Put the cursor on the line to render. -/
 def overlay : Html :=
-  let data := samplePair 200;
-  <LineChart width={400} height={400} data={data}>
-    <XAxis domain?={#[toJson 0, toJson 1]} dataKey?="x" />
-    <YAxis domain?={#[toJson 0, toJson 1]} />
-    <Line type={.monotone} dataKey="y1" stroke="#1f77b4" dot?={Bool.false} />
-    <Line type={.monotone} dataKey="y2" stroke="#ff7f0e" dot?={Bool.false} />
-  </LineChart>
+  let data := sampleMany #[("y1", fun x => x), ("y2", fun x => x * x)] 200 0 1
+  mkLineChart data #[("y1", "#1f77b4"), ("y2", "#ff7f0e")] 400 400
 
 #html overlay
 
