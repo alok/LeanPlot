@@ -69,7 +69,7 @@ Sub-tasks:
   - [ ] Expose `Palette.defaultPalette.head!`
 - [ ] Documentation & demos
   - [ ] README quick-start snippet updated
-  - [ ] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
   - [ ] Tick "Cubic" in `Gallery.md`
 - [ ] Quality gates
   - [ ] `lake build` passes
@@ -99,7 +99,7 @@ Updated nested checkbox view
   - [x] Expose `Palette.defaultPalette.head!` via `autoColours`
 - [ ] Documentation & demos
   - [ ] README quick-start snippet updated
-  - [ ] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
   - [ ] Tick "Cubic" in `Gallery.md`
 - [ ] Quality gates
   - [ ] `lake build` passes (TODO verify)
