@@ -40,3 +40,17 @@
 
 ### Changed
 - `Gallery.md` line-chart checklist now ticks off linear and quadratic demos. 
+
+## [0.2.0] – 2025-05-03:09:41
+### Added
+- Tier-0 ergonomics layer: new module `LeanPlot.API` with zero-config helpers
+  * `lineChart` – sample a `Float → β` function on `[0,1]` and render.
+  * `scatterChart` – render array of points (first implementation via `mkScatterChart`).
+- Core `LeanPlot.Components` now includes bindings for Recharts `ScatterChart`/`Scatter` and helper `mkScatterChart`.
+- Library-wide defaults centralised in `LeanPlot.Constants` (`defaultW`, `defaultH`).
+
+### Changed
+- Palette helpers now expose `colourFor` for single series selection.
+
+### Fixed
+- None. 

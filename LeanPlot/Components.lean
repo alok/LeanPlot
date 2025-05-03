@@ -100,4 +100,49 @@ sites. -/
   (fns : Array (String × (Float → β))) (steps : Nat := 200) : Array Json :=
   sampleMany fns steps 0 1
 
+/--
+Minimal props for a Recharts `<ScatterChart>` component.  We only expose
+`width`, `height` and the `data` array because these are the fields
+required by our Tier-0 helper.  Additional props can be surfaced later
+without breaking existing call-sites.
+-/
+structure ScatterChartProps where
+  width  : Nat
+  height : Nat
+  data   : Array Json
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<ScatterChart>`.
+We delegate to the same JavaScript bundle used by the other Recharts
+components that ship with ProofWidgets. -/
+@[inline] def ScatterChart : ProofWidgets.Component ScatterChartProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "ScatterChart"
+
+/-- Minimal props for a Recharts `<Scatter>` (single series of points).
+At present we only need `dataKey` (which field of the JSON row contains
+the y-value) and a `fill` colour for the points. -/
+structure ScatterProps where
+  dataKey : Json := Json.str "y"
+  fill    : String
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<Scatter>`. -/
+@[inline] def Scatter : ProofWidgets.Component ScatterProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "Scatter"
+
+/--
+Turn an array of JSON rows into a Recharts scatter chart containing a
+single series named `y`.  The helper mirrors `mkLineChart` but renders
+dots instead of a line.  The point colour is supplied via `fillColour`.
+-/
+@[inline] def mkScatterChart (data : Array Json) (fillColour : String)
+    (w h : Nat := 400) : Html :=
+  <ScatterChart width={w} height={h} data={data}>
+    <XAxis dataKey?="x" />
+    <YAxis />
+    <Scatter dataKey={Json.str "y"} fill={fillColour} />
+  </ScatterChart>
+
 end LeanPlot.Components
