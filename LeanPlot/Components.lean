@@ -88,18 +88,6 @@ plots.
         <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
   </LineChart>
 
-/-- Convenience wrapper of `sample` that fixes the interval to `[0,1]` – the
-most common case in our demos.  Use this to avoid repeating `0 1` at call
-sites. -/
-@[inline] def sample01 {β} [ToFloat β]
-  (f : Float → β) (steps : Nat := 200) : Array Json :=
-  sample f steps 0 1
-
-/-- Like `sampleMany` but with the domain fixed to `[0,1]`. -/
-@[inline] def sampleMany01 {β} [ToFloat β]
-  (fns : Array (String × (Float → β))) (steps : Nat := 200) : Array Json :=
-  sampleMany fns steps 0 1
-
 /--
 Minimal props for a Recharts `<ScatterChart>` component.  We only expose
 `width`, `height` and the `data` array because these are the fields
