@@ -8,8 +8,9 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 
 ## ✨ Features (0.1.x)
 
-* `sample` / `sampleMany` – uniformly sample functions on a numeric interval.
-* `mkLineChart` – build a Recharts `<LineChart>` (with X/Y axes) from an `Array Json`.
+* Tier-0 helpers `LeanPlot.API.lineChart` / `scatterChart` – go from a Lean function or point cloud to a rendered chart with **zero configuration**.
+* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval.
+* `mkLineChart` – construct a customised Recharts `<LineChart>` when you outgrow Tier-0.
 * Ready-to-run demos under `LeanPlot/Demos`.
 
 ---
@@ -44,12 +45,10 @@ Make sure you have node/npm installed—the ProofWidgets build will take care of
 Open a `.lean` file in VS Code with the infoview visible and paste:
 
 ```lean
-import LeanPlot.Components
-open Lean ProofWidgets Recharts LeanPlot.Components
-open scoped ProofWidgets.Jsx
+import LeanPlot.API
 
-/-- Plot `y = x` on `[0,1]`.  Put your cursor on the `#html` line. -/
-#html mkLineChart (sample (fun x => x) 200 0 1) #[("y", "#1f77b4")] 400 400
+-- One-liner!  Put your cursor on the `#plot` line.
+#plot (LeanPlot.API.lineChart (fun x : Float => x))
 ```
 
 You should see an interactive line chart pop up.
