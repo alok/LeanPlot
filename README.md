@@ -20,13 +20,16 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 Add LeanPlot as a dependency in your project's `lakefile.toml`:
 
 ```toml
-package LeanPlot where
-  srcDir := "LeanPlot"
+[[require]]
+name = "LeanPlot"
+url = "https://github.com/alok/LeanPlot"
+```
 
-require proofwidgets from git
-  "https://github.com/leanprover-community/ProofWidgets4" @ "main"
-require leanplot from git
-  "https://github.com/YOUR_GITHUB/LeanPlot" @ "main"
+or in `lakefile.lean`:
+
+```lean
+require LeanPlot from git
+  "https://github.com/alok/LeanPlot" @ "main"
 ```
 
 Then run:
@@ -48,7 +51,7 @@ Open a `.lean` file in VS Code with the infoview visible and paste:
 import LeanPlot.API
 
 -- One-liner!  Put your cursor on the `#plot` line.
-#plot (LeanPlot.API.lineChart (fun x : Float => x))
+#plot (LeanPlot.API.lineChart (fun x => x))
 ```
 
 You should see an interactive line chart pop up.
