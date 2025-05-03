@@ -1,0 +1,107 @@
+2025-05-03:07:11 UTC – Ergonomics roadmap brainstorm
+--------------------------------------------------
+• Emphasise zero-config #plot helpers (Tier 0) → default width/height, auto palette, auto domain.
+• Progressive disclosure: Tier 0 < Tier 1 < Tier 2 API. Keep mental load low.
+• Introduce forward-pipe DSL with `|>` to chain `PlotSpec` combinators.
+• Consistent naming (`mk…Chart` or `chart…`) to exploit familiarity bias.
+• Feedback banner in infoview for NaN/Inf or empty data.
+• Update docs & demos to demonstrate Tier 0 path first.
+
+Next concrete tasks (to branch ergonomics/phase-1):
+[ ] Add `lineChart` & `scatterChart` wrappers with sensible defaults.
+[ ] Option-record + DSL skeleton.
+[ ] Migrate demos.
+[ ] Warning banner component.
+[ ] Rename helpers; deprecate old names.
+[ ] README / CHANGELOG refresh.
+
+2025-05-03:07:12 UTC – Granular task breakdown (Tier 0 wrappers)
+----------------------------------------------------------------
+Goal: provide `lineChart`/`scatterChart` that need only a function/points.
+
+Sub-tasks:
+1. API surface
+   1.1 Decide module: `LeanPlot.API` (re-export helpers)?
+   1.2 Define `lineChart : (Float → β) → Html` with implicits:
+       • default N = 200, range = auto, colours = auto, size 400×300.
+   1.3 Provide `scatterChart : Array (Float × Float) → Html` with same defaults.
+
+2. Implementation plumbing
+   2.1 Extend `LeanPlot.Components.sample` to allow missing range → call `autoDomain`.
+   2.2 Write `autoDomain (f : Float → Float) (N := 200) : (Float × Float)` algorithm:
+       – naive: collect first 100 sample pts on [-1,1]; take min/max; widen 5 %.
+   2.3 Wrapper simply maps to existing `mkLineChart`.
+
+3. Colour defaults
+   3.1 Expose `Palette.defaultPalette.head!` for single-series stroke.
+
+4. Size defaults
+   4.1 Set constants `defaultW : Nat := 400`, `defaultH : Nat := 300` in `LeanPlot.Constants`.
+
+5. Documentation & demos
+   5.1 Update README quick-start snippet.
+   5.2 Add `LeanPlot.Demos.CubicDemo` using Tier 0 helper.
+   5.3 Tick off "Cubic" in Gallery.
+
+6. Tests / lint
+   6.1 Ensure `lake build` passes.
+   6.2 Optional: compile-time `Decide` to ensure output JSON has expected keys.
+
+7. Commit plan
+   7.1 git switch -c ergonomics/tier0-chart.
+   7.2 Implement Constants & API module.
+   7.3 Add autoDomain.
+   7.4 Update demos & docs.
+   7.5 `just lint && just build`.
+   7.6 git add/commit per logical chunk.
+
+2025-05-03:07:14 UTC – Nested checkbox view
+------------------------------------------------
+- [ ] Tier-0 chart wrappers
+  - [ ] `lineChart` wrapper (defaults N, domain, colours, size)
+  - [ ] `scatterChart` wrapper (defaults size, colours)
+- [ ] Core plumbing
+  - [ ] Extend `sample` to accept optional domain
+  - [ ] Implement `autoDomain` helper
+  - [ ] Wire wrappers to `mkLineChart`
+- [ ] Constants & palette
+  - [ ] `LeanPlot.Constants` with `defaultW`, `defaultH`
+  - [ ] Expose `Palette.defaultPalette.head!`
+- [ ] Documentation & demos
+  - [ ] README quick-start snippet updated
+  - [ ] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [ ] Tick "Cubic" in `Gallery.md`
+- [ ] Quality gates
+  - [ ] `lake build` passes
+  - [ ] Linter clean
+  - [ ] Optional compile-time JSON check
+- [ ] Git workflow
+  - [ ] Create branch `ergonomics/tier0-chart`
+  - [ ] Commit per logical chunk 
+
+2025-05-03:08:10 UTC – Progress update on Tier-0 wrappers
+--------------------------------------------------------
+• Implemented `LeanPlot.Constants` with `defaultW`/`defaultH`.
+• Added `LeanPlot.API` with `lineChart` and (stub) `scatterChart` helpers.
+• `Palette.autoColours` in place; zero-config colours working.
+• Demos still reference old constructors; migration pending.
+
+Updated nested checkbox view
+- [x] Tier-0 chart wrappers
+  - [x] `lineChart` wrapper (defaults N, domain, colours, size)
+  - [x] `scatterChart` wrapper (defaults size, colours)  <!-- stub for now -->
+- [ ] Core plumbing
+  - [ ] Extend `sample` to accept optional domain
+  - [ ] Implement `autoDomain` helper
+  - [ ] Wire wrappers to `mkLineChart` *(awaiting autoDomain integration)*
+- [x] Constants & palette
+  - [x] `LeanPlot.Constants` with `defaultW`, `defaultH`
+  - [x] Expose `Palette.defaultPalette.head!` via `autoColours`
+- [ ] Documentation & demos
+  - [ ] README quick-start snippet updated
+  - [ ] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [ ] Tick "Cubic" in `Gallery.md`
+- [ ] Quality gates
+  - [ ] `lake build` passes (TODO verify)
+  - [ ] Linter clean
+  - [ ] Optional compile-time JSON check 
