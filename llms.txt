@@ -105,3 +105,48 @@ Updated nested checkbox view
   - [ ] `lake build` passes (TODO verify)
   - [ ] Linter clean
   - [ ] Optional compile-time JSON check 
+
+2025-05-03:10:15 UTC – Documentation updates
+------------------------------------------------
+• Updated README.md: features bump to 0.2.x, quick-start snippet uses lineChart import-open pattern, demo list expanded.
+• Gallery already had Cubic ticked, verified.
+
+Updated nested checkbox view
+- [x] Documentation & demos
+  - [x] README quick-start snippet updated
+  - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [x] Migrated Linear & Quadratic demos to Tier-0
+  - [x] Tick "Cubic" in `Gallery.md`
+- [ ] Quality gates
+  - [x] `lake build` passes
+  - [ ] Linter clean
+  - [ ] Optional compile-time JSON check
+
+Next tasks:
+1. Linter clean-up – run `just linter` and fix warnings.
+2. Explore compile-time JSON key check.
+3. Warn banner component for NaN/Inf.
+
+2025-05-03:10:16 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:17 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:18 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:19 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf. 

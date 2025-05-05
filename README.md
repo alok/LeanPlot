@@ -6,12 +6,12 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 
 ---
 
-## ✨ Features (0.1.x)
+## ✨ Features (0.2.x)
 
-* Tier-0 helpers `LeanPlot.API.lineChart` / `scatterChart` – go from a Lean function or point cloud to a rendered chart with **zero configuration**.
-* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval.
-* `mkLineChart` – construct a customised Recharts `<LineChart>` when you outgrow Tier-0.
-* Ready-to-run demos under `LeanPlot/Demos`.
+* **Tier-0 zero-config helpers**  `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function _or_ an array of points to an interactive plot with **one line of Lean**.
+* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
+* `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
+* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay).
 
 ---
 
@@ -50,8 +50,10 @@ Open a `.lean` file in VS Code with the infoview visible and paste:
 ```lean
 import LeanPlot.API
 
+open LeanPlot.API
+
 -- One-liner!  Put your cursor on the `#plot` line.
-#plot (LeanPlot.API.lineChart (fun x => x))
+#plot (lineChart (fun x : Float => x))
 ```
 
 You should see an interactive line chart pop up.
@@ -62,7 +64,10 @@ You should see an interactive line chart pop up.
 
 See `Gallery.md` for the roadmap of examples we plan to support.  The following are already available:
 
-* `LeanPlot.Demos.overlay` – overlays `y = x` and `y = x²`.
+* `LeanPlot.Demos.LinearDemo`   – `y = x`
+* `LeanPlot.Demos.QuadraticDemo` – `y = x²`
+* `LeanPlot.Demos.CubicDemo`    – `y = x³`
+* `LeanPlot.Demos.OverlayDemo`  – overlay of `y = x` and `y = x²`
 
 Run them by putting your cursor over the `#html` command in each file.
 

@@ -42,16 +42,16 @@ overlay:
 # Update changelog timestamp
 changelog-update:
 	python - <<'PY'
-from datetime import datetime, timezone
-stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d:%H:%M')
-import pathlib, re
-path = pathlib.Path('CHANGELOG.md')
-txt = path.read_text()
-import sys, re
-new = re.sub(r'\[0\.1\.0\] – [0-9-:]+', '[0.1.0] – '+stamp, txt, count=1)
-path.write_text(new)
-print('Timestamp updated ->', stamp)
-PY
+	from datetime import datetime, timezone
+	stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d:%H:%M')
+	import pathlib, re
+	path = pathlib.Path('CHANGELOG.md')
+	txt = path.read_text()
+	import sys, re
+	new = re.sub(r'\[0\.1\.0\] – [0-9-:]+', '[0.1.0] – '+stamp, txt, count=1)
+	path.write_text(new)
+	print('Timestamp updated ->', stamp)
+	PY
 
 # Docs placeholder
 docs:
