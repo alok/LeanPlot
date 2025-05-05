@@ -8,7 +8,14 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 
 ## ✨ Features (0.2.x)
 
-* **Tier-0 zero-config helpers**  `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function _or_ an array of points to an interactive plot with **one line of Lean**.
+* **Tier-0 zero-config helpers** `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function *or* an array of points to an interactive plot with **one line of Lean**.
+* **Composable graphics algebra** – build plots from smaller pieces and overlay them with the ordinary `+` operator:
+  ```lean
+  import LeanPlot.Algebra; open LeanPlot.Algebra
+
+  #plot (line "y"  (fun x ↦ x) +
+         line "y²" (fun x ↦ x*x))
+  ```
 * `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
 * `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
 * Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay).
@@ -48,15 +55,15 @@ Make sure you have node/npm installed—the ProofWidgets build will take care of
 Open a `.lean` file in VS Code with the infoview visible and paste:
 
 ```lean
-import LeanPlot.API
+import LeanPlot.Algebra
 
-open LeanPlot.API
+open LeanPlot.Algebra
 
--- One-liner!  Put your cursor on the `#plot` line.
-#plot (lineChart (fun x : Float => x))
+#plot (line "y" (fun x : Float ↦ x) +
+       line "y²" (fun x ↦ x*x))
 ```
 
-You should see an interactive line chart pop up.
+You should see two series rendered in a single interactive chart.
 
 ---
 
