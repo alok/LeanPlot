@@ -26,7 +26,7 @@ This helper is **purely for convenience**; callers remain free to choose their
 own explicit axis limits if desired.
 -/
 @[inline] def autoDomain {β} [ToFloat β] (f : Float → β) (N : Nat := 100) : Float × Float :=
-  if h : N = 0 then
+  if _h : N = 0 then
     (0, 1) -- degenerate case; shouldn't happen
   else
     -- Convert `N` to a `Nat` ≥ 1.
