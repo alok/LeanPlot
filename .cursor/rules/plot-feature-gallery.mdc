@@ -1,0 +1,10 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Gallery Example Rule
+
+Whenever you implement **any new plot feature or chart type** in LeanPlot, add a corresponding demo entry to the gallery so users can discover it quickly.
+
+The demo should live under `LeanPlot/Demos/` and be linked in [Gallery.md](mdc:Gallery.md).  Prefer the naming convention `<FeatureName>Demo.lean`.
