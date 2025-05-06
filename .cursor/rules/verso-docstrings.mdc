@@ -1,0 +1,55 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Verso Docstring & Manual Generation Guide
+
+This repository uses **Verso** (see dependency declared in `lakefile.toml`) to build interactive manuals and API docs directly from Lean code.
+
+## High-level pipeline
+
+1. **Environment preparation** – every constant that should be documented must be `import`-ed so it is present in the Lean environment that Verso runs in.
+2. **Extraction** – VersoManual's helper `Verso.Genre.Manual.getDocString?` wraps Lean's `findDocString?` to pull doc comments and apply policy checks (missing / deprecated docs ⇒ errors unless options allow).
+3. **Representation in AST** – a docstring becomes a custom block node:
+   ```lean
+   Block.docstring
+   name := `Verso.Genre.Manual.Block.docstring
+   data := toJson (declName, declType, signature, customLabel?)
+   ```
+4. **Traversal hooks** – the block extension (`@[block_extension Block.docstring]` in `VersoManual/Docstring.lean`) registers each constant in the `docstringDomain`.  This enables hyperlinks `{docstring Foo.bar}` inside prose.
+5. **HTML renderer** – `toHtml` prettifies signature + markdown, adds hover cards, and injects into the generated manual page.
+
+## Key modules to read (paths are *inside the Verso vendored source*)
+* [`VersoManual/Docstring.lean`](mdc:.lake/packages/verso/src/verso-manual/VersoManual/Docstring.lean) – extraction, block definition, traversal, renderer
+* [`VersoManual/InlineLean.lean`](mdc:.lake/packages/verso/src/verso-manual/VersoManual/InlineLean.lean) – inline role `{docstring …}` expander (~line 730)
+* [`VersoManual/Docstring/Config.lean`](mdc:.lake/packages/verso/src/verso-manual/VersoManual/Docstring/Config.lean) – user-options controlling strictness
+
+## Options (can be set with `set_option` before running docs build)
+| Option | Default | Effect |
+| --- | --- | --- |
+| `verso.docstring.allowMissing` | `true` | Warn vs error on missing docs |
+| `verso.docstring.allowDeprecated` | `false` | Allow documenting deprecated names |
+| `verso.docstring.elabMarkdown` | `true` | Elaborate Lean snippets inside markdown |
+
+## Using in LeanPlot
+
+Create a manual executable (see `DocsMain.lean` plan) that `import`s both your library and VersoManual:
+```lean
+import LeanPlot
+import VersoManual
+
+def book : Book := -- assemble chapters, can use `{docstring Foo}` links
+
+def main : IO Unit := manualMain Theme.default book
+```
+Run `lake exe docs --output _docs` to generate static HTML with fully linked and linted API reference.
+
+## Lint policy
+
+CI should run the docs build.  If a public constant lacks `/- … -/` documentation and `verso.docstring.allowMissing` is `false` the build fails, ensuring documentation coverage.
+
+> Tip: You can quickly locate missing docs during development by generating a **draft** build (`--depth draft` flag in reference-manual) which shows coverage bars.
+
+---
+This rule helps future AI agents navigate Verso's docstring machinery and avoid re-discovering the same patterns.
