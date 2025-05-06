@@ -1,8 +1,11 @@
---! /-! # `ToFloat` typeclass
+import Std.Internal.Rat
+
+/-! # `ToFloat` typeclass
 --  A light-weight abstraction for types that can be coerced (lossily) to `Float`.
 --  This powers the generic sampling helpers in `LeanPlot.Components` so that users
 --  are not restricted to returning `Float` values – any numeric-like type with a
 --  `[ToFloat]` instance will work out-of-the-box.
+-/
 
 /-! # `ToFloat` typeclass
 
@@ -46,19 +49,16 @@ instance instToFloatInt : ToFloat Int where
 instance [Coe α Float] : ToFloat α where
   toFloat a := ↑a
 
--- `Rat` lives in Mathlib; provide the instance only when available.
--- We place it in a `namespace` with `if` semantics so it does not break builds
--- without mathlib.  Users can open this namespace once Mathlib is in scope.
-/-
-namespace _MathlibCompat
-  -- `Rat` is defined in Mathlib.  Uncomment the following lines once Mathlib
-  -- is available in your build to enable the instance.
-  --
-  -- open scoped Rat
-  -- @[default_instance]
-  -- instance instToFloatRat : ToFloat Rat where
-  --   toFloat := Rat.toFloat
-end _MathlibCompat
+/-! ### `Rat` instance
+
+Lean 4 already ships with a *minimal* rational number type at
+`Std.Internal.Rat`.  Batteries/Mathlib re-export it, so we can safely provide a
+`ToFloat` instance here unconditionally.
+The conversion takes the numerator/denominator and performs a floating-point
+division.
 -/
+
+instance instToFloatRat : ToFloat Std.Internal.Rat where
+  toFloat r := (Float.ofInt r.num) / (Float.ofNat r.den)
 
 end LeanPlot
