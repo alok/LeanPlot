@@ -2,6 +2,12 @@ name = "LeanPlot"
 version = "0.1.0"
 defaultTargets = ["leanplot"]
 
+[leanOptions]
+pp.unicode.fun = true
+relaxedAutoImplicit = false
+linter.missingDocs = true
+
+
 [[lean_lib]]
 name = "LeanPlot"
 
@@ -13,3 +19,10 @@ root = "Main"
 name = "proofwidgets"
 git = "https://github.com/leanprover-community/ProofWidgets4.git"
 rev = "v0.0.57"
+
+[[require]]
+name = "verso"
+# We pin to latest main commit for now; consider using a tagged release later
+# when Verso publishes stable versions.
+git = "https://github.com/leanprover/verso.git"
+rev = "main"
