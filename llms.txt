@@ -149,4 +149,17 @@ Next tasks:
 ------------------------------------
 • Linter clean-up – run `just linter` and fix warnings.
 • Explore compile-time JSON key check.
-• Warn banner component for NaN/Inf. 
+• Warn banner component for NaN/Inf.
+
+2025-05-03:11:05 UTC – Verso Documentation Integration
+-------------------------------------------------------
+• Added `verso` dependency to `lakefile.toml`; project builds successfully.
+• Investigated reference-manual to understand docstring extraction pipeline.
+• Added Cursor rule `[verso-docstrings.mdc](mdc:.cursor/rules/verso-docstrings.mdc)` summarising Verso's docstring machinery for future contributors.
+• Committed rule and dependency under branch `ergonomics/tier0-chart`.
+
+Next tasks (documentation)
+[ ] Scaffold `docs/` directory with minimal `%doc` page.
+[ ] Add `DocsMain.lean` executable using `manualMain`.
+[ ] Update CI to build docs and publish to `_docs`.
+[ ] Integrate `{docstring LeanPlot.*}` links throughout prose. 
