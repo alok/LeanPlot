@@ -18,7 +18,8 @@ watch:
 
 # Lint (placeholder – adjust when linter chosen)
 lint:
-	lake env lean --run Std.Tactic.Lint
+	# Use Batteries linter which our project depends on
+	lake env lean --run Batteries.Tactic.Lint
 
 # Clean build artefacts
 clean:

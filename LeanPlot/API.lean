@@ -59,13 +59,13 @@ Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=
   let data := LeanPlot.Components.sample f steps 0 1
   -- Infer a reasonable y-axis domain automatically.
-  let (_lo, _hi) := LeanPlot.AutoDomain.autoDomain f steps
+  let (lo, hi) := LeanPlot.AutoDomain.autoDomain f steps;
+  let yDomain : Array Json := #[toJson lo, toJson hi];
   -- Assign a colour for the single series "y" using the default palette.
-  let seriesStrokes := LeanPlot.Palette.autoColours #["y"]; -- TODO fixup grammar so ; cancer excised (perlis)
-  -- Build the chart manually so we can pass the `domain?` prop.
+  let seriesStrokes := LeanPlot.Palette.autoColours #["y"];
   <LineChart width={w} height={h} data={data}>
     <XAxis dataKey?="x" label?="x" />
-    <YAxis dataKey?="y" label?="y" />
+    <YAxis dataKey?="y" label?="y" domain?={some yDomain} />
     {... seriesStrokes.map (fun (name, colour) =>
       <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
   </LineChart>
