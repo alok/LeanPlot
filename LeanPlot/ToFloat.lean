@@ -4,6 +4,15 @@
 --  are not restricted to returning `Float` values – any numeric-like type with a
 --  `[ToFloat]` instance will work out-of-the-box.
 
+/-! # `ToFloat` typeclass
+
+Provides a **light-weight** abstraction for types that can be coerced
+(lossily) to `Float`.  This powers the generic sampling helpers in
+`LeanPlot.Components` so that users are not restricted to returning `Float`
+values – any numeric-like type with a `[ToFloat]` instance will work
+out-of-the-box.
+-/
+
 namespace LeanPlot
 
 /-- Typeclass for converting a value to a `Float`.  The conversion might be lossy
