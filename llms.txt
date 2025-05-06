@@ -162,4 +162,13 @@ Next tasks (documentation)
 [ ] Scaffold `docs/` directory with minimal `%doc` page.
 [ ] Add `DocsMain.lean` executable using `manualMain`.
 [ ] Update CI to build docs and publish to `_docs`.
-[ ] Integrate `{docstring LeanPlot.*}` links throughout prose. 
+[ ] Integrate `{docstring LeanPlot.*}` links throughout prose.
+
+2025-05-06:04:40 UTC – Verso documentation next steps
+------------------------------------------------------
+1. Bootstrap Verso manual (`docs/DocsMain.lean`, `lake exe docs` + Justfile)
+2. Auto-extract demo snippets into manual via `{docstring LeanPlot.Demos.*}`
+3. Enable strict docstring lint pass in docs build
+4. Expand README & manual with quick-start + VS Code infoview GIF
+5. Changelog bump to 0.2.2 and record docs pipeline
+6. Optional dev UX polish (docs-preview target, pre-commit diff check) 
