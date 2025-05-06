@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: debugging, plotting
+globs: 
 alwaysApply: false
 ---
 # Debugging Charts with Image Snapshots

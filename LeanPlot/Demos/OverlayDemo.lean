@@ -7,12 +7,25 @@ open scoped ProofWidgets.Jsx
 
 namespace LeanPlot.Demos
 
-/- Overlay of `y = x` and `y = x²` with built-in legend. Put the cursor on the `#plot` line below to render. -/
+/-- Overlay of `y = x` and `y = x²` with a built-in legend.  Use
+`#plot overlayLegend` in the infoview to render the chart. -/
 def overlayLegend : Html :=
   let names := #["y", "y²"]
-  let data := sampleMany01 #[("y", fun x => x), ("y²", fun x => x * x)] 200
+  let data := sampleMany #[("y", fun x => x), ("y²", fun x => x * x)]
   mkLineChartFull data (autoColours names) none none 400 400
 
 #plot overlayLegend
+
+
+/-- Archimedes' constant with sufficient precision for the purposes of these
+demos.  We redeclare it here rather than depend on Mathlib. -/
+def Float.pi : Float := 3.14159265358979323846
+
+/-- Plot of the sine function on the interval `[-2π, 2π]`. -/
+def sinChart : Html :=
+  let data := sampleMany #[("sin", fun x => Float.sin x)] (min := -2 * Float.pi) (max := 2 * Float.pi)
+  mkLineChartFull data (autoColours #["sin"])
+
+#plot sinChart
 
 end LeanPlot.Demos

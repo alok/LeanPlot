@@ -16,8 +16,14 @@ open Lean ProofWidgets ProofWidgets.Recharts
 /-- Extended props for an axis. The fields match
 `ProofWidgets.Recharts.AxisProps` with an extra `label?` string. -/
 structure AxisProps where
+  /-- Which field of the JSON row contains the coordinate for this axis. When
+  `none`, Recharts will attempt to infer it. -/
   dataKey? : Option Json := none
+  /-- Optional explicit `[lo, hi]` domain for the axis.  When `none`, Recharts
+  determines the range automatically based on the data. -/
   domain? : Option (Array Json) := none
+  /-- When `true`, points are allowed to overflow the axis domain instead of
+  being clipped.  Defaults to `false` like Recharts. -/
   allowDataOverflow : Bool := false
   /-- How values along this axis should be interpreted. The Recharts default is
   `category`. -/

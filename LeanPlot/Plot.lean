@@ -21,6 +21,8 @@ can be displayed with `#plot t`.  This mirrors the behaviour of `#html`. -/
 syntax (name := plotCmd) "#plot " term : command
 
 open Elab Command ProofWidgets.HtmlCommand in
+/-- The `#plot` command is an alias for `#html`.  It is namespaced under
+`LeanPlot` to improve discoverability.  -/
 @[command_elab plotCmd]
 def elabPlotCmd : CommandElab := fun
   | stx@`(#plot $t:term) => do

@@ -22,7 +22,4 @@ rev = "v0.0.57"
 
 [[require]]
 name = "verso"
-# We pin to latest main commit for now; consider using a tagged release later
-# when Verso publishes stable versions.
 git = "https://github.com/leanprover/verso.git"
-rev = "main"

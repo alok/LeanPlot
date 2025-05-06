@@ -15,19 +15,35 @@ open Lean
 
 private abbrev Color := String
 
+/-- Dark purple (`#440154`). -/
 def darkPurple : Color := "#440154"
+
+/-- Indigo (`#482878`). -/
 def indigo : Color := "#482878"
+
+/-- Blue-purple (`#3e4a89`). -/
 def bluePurple : Color := "#3e4a89"
+
+/-- Medium blue (`#31688e`). -/
 def blue : Color := "#31688e"
+
+/-- Turquoise (#26828e). -/
 def turquoise : Color := "#26828e"
+
+/-- Green-turquoise (#1f9e89). -/
 def greenTurquoise : Color := "#1f9e89"
+
+/-- Green (`#35b779`). -/
 def green : Color := "#35b779"
+
+/-- Lime (`#6ece58`). -/
 def lime : Color := "#6ece58"
+
+/-- Yellow-green (`#b5de2b`). -/
 def yellowGreen : Color := "#b5de2b"
+
+/-- Yellow (`#fde725`). -/
 def yellow : Color := "#fde725"
-
-
-
 
 /-- A qualitative 10-colour palette that looks good on both dark and light
 backgrounds and is colour-blind-friendly.  Source: Matplotlib _tab10_. -/
@@ -54,7 +70,7 @@ lists (with the caveat that colours will start repeating). -/
 `defaultPalette` (cycling when necessary).  The result is suitable for the
 `seriesStrokes` argument expected by `LeanPlot.Components.mkLineChart` and
 friends. -/
+-- TODO this should be any collection, not just an array
 @[inline] def autoColours (names : Array String) : Array (String × String) :=
   names.zipIdx.map (fun (n, i) => (n, colourFor i))
-
 end LeanPlot.Palette

@@ -3,6 +3,7 @@ import ProofWidgets.Component.Recharts
 import LeanPlot.ToFloat
 import LeanPlot.Axis
 import LeanPlot.Legend
+import LeanPlot.Palette
 
 /-! # LeanPlot core components
 
@@ -88,15 +89,14 @@ plots.
         <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
   </LineChart>
 
-/--
-Minimal props for a Recharts `<ScatterChart>` component.  We only expose
-`width`, `height` and the `data` array because these are the fields
-required by our Tier-0 helper.  Additional props can be surfaced later
-without breaking existing call-sites.
--/
+/-- Props for a Recharts `<ScatterChart>` wrapped in Lean.  We intentionally
+keep this minimal, exposing only what the Tier-0 helpers require. -/
 structure ScatterChartProps where
+  /-- Width of the SVG container in pixels. -/
   width  : Nat
+  /-- Height of the SVG container in pixels. -/
   height : Nat
+  /-- Array of JSON rows each containing at least `x` and `y` fields. -/
   data   : Array Json
   deriving FromJson, ToJson
 
@@ -107,11 +107,12 @@ components that ship with ProofWidgets. -/
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "ScatterChart"
 
-/-- Minimal props for a Recharts `<Scatter>` (single series of points).
-At present we only need `dataKey` (which field of the JSON row contains
-the y-value) and a `fill` colour for the points. -/
+/-- Props for a Recharts `<Scatter>` series. -/
 structure ScatterProps where
+  /-- Which field of the JSON row encodes the y-value to plot. Defaults to
+  `"y"`. -/
   dataKey : Json := Json.str "y"
+  /-- CSS colour for the scatter points. -/
   fill    : String
   deriving FromJson, ToJson
 
