@@ -4,7 +4,6 @@ defaultTargets = ["leanplot"]
 
 [leanOptions]
 pp.unicode.fun = true
-relaxedAutoImplicit = false
 linter.missingDocs = true
 
 

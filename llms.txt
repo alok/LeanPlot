@@ -172,3 +172,9 @@ Next tasks (documentation)
 4. Expand README & manual with quick-start + VS Code infoview GIF
 5. Changelog bump to 0.2.2 and record docs pipeline
 6. Optional dev UX polish (docs-preview target, pre-commit diff check) 
+
+2025-05-06:07:05 UTC – Verso manual postponed
+------------------------------------------------------
+• Decision: Verso documentation pipeline tasks moved to backlog; focus returns to plotting ergonomics.
+• Committing current WIP (DocsMain stub, DSL experiment) on branch `ergonomics/tier0-chart`.
+• Next up: linter clean-up and core auto-domain plumbing. 
