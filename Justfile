@@ -18,8 +18,10 @@ watch:
 
 # Lint (placeholder – adjust when linter chosen)
 lint:
-	# Use Batteries linter which our project depends on
-	lake env lean --run Batteries.Tactic.Lint
+	# Ensure Batteries linter modules are freshly built with current Lean version
+	lake build +Batteries.Tactic.Lint
+	# Run Batteries linter script that checks our project modules
+	lake env lean --run .lake/packages/batteries/scripts/runLinter.lean
 
 # Clean build artefacts
 clean:
