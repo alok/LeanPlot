@@ -90,10 +90,10 @@ Updated nested checkbox view
 - [x] Tier-0 chart wrappers
   - [x] `lineChart` wrapper (defaults N, domain, colours, size)
   - [x] `scatterChart` wrapper (defaults size, colours)  <!-- stub for now -->
-- [ ] Core plumbing
-  - [ ] Extend `sample` to accept optional domain
-  - [ ] Implement `autoDomain` helper
-  - [ ] Wire wrappers to `mkLineChart` *(awaiting autoDomain integration)*
+- [x] Core plumbing
+  - [x] Extend `sample` to accept optional domain
+  - [x] Implement `autoDomain` helper
+  - [x] Wire wrappers to `mkLineChart` (Done for `lineChart` via `sample`)
 - [x] Constants & palette
   - [x] `LeanPlot.Constants` with `defaultW`, `defaultH`
   - [x] Expose `Palette.defaultPalette.head!` via `autoColours`
@@ -102,8 +102,8 @@ Updated nested checkbox view
   - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
   - [ ] Tick "Cubic" in `Gallery.md`
 - [ ] Quality gates
-  - [ ] `lake build` passes (TODO verify)
-  - [ ] Linter clean
+  - [x] `lake build` passes
+  - [ ] Linter clean (Blocked by upstream `batteries` issue: unknown id `initSrcSearchPath`)
   - [ ] Optional compile-time JSON check 
 
 2025-05-03:10:15 UTC – Documentation updates
@@ -119,11 +119,11 @@ Updated nested checkbox view
   - [x] Tick "Cubic" in `Gallery.md`
 - [ ] Quality gates
   - [x] `lake build` passes
-  - [ ] Linter clean
+  - [ ] Linter clean (Blocked by upstream `batteries` issue: unknown id `initSrcSearchPath`)
   - [ ] Optional compile-time JSON check
 
 Next tasks:
-1. Linter clean-up – run `just linter` and fix warnings.
+1. Linter clean-up – run `just linter` and fix warnings. (Currently blocked by upstream `batteries` issue)
 2. Explore compile-time JSON key check.
 3. Warn banner component for NaN/Inf.
 
@@ -177,4 +177,11 @@ Next tasks (documentation)
 ------------------------------------------------------
 • Decision: Verso documentation pipeline tasks moved to backlog; focus returns to plotting ergonomics.
 • Committing current WIP (DocsMain stub, DSL experiment) on branch `ergonomics/tier0-chart`.
-• Next up: linter clean-up and core auto-domain plumbing. 
+• Next up: linter clean-up (blocked) and core auto-domain plumbing (now complete for `sample`/`lineChart`).
+
+NEW_LOG_ENTRY_BELOW
+2025-05-06:10:00 UTC – PlotSpec Refinements & Rendering Typeclass
+---------------------------------------------------------------------
+- [ ] Investigate and add Recharts Legend component (currently causes "unknown identifier").
+- [ ] Implement typeclass-based rendering for `SeriesSpec`.
+- [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots. 
