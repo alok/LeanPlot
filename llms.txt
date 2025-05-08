@@ -185,3 +185,79 @@ NEW_LOG_ENTRY_BELOW
 - [ ] Investigate and add Recharts Legend component (currently causes "unknown identifier").
 - [ ] Implement typeclass-based rendering for `SeriesSpec`.
 - [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots. 
+
+2025-05-06:10:30 UTC – Potential Dependent Type Design for Series Rendering
+----------------------------------------------------------------------------
+Consider a more type-safe and extensible approach for handling heterogeneous series types and their rendering using dependent types (Σ-types).
+
+1.  **`SeriesKind` Enum:**
+    ```lean
+    inductive SeriesKind where
+      | line | scatter | bar
+      deriving Repr, BEq
+    ```
+
+2.  **Specific Detail Structs per Kind:**
+    ```lean
+    structure LineSeriesDetails where
+      color : String
+      dot : Option Bool := true
+      -- ... other line-specific options
+
+    structure ScatterSeriesDetails where
+      color : String
+      shape : String := "circle"
+      -- ... other scatter-specific options
+    ```
+
+3.  **Dependent Series Specification (`SeriesDSpec` - a Σ-type):
+    ```lean
+    structure SeriesDSpec where
+      kind : SeriesKind
+      name : String
+      dataKey : String
+      details : match kind with
+                  | SeriesKind.line    => LineSeriesDetails
+                  | SeriesKind.scatter => ScatterSeriesDetails
+                  | SeriesKind.bar     => BarSeriesDetails -- (assuming BarSeriesDetails)
+    ```
+
+4.  **`PlotSpec.series` becomes `Array SeriesDSpec`.**
+
+5.  **Refined `RenderSeries` Typeclass (parameterized by `SeriesKind`):
+    ```lean
+    class RenderSeries (kind : SeriesKind) where
+      render (name : String) (dataKey : String) (details : seriesKindToDetailsType kind) (allChartData : Array Json) : Html
+    ```
+    (where `seriesKindToDetailsType` is a type-level function mapping `SeriesKind` to its detail struct type).
+
+    Instances:
+    ```lean
+    instance : RenderSeries SeriesKind.line where
+      render name dataKey lineDetails _ := ...
+
+    instance : RenderSeries SeriesKind.scatter where
+      render name dataKey scatterDetails _ := ...
+    ```
+
+6.  **`PlotSpec.render` uses the dependent renderer:**
+    Map over `spec.series : Array SeriesDSpec`, typeclass resolution finds the correct `RenderSeries` instance based on `s.kind` to render `s.details`.
+
+**Advantages:** Type safety (no string dispatch), better extensibility for new series types, improved tooling support, elimination of "unsupported type" runtime errors for series rendering.
+**Considerations:** Increased initial complexity and potential boilerplate compared to simpler dispatch mechanisms. Good fit for a robust, extensible "grammar of graphics" style library. 
+
+2025-05-08:05:29 UTC – RenderFragment & LayerSpec rename plan
+-------------------------------------------------------------
+• Naming audit completed; decided on:
+  – `RenderSeries` ⇒ **RenderFragment** (typeclass)
+  – `renderSeries` method ⇒ **render**
+  – `SeriesSpec`   ⇒ **LayerSpec**
+• Mermaid diagram drafted for current architecture.
+• Next steps:
+  1. Create branch `refactor/onomastics-fragment-layer`.
+  2. Mechanical rename of types & instances; deprecate old names via `abbrev`.
+  3. Update `Specification.lean` render pipeline and combinators.
+  4. Add `RenderFragment AxisSpec` instance to demo polymorphism.
+  5. Update demos, README, CHANGELOG (bump 0.3.0-alpha).
+  6. Run `lake build` and docs pipeline.
+  7. Commit per logical chunk; open PR targeting `main`. 
