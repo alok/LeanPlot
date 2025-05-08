@@ -70,18 +70,29 @@ The result is a `Plot` containing all layers from both operands. -/
 instance (priority := 2000) [ToPlot α] [ToPlot β] : HAdd α β Plot where
   hAdd a b := Plot.overlay (toPlot a) (toPlot b)
 
+/-- Generic `*` overlay via `[ToPlot]`. -/
+instance (priority := 2000) [ToPlot α] [ToPlot β] : HMul α β Plot where
+  hMul a b := Plot.overlay (toPlot a) (toPlot b)
+
+/-- Generic `/` overlay via `[ToPlot]`.  Provided for API symmetry. -/
+instance (priority := 2000) [ToPlot α] [ToPlot β] : HDiv α β Plot where
+  hDiv a b := Plot.overlay (toPlot a) (toPlot b)
+
 /-! ### Render instance ---------------------------------------------------- -/
 
 instance : Render Layer where
   render := Layer.html
 
-/-- Render a plot by vertically stacking each layer inside a `<div>` container.
+/-- Render a plot by overlaying all layers in a single relative container.
 For line/scatter overlays we ideally want a *single* combined Recharts chart;
-that is a future optimisation.  The vertical stack is "correct" though perhaps
-not visually perfect. -/
+that is a future optimisation. -/
 instance : Render Plot where
   render p :=
-    -- simple flex column
-    <div style={Json.mkObj [("display", "flex"), ("flex-direction", "column")]}>
-      {... p.layers.map (fun l => l.html)}
-    </div>
+    let rows := (List.range p.layers.size).toArray.map (fun idx =>
+      let l := p.layers[idx]!
+      Html.element "div"
+        #[("key", Json.str (toString idx))]
+        #[l.html])
+    Html.element "div"
+      #[("style", Json.str "display:flex; flex-direction:column;")]
+      rows
