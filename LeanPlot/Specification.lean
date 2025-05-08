@@ -7,6 +7,7 @@ import LeanPlot.API -- For xyArrayToJson
 import LeanPlot.Utils -- For jsonDataHasInvalidFloats
 import LeanPlot.WarningBanner -- For WarningBanner
 import LeanPlot.Core -- For LeanPlot.Render instance
+import LeanPlot.Legend -- Add import for Legend
 import ProofWidgets.Component.Recharts
 import ProofWidgets.Data.Html -- Explicit import for Html.empty and Html.text
 import Lean.Server -- For HtmlEval
@@ -15,6 +16,7 @@ import Lean.Server -- For HtmlEval
 open Lean ProofWidgets ProofWidgets.Recharts LeanPlot.Constants
 open LeanPlot -- For WarningBannerProps, WarningBanner, Render
 open LeanPlot.Utils -- For jsonDataHasInvalidFloats
+open LeanPlot.Legend (Legend) -- Open Legend for direct use
 open scoped ProofWidgets.Jsx -- This enables JSX syntax
 namespace LeanPlot
 
@@ -163,9 +165,33 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
   | some yAxisSpec => { spec with yAxis := some { yAxisSpec with domain := some newDomain } }
   | none           => { spec with yAxis := some { dataKey := "y", domain := some newDomain } }
 
--- TODO: Add more combinators: addSeries, etc.
+/-- Append a new series to the plot. The caller must ensure that `spec.chartData` already provides the data for `series.dataKey`. -/
+@[inline]
+def addSeries (spec : PlotSpec) (series : SeriesSpec) : PlotSpec :=
+  { spec with series := spec.series.push series, legend := true }
 
--- Renderer
+-- Renderer Typeclass
+class RenderSeries (α : Type) where
+  /-- Renders a series specification into HTML.
+      `seriesSpec` is the specification for the individual series.
+      `allChartData` is the complete dataset for the chart, passed in case the renderer needs it. -/
+  renderSeries (seriesSpec : α) (allChartData : Array Json) : Html
+
+-- Default instance for SeriesSpec using its `type` field.
+-- This moves the old if/else logic into the typeclass instance.
+instance : RenderSeries SeriesSpec where
+  renderSeries (s : SeriesSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
+    if s.type == "line" then
+      let dotProp := s.dot.getD true -- Default to true if `none`
+      (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some dotProp} /> : Html)
+    else if s.type == "scatter" then
+      let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
+      (<LeanPlot.Components.Scatter {...scatterProps} /> : Html)
+    else
+      (Html.text s!"Unsupported series type: {s.type}" : Html)
+
+
+-- Main Plot Renderer
 -- This is a complex part, converting the spec to Recharts JSX
 -- For now, we can adapt the existing mkLineChartFull or similar logic
 
@@ -173,30 +199,21 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
 @[inline]
 def render (spec : PlotSpec) : Html :=
   let chartComponents := spec.series.map fun s =>
-    if s.type == "line" then
-      let dotProp := s.dot.getD true -- Default to true if `none`
-      (<Line type={LineType.monotone} dataKey={s.dataKey} stroke={s.color} dot?={some dotProp} /> : Html)
-    else if s.type == "scatter" then
-      let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
-      (<LeanPlot.Components.Scatter {...scatterProps} /> : Html)
-    else
-      (Html.text s!"Unsupported series type: {s.type}" : Html)
+    RenderSeries.renderSeries s spec.chartData -- Use the typeclass instance
 
   let xAxisHtml := match spec.xAxis with
     | some ax =>
-      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := toJson ax.dataKey, label? := ax.label, domain? := ax.domain, type := .number }
+      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := some (toJson ax.dataKey), domain? := ax.domain, label? := ax.label, type := .number }
       (<LeanPlot.Axis.XAxis {...axProps} /> : Html)
     | none => (Html.text "" : Html)
 
   let yAxisHtml := match spec.yAxis with
     | some ax =>
-      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := toJson ax.dataKey, label? := ax.label, domain? := ax.domain, type := .number }
+      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := some (toJson ax.dataKey), domain? := ax.domain, label? := ax.label, type := .number }
       (<LeanPlot.Axis.YAxis {...axProps} /> : Html)
     | none => (Html.text "" : Html)
 
-  let legendHtml := if spec.legend then (Html.text "" : Html) else (Html.text "" : Html) -- Temporarily removed Legend
-  -- Temporarily remove legend until a Legend component is available/created
-  -- let legendHtml := (Html.text "" : Html)
+  let legendHtml := if spec.legend then (<Legend /> : Html) else (Html.text "" : Html)
 
   let mainChartComponent :=
     -- Always use LineChart as the main container, it can host Scatter series too.
@@ -204,7 +221,7 @@ def render (spec : PlotSpec) : Html :=
       {xAxisHtml}
       {yAxisHtml}
       {legendHtml}
-      {Html.element "Fragment" #[] chartComponents}
+      {... chartComponents}
     </LineChart> : Html)
 
   let finalHtml := match spec.title with

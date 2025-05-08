@@ -83,3 +83,37 @@
 - Added low-priority generic `HAdd` instance that overlays any `[ToPlot]` values via `Plot.overlay`.
 - Migrated `LeanPlot.Algebra` to these abstractions, deleting duplicated `Render`/`CoeTC` and bespoke `HAdd`.
 - `LinePlot` now only provides a `[ToLayer]` instance and inherits `+` overlay behaviour from the core instance.
+
+## [0.2.2] – 2025-05-07:19:00
+
+### Added
+
+- **Warning Banner for Invalid Plot Data**: Charts now display a warning banner if the input data contains `NaN` or `Infinity` values. This helps users identify problematic data that might lead to incorrect or empty plots.
+  - New `LeanPlot.WarningBanner` component for displaying HTML-based warnings.
+  - New utility functions in `LeanPlot.Utils` (`isInvalidFloat`, `jsonDataHasInvalidFloats`) to detect invalid floating-point numbers in JSON data.
+  - Chart generation functions in `LeanPlot.Components` (e.g., `mkLineChart`, `mkScatterChart`) now integrate these checks.
+- New demo `LeanPlot.Demos.InvalidDataDemo.lean` to showcase the warning banner with functions producing `NaN`/`Infinity`.
+
+### Changed
+
+- N/A
+
+### Fixed
+
+- Corrected block comment syntax in `LeanPlot/Utils.lean` to resolve parsing errors.
+- Adjusted `open` statements in `LeanPlot/Components.lean` to correctly access `jsonDataHasInvalidFloats` from `LeanPlot.Utils`.
+
+## [0.2.3] – 2025-05-08:01:04
+
+### Added
+
+- Support for axis labels in high‐level `PlotSpec` renderer: `AxisSpec.label` is now passed through to Recharts.
+- New `PlotSpec.addSeries` combinator to append additional series to an existing plot.
+
+### Changed
+
+- Corrected construction of `AxisProps` in `PlotSpec.render` so that `dataKey?` is wrapped in `some …` as required by the `Option` type.
+
+### Fixed
+
+- N/A
