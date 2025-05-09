@@ -139,3 +139,4 @@
 - Renamed `SeriesSpec` to `LayerSpec` for clarity and to better reflect its role in a layered grammar of graphics approach.
 - Renamed the `RenderSeries` typeclass to `RenderFragment` and its method `renderSeries` to `render`. `SeriesSpec` and `RenderSeries` are kept as deprecated `abbrev`s for backward compatibility.
 - Added a dummy `RenderFragment AxisSpec` instance to demonstrate polymorphism of the rendering pipeline.
+- Added `PlotSpec.overlay` (alias `stack`) and an `HAdd` instance so two `PlotSpec`s can be combined with the `+` operator.

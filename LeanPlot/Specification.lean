@@ -193,6 +193,26 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
 def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
   { spec with series := spec.series.push series, legend := true }
 
+/-- Overlay two `PlotSpec`s by concatenating their `series` arrays and combining metadata.
+    NOTE: This assumes both specs refer to the *same* `chartData` (same x‐values).
+    If the datasets differ the function keeps `p.chartData` and discards `q.chartData`.
+    Axis specs prefer the first non-`none` value encountered.  Width/height take the max. -/
+@[inline] def overlay (p q : PlotSpec) : PlotSpec :=
+  { chartData := p.chartData,
+    series    := p.series ++ q.series,
+    xAxis     := match p.xAxis with | some x => some x | none => q.xAxis,
+    yAxis     := match p.yAxis with | some y => some y | none => q.yAxis,
+    title     := none,
+    width     := max p.width q.width,
+    height    := max p.height q.height,
+    legend    := true }
+
+/-- Synonym for `overlay` inspired by grammar-of-graphics "stacking". -/
+@[inline] def stack := overlay
+
+instance : HAdd PlotSpec PlotSpec PlotSpec where
+  hAdd := overlay
+
 -- Renderer Typeclass
 /-- A typeclass for rendering a layer specification into HTML. -/
 class RenderFragment (α : Type) where

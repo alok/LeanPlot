@@ -275,3 +275,16 @@ NEW_LOG_ENTRY_BELOW
 - [ ] Run `lake build`.
 - [ ] Run docs pipeline (currently deferred).
 - [ ] Commit per logical chunk; open PR targeting `main`. 
+
+2025-05-09:22:15 UTC – `PlotSpec.stack` implementation
+------------------------------------------------------
+- Implemented `overlay`, `stack`, and `[HAdd]` instance in `LeanPlot/Specification.lean`.
+- Added new demo `LeanPlot.Demos.StackDemo` demonstrating stacking via `+` and `stack`.
+- Updated CHANGELOG with new feature.
+- `lake build` passes.
+- TODO: Update README snippet, commit changes.
+
+- [ ] Documentation & demos
+   - [ ] README quick-start snippet updated
+   - [ ] Add StackDemo
+  - [x] Add StackDemo 
