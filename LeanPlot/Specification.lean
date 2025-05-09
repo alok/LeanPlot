@@ -92,20 +92,33 @@ def line {β} [ToFloat β]
   (fn : Float → β) (name : String := "y") (steps : Nat := 200)
   (domainOpt : Option (Float × Float) := none)
   (color : Option String := none) : PlotSpec :=
-  let data := LeanPlot.Components.sample fn steps (domainOpt := domainOpt)
+  let (minVal, maxVal) : Float × Float :=
+    match domainOpt with
+    | some d => d
+    | none   => if steps == 0 then (0.0,1.0) else LeanPlot.AutoDomain.autoDomain fn steps
+
+  let data : Array Json :=
+    if steps == 0 then #[] else
+      (List.range (steps.succ)).toArray.map fun i =>
+        let x : Float := minVal + (maxVal - minVal) * i.toFloat / steps.toFloat
+        let y : β := fn x
+        Json.mkObj [
+          ("x", toJson x),
+          (name, toJson (toFloat y))
+        ]
+
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
     series := #[{
       name      := name,
-      dataKey   := "y", -- `sample` produces {x:_, y:_} items
+      dataKey   := name,
       color     := seriesColor,
       type      := "line"
-      -- dot defaults to none -> true for line
     }],
-    xAxis     := some { dataKey := "x", label := some "x" }, -- Default x-axis label
-    yAxis     := some { dataKey := "y", label := some name },
-    legend    := !(name == "y") -- Hide legend if name is default "y" for single series plot
+    xAxis     := some { dataKey := "x", label := some "x" },
+    yAxis     := some { dataKey := name, label := some name },
+    legend    := true
   }
 
 /-- Construct a scatter plot from an array of points. -/
@@ -198,8 +211,37 @@ def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
     If the datasets differ the function keeps `p.chartData` and discards `q.chartData`.
     Axis specs prefer the first non-`none` value encountered.  Width/height take the max. -/
 @[inline] def overlay (p q : PlotSpec) : PlotSpec :=
-  { chartData := p.chartData,
-    series    := p.series ++ q.series,
+  let existing : List String := p.series.map (·.dataKey) |>.toList
+
+  let (renamedSeries, renamePairs) := Id.run do
+    let mut used := existing
+    let mut out : Array LayerSpec := #[]
+    let mut pairs : List (String × String) := []
+    for s in q.series do
+      let mut k := s.dataKey
+      while used.elem k do
+        k := k ++ "'"
+      used := k :: used
+      if k != s.dataKey then
+        pairs := (s.dataKey, k) :: pairs
+      out := out.push { s with dataKey := k, name := if s.name == s.dataKey then k else s.name }
+    pure (out, pairs)
+
+  let renamedData :=
+    if renamePairs.isEmpty then q.chartData else
+      q.chartData.map fun row =>
+        match row with
+        | Json.obj kvs =>
+          let extra : List (String × Json) :=
+            renamePairs.map (fun (old,newK) =>
+              match kvs.find? (fun (k,_) => k = old) with
+              | some (_,v) => (newK, v)
+              | none       => (newK, Json.null))
+          Json.mkObj (kvs ++ extra)
+        | _ => row
+
+  { chartData := p.chartData ++ renamedData,
+    series    := p.series ++ renamedSeries,
     xAxis     := match p.xAxis with | some x => some x | none => q.xAxis,
     yAxis     := match p.yAxis with | some y => some y | none => q.yAxis,
     title     := none,
