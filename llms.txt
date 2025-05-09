@@ -183,7 +183,7 @@ NEW_LOG_ENTRY_BELOW
 2025-05-06:10:00 UTC – PlotSpec Refinements & Rendering Typeclass
 ---------------------------------------------------------------------
 - [ ] Investigate and add Recharts Legend component (currently causes "unknown identifier").
-- [ ] Implement typeclass-based rendering for `SeriesSpec`.
+- [x] Implement typeclass-based rendering for `LayerSpec` (formerly `SeriesSpec`).
 - [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots. 
 
 2025-05-06:10:30 UTC – Potential Dependent Type Design for Series Rendering
@@ -224,24 +224,24 @@ Consider a more type-safe and extensible approach for handling heterogeneous ser
 
 4.  **`PlotSpec.series` becomes `Array SeriesDSpec`.**
 
-5.  **Refined `RenderSeries` Typeclass (parameterized by `SeriesKind`):
+5.  **Refined `RenderFragment` Typeclass (parameterized by `SeriesKind`):
     ```lean
-    class RenderSeries (kind : SeriesKind) where
+    class RenderFragment (kind : SeriesKind) where
       render (name : String) (dataKey : String) (details : seriesKindToDetailsType kind) (allChartData : Array Json) : Html
     ```
     (where `seriesKindToDetailsType` is a type-level function mapping `SeriesKind` to its detail struct type).
 
     Instances:
     ```lean
-    instance : RenderSeries SeriesKind.line where
+    instance : RenderFragment SeriesKind.line where
       render name dataKey lineDetails _ := ...
 
-    instance : RenderSeries SeriesKind.scatter where
+    instance : RenderFragment SeriesKind.scatter where
       render name dataKey scatterDetails _ := ...
     ```
 
 6.  **`PlotSpec.render` uses the dependent renderer:**
-    Map over `spec.series : Array SeriesDSpec`, typeclass resolution finds the correct `RenderSeries` instance based on `s.kind` to render `s.details`.
+    Map over `spec.series : Array SeriesDSpec`, typeclass resolution finds the correct `RenderFragment` instance based on `s.kind` to render `s.details`.
 
 **Advantages:** Type safety (no string dispatch), better extensibility for new series types, improved tooling support, elimination of "unsupported type" runtime errors for series rendering.
 **Considerations:** Increased initial complexity and potential boilerplate compared to simpler dispatch mechanisms. Good fit for a robust, extensible "grammar of graphics" style library. 
@@ -260,4 +260,18 @@ Consider a more type-safe and extensible approach for handling heterogeneous ser
   4. Add `RenderFragment AxisSpec` instance to demo polymorphism.
   5. Update demos, README, CHANGELOG (bump 0.3.0-alpha).
   6. Run `lake build` and docs pipeline.
-  7. Commit per logical chunk; open PR targeting `main`. 
+  7. Commit per logical chunk; open PR targeting `main`.
+
+NEW_LOG_ENTRY_BELOW
+2025-05-09:22:07 UTC – Renaming `SeriesSpec` and `RenderSeries`
+------------------------------------------------------------------
+- [x] Create branch `refactor/onomastics-fragment-layer`.
+- [x] Mechanical rename of `SeriesSpec` to `LayerSpec` and `RenderSeries` to `RenderFragment` (method `renderSeries` to `render`) in `LeanPlot/Specification.lean`. Added `abbrev` for deprecated names.
+- [x] Ensured `Specification.lean` render pipeline and combinators use new names.
+- [x] Added dummy `RenderFragment AxisSpec` instance in `LeanPlot/Specification.lean`.
+- [x] Updated `CHANGELOG.md` with version 0.3.0-alpha and rename details.
+- [x] Verified `README.md` does not require changes for these renames.
+- [x] Updated this `llms.txt` file to reflect the renames and progress.
+- [ ] Run `lake build`.
+- [ ] Run docs pipeline (currently deferred).
+- [ ] Commit per logical chunk; open PR targeting `main`. 

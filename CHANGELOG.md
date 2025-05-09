@@ -117,3 +117,25 @@
 ### Fixed
 
 - N/A
+
+## [0.2.4] – 2025-05-08:15:49
+
+### Added
+
+- **Automatic Axis Labels:** `LeanPlot.Algebra.LinePlot.toHtml` now automatically labels the x-axis as "x". For single-series plots, the y-axis is labelled with the series name. Multi-series overlays keep axes unlabelled to avoid ambiguity.
+
+### Changed
+
+- Added `deriving Inhabited` to `LineSeries` and adjusted `LinePlot` rendering accordingly.
+
+### Fixed
+
+- N/A
+
+## [0.3.0-alpha] - 2025-05-09:22:07
+
+### Changed
+
+- Renamed `SeriesSpec` to `LayerSpec` for clarity and to better reflect its role in a layered grammar of graphics approach.
+- Renamed the `RenderSeries` typeclass to `RenderFragment` and its method `renderSeries` to `render`. `SeriesSpec` and `RenderSeries` are kept as deprecated `abbrev`s for backward compatibility.
+- Added a dummy `RenderFragment AxisSpec` instance to demonstrate polymorphism of the rendering pipeline.

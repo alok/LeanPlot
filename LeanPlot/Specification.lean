@@ -20,33 +20,56 @@ open LeanPlot.Legend (Legend) -- Open Legend for direct use
 open scoped ProofWidgets.Jsx -- This enables JSX syntax
 namespace LeanPlot
 
-structure AxisSpec where
-  label    : Option String := none
-  dataKey  : String := "x" -- Default for x-axis, override for y-axis
-  -- domain   : Option (Json × Json) := none -- Recharts takes Array Json for domain
-  domain   : Option (Array Json) := none
-  -- Potentially more options like 'type' (category, number), ticks, etc.
-  deriving Inhabited, ToJson, FromJson
+/-! # LeanPlot Specification Language
+Defines data types for plot specifications (series, axes, styling etc.) that
+can be lowered to different concrete back-ends (Recharts, VegaLite etc.).
+-/
 
-structure SeriesSpec where
-  /-- The name of the series, used for legend and default y-axis label. -/
+/--
+Specification of a chart axis.
+
+Note that Recharts expects the *domain* as a JSON array `[lo, hi]`, so we
+store it as `Array Json` ready for serialisation rather than a tuple of
+`Float`s.  When the domain is left as `none`, Recharts will automatically pick
+an appropriate range based on the data.
+-/
+structure AxisSpec where
+  /-- Human-readable label shown alongside the axis. -/
+  label    : Option String := none
+  /-- Field in the chart-level JSON rows that provides the coordinate for this axis. -/
+  dataKey  : String
+  /-- Axis interpretation, e.g. `"number"` or `"category"`. -/
+  type     : Option String := none
+  /-- Explicit numeric domain given as `[lo, hi]`. -/
+  domain   : Option (Array Json) := none
+  deriving ToJson, FromJson, Inhabited
+
+/--
+Specification of an individual series/layer within the chart.  This is intentionally
+minimal for now — fields are added on demand by the higher-level helpers.
+-/
+structure LayerSpec where
+  /-- Name of the series (appears in legends and tooltips). -/
   name     : String
-  /-- The key in chartData for this series' y-values. -/
-  dataKey  : String := name
-  /-- The color of the series. -/
+  /-- Which field of the chart-level data rows to plot for this series. -/
+  dataKey  : String
+  /-- CSS colour (e.g. `"#ff0000"`) used to render the series. -/
   color    : String
-  /-- The type of the series, e.g., "line", "scatter". -/
-  type     : String -- e.g., "line", "scatter"
-  /-- Whether to show dots for a line series. `none` means default (true for line, not applicable for scatter). -/
+  /-- The kind of Recharts series to render, such as `"line"` or `"scatter"`. -/
+  type     : String := "line"
+  /-- Whether to render the point markers (`<Line dot={…}/>`).  `none` falls back to the Recharts default. -/
   dot      : Option Bool := none
-  deriving Inhabited, ToJson, FromJson
+  deriving ToJson, FromJson, Inhabited
+
+/-- Deprecated: Use `LayerSpec` instead. -/
+abbrev SeriesSpec := LayerSpec
 
 /-- The specification for a plot. -/
 structure PlotSpec where
   /-- The data for the chart. -/
   chartData : Array Json := #[]
   /-- The series in the chart. -/
-  series    : Array SeriesSpec := #[]
+  series    : Array LayerSpec := #[]
   /-- Default x-axis specification. -/
   xAxis     : Option AxisSpec := some { dataKey := "x" }
   /-- Default y-axis specification. -/
@@ -70,7 +93,7 @@ def line {β} [ToFloat β]
   (domainOpt : Option (Float × Float) := none)
   (color : Option String := none) : PlotSpec :=
   let data := LeanPlot.Components.sample fn steps (domainOpt := domainOpt)
-  let seriesColor := color.getD (LeanPlot.Palette.colourFor 0)
+  let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
     series := #[{
@@ -90,7 +113,7 @@ def line {β} [ToFloat β]
 def scatter (points : Array (Float × Float)) (name : String := "y")
   (color : Option String := none) : PlotSpec :=
   let data := LeanPlot.API.xyArrayToJson points
-  let seriesColor := color.getD (LeanPlot.Palette.colourFor 0)
+  let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
     series := #[{
@@ -167,20 +190,24 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
 
 /-- Append a new series to the plot. The caller must ensure that `spec.chartData` already provides the data for `series.dataKey`. -/
 @[inline]
-def addSeries (spec : PlotSpec) (series : SeriesSpec) : PlotSpec :=
+def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
   { spec with series := spec.series.push series, legend := true }
 
 -- Renderer Typeclass
-class RenderSeries (α : Type) where
-  /-- Renders a series specification into HTML.
-      `seriesSpec` is the specification for the individual series.
+/-- A typeclass for rendering a layer specification into HTML. -/
+class RenderFragment (α : Type) where
+  /-- Renders a layer specification into HTML.
+      `layerSpec` is the specification for the individual layer.
       `allChartData` is the complete dataset for the chart, passed in case the renderer needs it. -/
-  renderSeries (seriesSpec : α) (allChartData : Array Json) : Html
+  render (layerSpec : α) (allChartData : Array Json) : Html
 
--- Default instance for SeriesSpec using its `type` field.
+/-- Deprecated: Use `RenderFragment` instead. -/
+abbrev RenderSeries (α : Type) := RenderFragment α
+
+-- Default instance for LayerSpec using its `type` field.
 -- This moves the old if/else logic into the typeclass instance.
-instance : RenderSeries SeriesSpec where
-  renderSeries (s : SeriesSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
+instance : RenderFragment LayerSpec where
+  render (s : LayerSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
     if s.type == "line" then
       let dotProp := s.dot.getD true -- Default to true if `none`
       (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some dotProp} /> : Html)
@@ -190,6 +217,9 @@ instance : RenderSeries SeriesSpec where
     else
       (Html.text s!"Unsupported series type: {s.type}" : Html)
 
+/-- Instance to demonstrate polymorphism. Does not render a meaningful axis yet. -/
+instance : RenderFragment AxisSpec where
+  render (_ax : AxisSpec) (_allChartData : Array Json) : Html := (Html.text "AxisSpec Fragment (dummy)" : Html)
 
 -- Main Plot Renderer
 -- This is a complex part, converting the spec to Recharts JSX
@@ -199,7 +229,7 @@ instance : RenderSeries SeriesSpec where
 @[inline]
 def render (spec : PlotSpec) : Html :=
   let chartComponents := spec.series.map fun s =>
-    RenderSeries.renderSeries s spec.chartData -- Use the typeclass instance
+    RenderFragment.render s spec.chartData -- Use the typeclass instance
 
   let xAxisHtml := match spec.xAxis with
     | some ax =>
