@@ -7,6 +7,7 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 ---
 
 ## ✨ Features (0.2.x)
+## Legacy features (0.2.x – superseded)
 
 * **Tier-0 zero-config helpers** `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function *or* an array of points to an interactive plot with **one line of Lean**.
 * **Composable graphics algebra** – build plots from smaller pieces and overlay them with the ordinary `+` operator:
@@ -19,6 +20,21 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 * `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
 * `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
 * Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay).
+
+## ✨ Features (0.3.x-alpha)
+
+* **Tier-0 zero-config helpers** `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function *or* an array of points to an interactive plot with **one line of Lean**.
+* **Composable graphics algebra** – build plots from smaller pieces and overlay them with the ordinary `+` operator *or* the explicit `PlotSpec.stack` helper:
+  ```lean
+  import LeanPlot.Algebra; open LeanPlot.Algebra
+
+  #plot (line "y"  (fun x ↦ x) +
+         line "y²" (fun x ↦ x*x))
+  ```
+* **Layered specification language** – low-level `PlotSpec` API for fine-grained control; new `overlay`/`stack` combinators let you combine two `PlotSpec`s just like higher-level plots.
+* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
+* `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
+* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, **stack**).
 
 ---
 
@@ -75,6 +91,7 @@ See `Gallery.md` for the roadmap of examples we plan to support.  The following 
 * `LeanPlot.Demos.QuadraticDemo` – `y = x²`
 * `LeanPlot.Demos.CubicDemo`    – `y = x³`
 * `LeanPlot.Demos.OverlayDemo`  – overlay of `y = x` and `y = x²`
+* `LeanPlot.Demos.StackDemo`   – stacking/overlay via `+` and `stack` helpers
 
 Run them by putting your cursor over the `#html` command in each file.
 
