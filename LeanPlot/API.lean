@@ -29,8 +29,6 @@ Recharts. -/
 @[inline] def xyArrayToJson (pts : Array (Float × Float)) : Array Json :=
   pts.map fun (x, y) => json% {x: $(toJson x), y: $(toJson y)}
 
-
-
 /-- **Tier-0 helper:** Render a line chart from an array of points.
 This delegates to `LeanPlot.Components.mkLineChart` under the hood and
 uses the first colour of `defaultPalette` for the point fill.
@@ -57,20 +55,16 @@ Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
 @[inline] def lineChart {β} [ToFloat β]
   (f : Float → β) (steps : Nat := 200)
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=
-  let data := LeanPlot.Components.sample f steps 0 1
-  -- Infer a reasonable y-axis domain automatically.
-  let (lo, hi) := LeanPlot.AutoDomain.autoDomain f steps;
-  let yDomain : Array Json := #[toJson lo, toJson hi];
+  let data := LeanPlot.Components.sample f steps (domainOpt := none)
   -- Assign a colour for the single series "y" using the default palette.
-  let seriesStrokes := LeanPlot.Palette.autoColours #["y"];
-  <LineChart width={w} height={h} data={data}>
+  let seriesStrokes := LeanPlot.Palette.autoColours #["y"]
+
+  (<LineChart width={w} height={h} data={data}>
     <XAxis dataKey?="x" label?="x" />
-    <YAxis dataKey?="y" label?="y" domain?={some yDomain} />
+    <YAxis dataKey?="y" label?="y" />
     {... seriesStrokes.map (fun (name, colour) =>
       <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
-  </LineChart>
-
-
+  </LineChart>)
 
 /-- **Tier-0 helper:** Render a scatter chart from an array of points.
 This delegates to `LeanPlot.Components.mkScatterChart` under the hood and
@@ -79,6 +73,6 @@ uses the first colour of `defaultPalette` for the point fill.
 @[inline] def scatterChart (pts : Array (Float × Float))
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=
   let data := xyArrayToJson pts
-  LeanPlot.Components.mkScatterChart data (LeanPlot.Palette.colourFor 0) w h
+  LeanPlot.Components.mkScatterChart data (LeanPlot.Palette.colorFromNat 0) w h
 
 end LeanPlot.API

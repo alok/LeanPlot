@@ -4,6 +4,9 @@ import LeanPlot.ToFloat
 import LeanPlot.Axis
 import LeanPlot.Legend
 import LeanPlot.Palette
+import LeanPlot.Utils
+import LeanPlot.WarningBanner
+import LeanPlot.AutoDomain
 
 /-! # LeanPlot core components
 
@@ -15,19 +18,30 @@ open Lean ProofWidgets
 open ProofWidgets.Recharts (LineChart Line LineType)
 open LeanPlot.Axis
 open LeanPlot.Legend (Legend)
+open LeanPlot
+open LeanPlot.Utils
 open scoped ProofWidgets.Jsx
+open LeanPlot.AutoDomain
 
 namespace LeanPlot.Components
 
-/-- Uniformly sample a function `f : Float → β` on the interval `[min,max]`.
+/-- Uniformly sample a function `f : Float → β` on the interval `[min,max]` or an auto-detected domain.
 `β` is required to have a `[ToFloat β]` instance so that values can be
 converted to a JavaScript-friendly `Float` for serialisation. -/
 @[inline] def sample {β} [ToFloat β]
-  (f : Float → β) (steps : Nat := 200) (min : Float := 0) (max : Float := 1) : Array Json :=
-  (List.range (steps.succ)).toArray.map fun i =>
-    let x : Float := min + (max - min) * i.toFloat / steps.toFloat
-    let y : β := f x
-    json% {x: $(toJson x), y: $(toJson (toFloat y))}
+  (f : Float → β) (steps : Nat := 200) (domainOpt : Option (Float × Float) := none) : Array Json :=
+  let (minVal, maxVal) : Float × Float := match domainOpt with
+    | some (minD, maxD) => (minD, maxD)
+    | none =>
+      if steps == 0 then (0.0, 1.0) -- Default for zero steps if autoDomain isn't ideal
+      else autoDomain f steps
+  if steps == 0 then
+    #[] -- Return empty array if steps is zero
+  else
+    (List.range (steps.succ)).toArray.map fun i =>
+      let x : Float := minVal + (maxVal - minVal) * i.toFloat / steps.toFloat
+      let y : β := f x
+      json% {x: $(toJson x), y: $(toJson (toFloat y))}
 
 /--
 Sample several functions whose outputs will be stored under the given series names.
@@ -51,24 +65,42 @@ Turn an array of JSON rows into a Recharts line chart.
 `seriesStrokes` supplies a colour for each series; its order must match the order in `fns` used to create the data.
 -/
 @[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
-  <LineChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" />
-    <YAxis />
-    {... seriesStrokes.map (fun (name, colour) =>
-      <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
-  </LineChart>
+  let chartHtml :=
+    <LineChart width={w} height={h} data={data}>
+      <XAxis dataKey?="x" />
+      <YAxis />
+      {... seriesStrokes.map (fun (name, colour) =>
+        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+    </LineChart>
+
+  let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
+  if jsonDataHasInvalidFloats data keysToCheck then
+    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := WarningBanner warningProps
+    .element "div" #[] #[warningHtml, chartHtml]
+  else
+    chartHtml
 
 /-- Like `mkLineChart` but allows setting axis labels. -/
 @[inline] def mkLineChartWithLabels (data : Array Json)
     (seriesStrokes : Array (String × String))
     (xLabel? : Option String := none) (yLabel? : Option String := none)
     (w h : Nat := 400) : Html :=
-  <LineChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" label?={xLabel?} />
-    <YAxis label?={yLabel?} />
-    {... seriesStrokes.map (fun (name, colour) =>
-      <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
-  </LineChart>
+  let chartHtml :=
+    <LineChart width={w} height={h} data={data}>
+      <XAxis dataKey?="x" label?={xLabel?} />
+      <YAxis label?={yLabel?} />
+      {... seriesStrokes.map (fun (name, colour) =>
+        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+    </LineChart>
+
+  let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
+  if jsonDataHasInvalidFloats data keysToCheck then
+    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := WarningBanner warningProps
+    .element "div" #[] #[warningHtml, chartHtml]
+  else
+    chartHtml
 
 /--
 `mkLineChartFull` extends `mkLineChartWithLabels` by also including a
@@ -80,14 +112,23 @@ plots.
     (seriesStrokes : Array (String × String))
     (xLabel? : Option String := none) (yLabel? : Option String := none)
     (w h : Nat := 400) : Html :=
-  <LineChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" label?={xLabel?} />
-    <YAxis label?={yLabel?} />
-    <Legend />
-    {...
-      seriesStrokes.map (fun (name, colour) =>
-        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
-  </LineChart>
+  let chartHtml :=
+    <LineChart width={w} height={h} data={data}>
+      <XAxis dataKey?="x" label?={xLabel?} />
+      <YAxis label?={yLabel?} />
+      <Legend />
+      {...
+        seriesStrokes.map (fun (name, colour) =>
+          <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+    </LineChart>
+
+  let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
+  if jsonDataHasInvalidFloats data keysToCheck then
+    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := WarningBanner warningProps
+    .element "div" #[] #[warningHtml, chartHtml]
+  else
+    chartHtml
 
 /-- Props for a Recharts `<ScatterChart>` wrapped in Lean.  We intentionally
 keep this minimal, exposing only what the Tier-0 helpers require. -/
@@ -128,10 +169,19 @@ dots instead of a line.  The point colour is supplied via `fillColour`.
 -/
 @[inline] def mkScatterChart (data : Array Json) (fillColour : String)
     (w h : Nat := 400) : Html :=
-  <ScatterChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" />
-    <YAxis />
-    <Scatter dataKey={Json.str "y"} fill={fillColour} />
-  </ScatterChart>
+  let chartHtml :=
+    <ScatterChart width={w} height={h} data={data}>
+      <XAxis dataKey?="x" />
+      <YAxis />
+      <Scatter dataKey={Json.str "y"} fill={fillColour} />
+    </ScatterChart>
+
+  let keysToCheck := #["x", "y"]
+  if jsonDataHasInvalidFloats data keysToCheck then
+    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := WarningBanner warningProps
+    .element "div" #[] #[warningHtml, chartHtml]
+  else
+    chartHtml
 
 end LeanPlot.Components

@@ -37,6 +37,7 @@ open scoped ProofWidgets.Jsx
 structure LineSeries where
   name : String
   fn   : Float → Float
+  deriving Inhabited
 
 /- A collection of `LineSeries` sampled uniformly on `[lo, hi]`. -/
 structure LinePlot where
@@ -67,11 +68,14 @@ resolution. -/
   let data := LeanPlot.Components.sampleMany fns p.steps p.lo p.hi
   let names := p.series.map (·.name)
   let seriesStrokes := LeanPlot.Palette.autoColours names
-  LeanPlot.Components.mkLineChartFull data seriesStrokes none none w h
+  let xLabel? : Option String := some "x"
+  let yLabel? : Option String :=
+    if p.series.size = 1 then some p.series[0]!.name else none
+  LeanPlot.Components.mkLineChartFull data seriesStrokes xLabel? yLabel? w h
 
 end LinePlot
 
-/- Provide a *builder* for a single line series so that users can create plots
+/-- Provide a *builder* for a single line series so that users can create plots
 without mentioning `LineSeries`/`LinePlot` explicitly. -/
 @[inline] def line (name : String) (f : Float → Float)
     (lo : Float := 0.0) (hi : Float := 1.0) (steps : Nat := 200) : LinePlot :=

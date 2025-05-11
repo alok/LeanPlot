@@ -21,8 +21,8 @@ v0.3.0-alpha.  Render with `#plot`. -/
 @[inline] def stackedPlus : PlotSpec := linearSpec + quadraticSpec
 
 /-- Overlay using the `stack` synonym. -/
-@[inline] def stackedStackFn : PlotSpec := PlotSpec.stack linearSpec quadraticSpec
+@[inline] def stackedStackFn : PlotSpec :=  linearSpec.stack quadraticSpec
 
-#plot stackedPlus
+#plot quadraticSpec + linearSpec + line (fun x => x^3) "y³"
 
 #plot stackedStackFn

@@ -94,4 +94,4 @@ Contributions welcome!  Check the TODO list and open a PR or issue.
 
 ## 📄 Licence
 
-LeanPlot is released under the MIT licence.  See `LICENSE` for details.
+LeanPlot is released under the Apache License, Version 2.0.  See `LICENSE.txt` for details.

@@ -13,10 +13,14 @@ can seamlessly participate in LeanPlot composition and render via `#plot`.
 open Lean ProofWidgets
 open scoped ProofWidgets.Jsx
 
-/-- Anything that can be coerced to an *interactive* `Html` fragment should
-implement this.  We keep it library-local to avoid name clashes with other
-`Render` classes in the ecosystem. -/
-class Render (α : Type) : Type where
+/-- A structure that can be rendered as HTML. -/
+structure Renderable where
+  /-- A function that renders the structure as HTML. -/
+  render : Html
+
+/-- A typeclass for structures that can be rendered as HTML. -/
+class Render (α : Type u) where
+  /-- A function that renders an instance of the type as HTML. -/
   render : α → Html
 
 export Render (render)
@@ -27,30 +31,29 @@ instance (α) [Render α] : CoeTC α Html where coe := render
 
 /-! ## Layer and Plot ------------------------------------------------------ -/
 
-/-- *Minimal* information needed to draw a single visual layer.  We expose only
-an `html` field for now; later we can add `legend?`, `bounds?`, etc., without
-breaking existing code. -/
+/-- A plot layer. -/
 structure Layer where
+  /-- The HTML representation of the layer. -/
   html : Html
   deriving Inhabited
 
-/-- Type-class turning arbitrary user types into `Layer`s.  This is the *open
-extension point*: implement `[ToLayer MyFancyPlot]` and you're in. -/
-class ToLayer (α : Type) where
+/-- A typeclass for structures that can be converted to a plot layer. -/
+class ToLayer (α : Type u) where
+  /-- Converts an instance of the type to a plot layer. -/
   toLayer : α → Layer
 export ToLayer (toLayer)
 
 instance : ToLayer Layer where toLayer := id
 
-/-- A *plot* is a bag of layers.  We wrap an `Array` so that extra metadata can
-be attached in future (e.g. global scales, titles, facets). -/
+/-- A plot, which is a collection of layers. -/
 structure Plot where
+  /-- The layers of the plot. -/
   layers : Array Layer := #[]
   deriving Inhabited
 
-/-- Type-class for things convertible to a `Plot`.  Default rule: if something
-is already a `Layer` we lift it into a single-layer plot. -/
-class ToPlot (α : Type) where
+/-- A typeclass for structures that can be converted to a plot. -/
+class ToPlot (α : Type u) where
+  /-- Converts an instance of the type to a plot. -/
   toPlot : α → Plot
 export ToPlot (toPlot)
 
@@ -80,8 +83,11 @@ instance (priority := 2000) [ToPlot α] [ToPlot β] : HDiv α β Plot where
 
 /-! ### Render instance ---------------------------------------------------- -/
 
+instance : Render Renderable where
+  render r := r.render
+
 instance : Render Layer where
-  render := Layer.html
+  render l := l.html
 
 /-- Render a plot by overlaying all layers in a single relative container.
 For line/scatter overlays we ideally want a *single* combined Recharts chart;

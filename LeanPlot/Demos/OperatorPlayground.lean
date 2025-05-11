@@ -27,5 +27,7 @@ private def multiSeries : Html :=
     (autoColours #["id", "sqr", "sqrt"])
 
 #plot multiSeries
-#plot line (fun x => x^3)
+
 end LeanPlot.OperatorDemo
+
+

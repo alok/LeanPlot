@@ -20,6 +20,6 @@ def overlay : Html :=
   let data := sampleMany #[("y1", fun x => x), ("y2", fun x => x * x)] 200 0 1
   mkLineChart data #[("y1", "#1f77b4"), ("y2", "#ff7f0e")] 400 400
 
-#html overlay
+#html overlay 
 
 end LeanPlot.Demos

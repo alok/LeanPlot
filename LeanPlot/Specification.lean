@@ -211,37 +211,8 @@ def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
     If the datasets differ the function keeps `p.chartData` and discards `q.chartData`.
     Axis specs prefer the first non-`none` value encountered.  Width/height take the max. -/
 @[inline] def overlay (p q : PlotSpec) : PlotSpec :=
-  let existing : List String := p.series.map (·.dataKey) |>.toList
-
-  let (renamedSeries, renamePairs) := Id.run do
-    let mut used := existing
-    let mut out : Array LayerSpec := #[]
-    let mut pairs : List (String × String) := []
-    for s in q.series do
-      let mut k := s.dataKey
-      while used.elem k do
-        k := k ++ "'"
-      used := k :: used
-      if k != s.dataKey then
-        pairs := (s.dataKey, k) :: pairs
-      out := out.push { s with dataKey := k, name := if s.name == s.dataKey then k else s.name }
-    pure (out, pairs)
-
-  let renamedData :=
-    if renamePairs.isEmpty then q.chartData else
-      q.chartData.map fun row =>
-        match row with
-        | Json.obj kvs =>
-          let extra : List (String × Json) :=
-            renamePairs.map (fun (old,newK) =>
-              match kvs.find? (fun (k,_) => k = old) with
-              | some (_,v) => (newK, v)
-              | none       => (newK, Json.null))
-          Json.mkObj (kvs ++ extra)
-        | _ => row
-
-  { chartData := p.chartData ++ renamedData,
-    series    := p.series ++ renamedSeries,
+  { chartData := p.chartData ++ q.chartData,
+    series    := p.series ++ q.series,
     xAxis     := match p.xAxis with | some x => some x | none => q.xAxis,
     yAxis     := match p.yAxis with | some y => some y | none => q.yAxis,
     title     := none,
