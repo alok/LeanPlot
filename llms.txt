@@ -90,10 +90,10 @@ Updated nested checkbox view
 - [x] Tier-0 chart wrappers
   - [x] `lineChart` wrapper (defaults N, domain, colours, size)
   - [x] `scatterChart` wrapper (defaults size, colours)  <!-- stub for now -->
-- [ ] Core plumbing
-  - [ ] Extend `sample` to accept optional domain
-  - [ ] Implement `autoDomain` helper
-  - [ ] Wire wrappers to `mkLineChart` *(awaiting autoDomain integration)*
+- [x] Core plumbing
+  - [x] Extend `sample` to accept optional domain
+  - [x] Implement `autoDomain` helper
+  - [x] Wire wrappers to `mkLineChart` (Done for `lineChart` via `sample`)
 - [x] Constants & palette
   - [x] `LeanPlot.Constants` with `defaultW`, `defaultH`
   - [x] Expose `Palette.defaultPalette.head!` via `autoColours`
@@ -102,6 +102,189 @@ Updated nested checkbox view
   - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
   - [ ] Tick "Cubic" in `Gallery.md`
 - [ ] Quality gates
-  - [ ] `lake build` passes (TODO verify)
-  - [ ] Linter clean
+  - [x] `lake build` passes
+  - [ ] Linter clean (Blocked by upstream `batteries` issue: unknown id `initSrcSearchPath`)
   - [ ] Optional compile-time JSON check 
+
+2025-05-03:10:15 UTC – Documentation updates
+------------------------------------------------
+• Updated README.md: features bump to 0.2.x, quick-start snippet uses lineChart import-open pattern, demo list expanded.
+• Gallery already had Cubic ticked, verified.
+
+Updated nested checkbox view
+- [x] Documentation & demos
+  - [x] README quick-start snippet updated
+  - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
+  - [x] Migrated Linear & Quadratic demos to Tier-0
+  - [x] Tick "Cubic" in `Gallery.md`
+- [ ] Quality gates
+  - [x] `lake build` passes
+  - [ ] Linter clean (Blocked by upstream `batteries` issue: unknown id `initSrcSearchPath`)
+  - [ ] Optional compile-time JSON check
+
+Next tasks:
+1. Linter clean-up – run `just linter` and fix warnings. (Currently blocked by upstream `batteries` issue)
+2. Explore compile-time JSON key check.
+3. Warn banner component for NaN/Inf.
+
+2025-05-03:10:16 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:17 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:18 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:10:19 UTC – Next tasks
+------------------------------------
+• Linter clean-up – run `just linter` and fix warnings.
+• Explore compile-time JSON key check.
+• Warn banner component for NaN/Inf.
+
+2025-05-03:11:05 UTC – Verso Documentation Integration
+-------------------------------------------------------
+• Added `verso` dependency to `lakefile.toml`; project builds successfully.
+• Investigated reference-manual to understand docstring extraction pipeline.
+• Added Cursor rule `[verso-docstrings.mdc](mdc:.cursor/rules/verso-docstrings.mdc)` summarising Verso's docstring machinery for future contributors.
+• Committed rule and dependency under branch `ergonomics/tier0-chart`.
+
+Next tasks (documentation)
+[ ] Scaffold `docs/` directory with minimal `%doc` page.
+[ ] Add `DocsMain.lean` executable using `manualMain`.
+[ ] Update CI to build docs and publish to `_docs`.
+[ ] Integrate `{docstring LeanPlot.*}` links throughout prose.
+
+2025-05-06:04:40 UTC – Verso documentation next steps
+------------------------------------------------------
+1. Bootstrap Verso manual (`docs/DocsMain.lean`, `lake exe docs` + Justfile)
+2. Auto-extract demo snippets into manual via `{docstring LeanPlot.Demos.*}`
+3. Enable strict docstring lint pass in docs build
+4. Expand README & manual with quick-start + VS Code infoview GIF
+5. Changelog bump to 0.2.2 and record docs pipeline
+6. Optional dev UX polish (docs-preview target, pre-commit diff check) 
+
+2025-05-06:07:05 UTC – Verso manual postponed
+------------------------------------------------------
+• Decision: Verso documentation pipeline tasks moved to backlog; focus returns to plotting ergonomics.
+• Committing current WIP (DocsMain stub, DSL experiment) on branch `ergonomics/tier0-chart`.
+• Next up: linter clean-up (blocked) and core auto-domain plumbing (now complete for `sample`/`lineChart`).
+
+NEW_LOG_ENTRY_BELOW
+2025-05-06:10:00 UTC – PlotSpec Refinements & Rendering Typeclass
+---------------------------------------------------------------------
+- [ ] Investigate and add Recharts Legend component (currently causes "unknown identifier").
+- [x] Implement typeclass-based rendering for `LayerSpec` (formerly `SeriesSpec`).
+- [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots. 
+
+2025-05-06:10:30 UTC – Potential Dependent Type Design for Series Rendering
+----------------------------------------------------------------------------
+Consider a more type-safe and extensible approach for handling heterogeneous series types and their rendering using dependent types (Σ-types).
+
+1.  **`SeriesKind` Enum:**
+    ```lean
+    inductive SeriesKind where
+      | line | scatter | bar
+      deriving Repr, BEq
+    ```
+
+2.  **Specific Detail Structs per Kind:**
+    ```lean
+    structure LineSeriesDetails where
+      color : String
+      dot : Option Bool := true
+      -- ... other line-specific options
+
+    structure ScatterSeriesDetails where
+      color : String
+      shape : String := "circle"
+      -- ... other scatter-specific options
+    ```
+
+3.  **Dependent Series Specification (`SeriesDSpec` - a Σ-type):
+    ```lean
+    structure SeriesDSpec where
+      kind : SeriesKind
+      name : String
+      dataKey : String
+      details : match kind with
+                  | SeriesKind.line    => LineSeriesDetails
+                  | SeriesKind.scatter => ScatterSeriesDetails
+                  | SeriesKind.bar     => BarSeriesDetails -- (assuming BarSeriesDetails)
+    ```
+
+4.  **`PlotSpec.series` becomes `Array SeriesDSpec`.**
+
+5.  **Refined `RenderFragment` Typeclass (parameterized by `SeriesKind`):
+    ```lean
+    class RenderFragment (kind : SeriesKind) where
+      render (name : String) (dataKey : String) (details : seriesKindToDetailsType kind) (allChartData : Array Json) : Html
+    ```
+    (where `seriesKindToDetailsType` is a type-level function mapping `SeriesKind` to its detail struct type).
+
+    Instances:
+    ```lean
+    instance : RenderFragment SeriesKind.line where
+      render name dataKey lineDetails _ := ...
+
+    instance : RenderFragment SeriesKind.scatter where
+      render name dataKey scatterDetails _ := ...
+    ```
+
+6.  **`PlotSpec.render` uses the dependent renderer:**
+    Map over `spec.series : Array SeriesDSpec`, typeclass resolution finds the correct `RenderFragment` instance based on `s.kind` to render `s.details`.
+
+**Advantages:** Type safety (no string dispatch), better extensibility for new series types, improved tooling support, elimination of "unsupported type" runtime errors for series rendering.
+**Considerations:** Increased initial complexity and potential boilerplate compared to simpler dispatch mechanisms. Good fit for a robust, extensible "grammar of graphics" style library. 
+
+2025-05-08:05:29 UTC – RenderFragment & LayerSpec rename plan
+-------------------------------------------------------------
+• Naming audit completed; decided on:
+  – `RenderSeries` ⇒ **RenderFragment** (typeclass)
+  – `renderSeries` method ⇒ **render**
+  – `SeriesSpec`   ⇒ **LayerSpec**
+• Mermaid diagram drafted for current architecture.
+• Next steps:
+  1. Create branch `refactor/onomastics-fragment-layer`.
+  2. Mechanical rename of types & instances; deprecate old names via `abbrev`.
+  3. Update `Specification.lean` render pipeline and combinators.
+  4. Add `RenderFragment AxisSpec` instance to demo polymorphism.
+  5. Update demos, README, CHANGELOG (bump 0.3.0-alpha).
+  6. Run `lake build` and docs pipeline.
+  7. Commit per logical chunk; open PR targeting `main`.
+
+NEW_LOG_ENTRY_BELOW
+2025-05-09:22:07 UTC – Renaming `SeriesSpec` and `RenderSeries`
+------------------------------------------------------------------
+- [x] Create branch `refactor/onomastics-fragment-layer`.
+- [x] Mechanical rename of `SeriesSpec` to `LayerSpec` and `RenderSeries` to `RenderFragment` (method `renderSeries` to `render`) in `LeanPlot/Specification.lean`. Added `abbrev` for deprecated names.
+- [x] Ensured `Specification.lean` render pipeline and combinators use new names.
+- [x] Added dummy `RenderFragment AxisSpec` instance in `LeanPlot/Specification.lean`.
+- [x] Updated `CHANGELOG.md` with version 0.3.0-alpha and rename details.
+- [x] Verified `README.md` does not require changes for these renames.
+- [x] Updated this `llms.txt` file to reflect the renames and progress.
+- [ ] Run `lake build`.
+- [ ] Run docs pipeline (currently deferred).
+- [ ] Commit per logical chunk; open PR targeting `main`. 
+
+2025-05-09:22:15 UTC – `PlotSpec.stack` implementation
+------------------------------------------------------
+- Implemented `overlay`, `stack`, and `[HAdd]` instance in `LeanPlot/Specification.lean`.
+- Added new demo `LeanPlot.Demos.StackDemo` demonstrating stacking via `+` and `stack`.
+- Updated CHANGELOG with new feature.
+- `lake build` passes.
+- TODO: Update README snippet, commit changes.
+
+- [ ] Documentation & demos
+   - [ ] README quick-start snippet updated
+   - [ ] Add StackDemo
+  - [x] Add StackDemo 

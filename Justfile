@@ -18,7 +18,10 @@ watch:
 
 # Lint (placeholder – adjust when linter chosen)
 lint:
-	lake env lean --run Std.Tactic.Lint
+	# Ensure Batteries linter modules are freshly built with current Lean version
+	lake build +Batteries.Tactic.Lint
+	# Run Batteries linter script that checks our project modules
+	lake env lean --run .lake/packages/batteries/scripts/runLinter.lean
 
 # Clean build artefacts
 clean:
@@ -42,16 +45,16 @@ overlay:
 # Update changelog timestamp
 changelog-update:
 	python - <<'PY'
-from datetime import datetime, timezone
-stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d:%H:%M')
-import pathlib, re
-path = pathlib.Path('CHANGELOG.md')
-txt = path.read_text()
-import sys, re
-new = re.sub(r'\[0\.1\.0\] – [0-9-:]+', '[0.1.0] – '+stamp, txt, count=1)
-path.write_text(new)
-print('Timestamp updated ->', stamp)
-PY
+	from datetime import datetime, timezone
+	stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d:%H:%M')
+	import pathlib, re
+	path = pathlib.Path('CHANGELOG.md')
+	txt = path.read_text()
+	import sys, re
+	new = re.sub(r'\[0\.1\.0\] – [0-9-:]+', '[0.1.0] – '+stamp, txt, count=1)
+	path.write_text(new)
+	print('Timestamp updated ->', stamp)
+	PY
 
 # Docs placeholder
 docs:

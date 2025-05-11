@@ -25,6 +25,7 @@
 - [ ] Auto colour palette
 - [x] `#plot` command alias for `#html` (LeanPlot.PlotCommand)
 - [ ] Auto domain inference
+- [ ] Auto axis labels from binder names (metaprogramming extraction of plotting function parameters)
 
 ### More chart types
 - [ ] Log / linear scale toggle

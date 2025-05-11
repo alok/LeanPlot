@@ -1,13 +1,12 @@
-import LeanPlot.Components
+import LeanPlot.API
 import LeanPlot.Plot
-import LeanPlot.Palette
 
-open Lean ProofWidgets Recharts LeanPlot.Components LeanPlot.Palette
-open scoped ProofWidgets.Jsx
+open Lean ProofWidgets LeanPlot.API
+
 
 namespace LeanPlot.Demos
 
 /- Plot `y = x²` on the interval `[0,1]`.  Put your cursor on the `#plot` line to render. -/
-#plot mkLineChart (sample01 (fun x => x * x) 200) (autoColours #["y²"]) 400 400
+#plot (LeanPlot.API.lineChart (fun x => x * x))
 
 end LeanPlot.Demos

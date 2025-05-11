@@ -1,6 +1,18 @@
 name = "LeanPlot"
+# Semantic-versioned package metadata
 version = "0.1.0"
+
+# Build default
 defaultTargets = ["leanplot"]
+
+# Tell `lake lint` which executable to invoke. Batteries ships a `runLinter` executable
+# that understands its extended linting framework, so we delegate to it here.
+lintDriver = "batteries/runLinter"
+
+[leanOptions]
+pp.unicode.fun = true
+linter.missingDocs = true
+
 
 [[lean_lib]]
 name = "LeanPlot"
@@ -13,3 +25,8 @@ root = "Main"
 name = "proofwidgets"
 git = "https://github.com/leanprover-community/ProofWidgets4.git"
 rev = "v0.0.57"
+
+[[require]]
+name = "verso"
+git = "https://github.com/leanprover/verso.git"
+rev = "main"
