@@ -31,20 +31,20 @@ Recharts. -/
 
 /-- **Tier-0 helper:** Render a line chart from an array of points.
 This delegates to `LeanPlot.Components.mkLineChart` under the hood and
-uses the first colour of `defaultPalette` for the point fill.
+uses the first color of `defaultPalette` for the point fill.
 -/
 @[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
   <LineChart width={w} height={h} data={data}>
     <XAxis dataKey?="x" />
     <YAxis />
-    {... seriesStrokes.map (fun (name, colour) =>
-      <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+    {... seriesStrokes.map (fun (name, color) =>
+      <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
   </LineChart>
 
 /-- **Tier-0 helper:** Render a line chart for a single function
 `f : Float → β` with zero configuration.  The function is sampled uniformly
 on `[0,1]` using `steps` samples (default 200).  The chart is sized
-`defaultW × defaultH` and coloured using the first entry of
+`defaultW × defaultH` and colored using the first entry of
 `Palette.defaultPalette`.
 
 Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
@@ -56,19 +56,19 @@ Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
   (f : Float → β) (steps : Nat := 200)
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=
   let data := LeanPlot.Components.sample f steps (domainOpt := none)
-  -- Assign a colour for the single series "y" using the default palette.
-  let seriesStrokes := LeanPlot.Palette.autoColours #["y"]
+  -- Assign a color for the single series "y" using the default palette.
+  let seriesStrokes := LeanPlot.Palette.autoColors #["y"]
 
   (<LineChart width={w} height={h} data={data}>
     <XAxis dataKey?="x" label?="x" />
     <YAxis dataKey?="y" label?="y" />
-    {... seriesStrokes.map (fun (name, colour) =>
-      <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+    {... seriesStrokes.map (fun (name, color) =>
+      <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
   </LineChart>)
 
 /-- **Tier-0 helper:** Render a scatter chart from an array of points.
 This delegates to `LeanPlot.Components.mkScatterChart` under the hood and
-uses the first colour of `defaultPalette` for the point fill.
+uses the first color of `defaultPalette` for the point fill.
 -/
 @[inline] def scatterChart (pts : Array (Float × Float))
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=

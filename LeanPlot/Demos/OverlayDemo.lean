@@ -12,7 +12,7 @@ namespace LeanPlot.Demos
 def overlayLegend : Html :=
   let names := #["y", "y²"]
   let data := sampleMany #[("y", fun x => x), ("y²", fun x => x * x)]
-  mkLineChartFull data (autoColours names) none none 400 400
+  mkLineChartFull data (autoColors names) none none 400 400
 
 #plot overlayLegend
 
@@ -24,7 +24,7 @@ def Float.pi : Float := 3.14159265358979323846
 /-- Plot of the sine function on the interval `[-2π, 2π]`. -/
 def sinChart : Html :=
   let data := sampleMany #[("sin", fun x => Float.sin x)] (min := -2 * Float.pi) (max := 2 * Float.pi)
-  mkLineChartFull data (autoColours #["sin"])
+  mkLineChartFull data (autoColors #["sin"])
 
 #plot sinChart
 

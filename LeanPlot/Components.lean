@@ -62,15 +62,15 @@ value can be serialised.
 /--
 Turn an array of JSON rows into a Recharts line chart.
 
-`seriesStrokes` supplies a colour for each series; its order must match the order in `fns` used to create the data.
+`seriesStrokes` supplies a color for each series; its order must match the order in `fns` used to create the data.
 -/
 @[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
   let chartHtml :=
     <LineChart width={w} height={h} data={data}>
       <XAxis dataKey?="x" />
       <YAxis />
-      {... seriesStrokes.map (fun (name, colour) =>
-        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+      {... seriesStrokes.map (fun (name, color) =>
+        <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
     </LineChart>
 
   let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
@@ -90,8 +90,8 @@ Turn an array of JSON rows into a Recharts line chart.
     <LineChart width={w} height={h} data={data}>
       <XAxis dataKey?="x" label?={xLabel?} />
       <YAxis label?={yLabel?} />
-      {... seriesStrokes.map (fun (name, colour) =>
-        <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+      {... seriesStrokes.map (fun (name, color) =>
+        <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
     </LineChart>
 
   let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
@@ -118,8 +118,8 @@ plots.
       <YAxis label?={yLabel?} />
       <Legend />
       {...
-        seriesStrokes.map (fun (name, colour) =>
-          <Line type={LineType.monotone} dataKey={Json.str name} stroke={colour} dot?={some false} />)}
+        seriesStrokes.map (fun (name, color) =>
+          <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
     </LineChart>
 
   let keysToCheck := seriesStrokes.map (fun (name, _) => name) |>.push "x"
@@ -153,7 +153,7 @@ structure ScatterProps where
   /-- Which field of the JSON row encodes the y-value to plot. Defaults to
   `"y"`. -/
   dataKey : Json := Json.str "y"
-  /-- CSS colour for the scatter points. -/
+  /-- CSS color for the scatter points. -/
   fill    : String
   deriving FromJson, ToJson
 
@@ -165,15 +165,15 @@ structure ScatterProps where
 /--
 Turn an array of JSON rows into a Recharts scatter chart containing a
 single series named `y`.  The helper mirrors `mkLineChart` but renders
-dots instead of a line.  The point colour is supplied via `fillColour`.
+dots instead of a line.  The point color is supplied via `fillColor`.
 -/
-@[inline] def mkScatterChart (data : Array Json) (fillColour : String)
+@[inline] def mkScatterChart (data : Array Json) (fillColor : String)
     (w h : Nat := 400) : Html :=
   let chartHtml :=
     <ScatterChart width={w} height={h} data={data}>
       <XAxis dataKey?="x" />
       <YAxis />
-      <Scatter dataKey={Json.str "y"} fill={fillColour} />
+      <Scatter dataKey={Json.str "y"} fill={fillColor} />
     </ScatterChart>
 
   let keysToCheck := #["x", "y"]

@@ -25,7 +25,7 @@ open LeanPlot.Algebra
 
 Behind the scenes we still delegate to the existing Tier-0 helpers from
 `LeanPlot.Components` but the user no longer has to juggle series arrays or
-colour assignments manually. -/
+color assignments manually. -/
 
 open LeanPlot.Components LeanPlot.Palette LeanPlot.Constants
 open Lean ProofWidgets
@@ -59,7 +59,7 @@ resolution. -/
     lo     := if p.lo ≤ q.lo then p.lo else q.lo,
     hi     := if p.hi ≥ q.hi then p.hi else q.hi }
 
-/- Sample all series, assign colours automatically, and delegate to the core
+/- Sample all series, assign colors automatically, and delegate to the core
 `mkLineChartFull` helper. -/
 @[inline] def toHtml (p : LinePlot)
     (w : Nat := defaultW) (h : Nat := defaultH) : Html :=
@@ -67,7 +67,7 @@ resolution. -/
     p.series.map (fun s => (s.name, s.fn))
   let data := LeanPlot.Components.sampleMany fns p.steps p.lo p.hi
   let names := p.series.map (·.name)
-  let seriesStrokes := LeanPlot.Palette.autoColours names
+  let seriesStrokes := LeanPlot.Palette.autoColors names
   let xLabel? : Option String := some "x"
   let yLabel? : Option String :=
     if p.series.size = 1 then some p.series[0]!.name else none

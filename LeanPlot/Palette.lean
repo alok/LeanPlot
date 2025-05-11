@@ -1,9 +1,9 @@
-/-! # Colour palette helpers
+/-! # Color palette helpers
 
-Provides a small default colour palette (taken from the classic
+Provides a small default color palette (taken from the classic
 Matplotlib/Jupyter qualitative set) and convenience helpers for mapping a
-list of series names to distinct stroke colours.  This avoids boiler-plate at
-call-sites where users would otherwise have to supply an explicit colour for
+list of series names to distinct stroke colors.  This avoids boiler-plate at
+call-sites where users would otherwise have to supply an explicit color for
 each series.
 
 The helpers are intentionally lightweight; future versions may allow
@@ -67,12 +67,12 @@ The colors repeat if `n` is larger than the number of colors in the palette. -/
 @[inline] def colorFromNat (n : Nat) : Color :=
   defaultPalette[n % defaultPalette.size]!
 
-/-- Given an `Array` of series names, assign each a colour from
+/-- Given an `Array` of series names, assign each a color from
 `defaultPalette`, cycling if necessary.  The result is suitable for the
 `seriesStrokes` argument expected by `LeanPlot.Components.mkLineChart` and
 friends. -/
 -- TODO this should be any collection, not just an array
-@[inline] def autoColours (names : Array String) : Array (String × String) :=
+@[inline] def autoColors (names : Array String) : Array (String × String) :=
   names.zipIdx.map (fun (n, i) => (n, colorFromNat i))
 
 /-- Generate a list of `n` distinct colors.

@@ -53,7 +53,7 @@ structure LayerSpec where
   name     : String
   /-- Which field of the chart-level data rows to plot for this series. -/
   dataKey  : String
-  /-- CSS colour (e.g. `"#ff0000"`) used to render the series. -/
+  /-- CSS color (e.g. `"#ff0000"`) used to render the series. -/
   color    : String
   /-- The kind of Recharts series to render, such as `"line"` or `"scatter"`. -/
   type     : String := "line"
@@ -242,8 +242,8 @@ abbrev RenderSeries (α : Type) := RenderFragment α
 instance : RenderFragment LayerSpec where
   render (s : LayerSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
     if s.type == "line" then
-      let dotProp := s.dot.getD true -- Default to true if `none`
-      (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some dotProp} /> : Html)
+      
+      (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some (s.dot.getD false)} /> : Html)
     else if s.type == "scatter" then
       let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
       (<LeanPlot.Components.Scatter {...scatterProps} /> : Html)

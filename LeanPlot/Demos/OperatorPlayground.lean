@@ -24,10 +24,8 @@ private def multiSeries : Html :=
       ("id",   fun x => x),
       ("sqr",  fun x => x*x),
       ("sqrt", fun x => Float.sqrt x)])
-    (autoColours #["id", "sqr", "sqrt"])
+    (autoColors #["id", "sqr", "sqrt"])
 
 #plot multiSeries
 
 end LeanPlot.OperatorDemo
-
-
