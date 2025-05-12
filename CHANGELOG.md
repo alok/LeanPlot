@@ -141,11 +141,12 @@
 - Added a dummy `RenderFragment AxisSpec` instance to demonstrate polymorphism of the rendering pipeline.
 - Added `PlotSpec.overlay` (alias `stack`) and an `HAdd` instance so two `PlotSpec`s can be combined with the `+` operator.
 
-## [0.3.1] - 2025-05-12:TBD
+## [0.3.1] – 2025-05-12:11:24 UTC
 
 ### Fixed
 
 - Added `LegendComp` alias in `LeanPlot.Legend` so existing call-sites (`mkLineChartFull`) compile without change.
+- Corrected default x-axis domain logic in `line`, `area`, and `lines` constructors to avoid using y-domain heuristic; default is now `[-1,1]` when unspecified, ensuring symmetric sampling for functions like `x²`.
 
 ### Changed
 
@@ -154,3 +155,4 @@
 ### Added
 
 - Documentation update in `TODO.md` ticking off completed items.
+- New `LeanPlot.Specification.area` and `.bar` helpers with matching constructors in `PlotSpec` for easy rendering of area and bar charts.
