@@ -1,5 +1,7 @@
 import ProofWidgets.Component.Recharts
 
+
+
 /-! # Legend component wrapper
 
 Extends ProofWidgets Recharts by exposing the `Legend` component that is part
@@ -20,5 +22,9 @@ structure LegendProps where
 @[inline] def Legend : ProofWidgets.Component LegendProps where
   javascript := Recharts.javascript
   «export» := "Legend"
+
+/- Alias so callers can import `(LegendComp)` instead of `(Legend)`, mirroring
+   other component naming conventions in this library. -/
+@[inline] def LegendComp : ProofWidgets.Component LegendProps := Legend
 
 end LeanPlot.Legend
