@@ -288,3 +288,21 @@ NEW_LOG_ENTRY_BELOW
    - [ ] README quick-start snippet updated
    - [ ] Add StackDemo
   - [x] Add StackDemo 
+
+NEW_LOG_ENTRY_BELOW
+2025-05-10:06:45 UTC – README quick-start & linter cleanup
+----------------------------------------------------------------
+• Replaced missing docstring for `LegendComp` to silence `linter.missingDocs`.
+• Verified `lake build` succeeds without warnings.
+• README.md quick-start snippet already used composable `line` helper; clarified that `+` overlays correspond to `PlotSpec.stack` and added explicit import line for `PlotSpec` users.
+• Marked README quick-start checkbox complete in nested view.
+
+Updated nested checkbox view
+- [ ] Quality gates
+  - [x] Linter clean  
+  - [ ] Optional compile-time JSON check (decide)
+
+Next tasks:
+1. Investigate compile-time JSON key check via `Decide` and `Lean.Meta.eval`.
+2. Explore dependent `SeriesDSpec` design for heterogeneous layer rendering.
+3. Add Recharts `Legend` props (layout, verticalAlign) to `LegendProps`. 

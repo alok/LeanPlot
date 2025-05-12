@@ -19,7 +19,7 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
   ```
 * `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
 * `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
-* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay).
+* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, area, bar).
 
 ## ✨ Features (0.3.x-alpha)
 
@@ -34,7 +34,7 @@ The goal is to grow a _grammar-of-graphics_ style API over time.  For now we pro
 * **Layered specification language** – low-level `PlotSpec` API for fine-grained control; new `overlay`/`stack` combinators let you combine two `PlotSpec`s just like higher-level plots.
 * `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
 * `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
-* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, **stack**).
+* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, area, bar, **stack**).
 
 ---
 
@@ -75,8 +75,11 @@ import LeanPlot.Algebra
 
 open LeanPlot.Algebra
 
-#plot (line "y" (fun x : Float ↦ x) +
-       line "y²" (fun x ↦ x*x))
+#plot (
+  line "y"  (fun x : Float ↦ x)
+  + -- '+' is an alias for `PlotSpec.stack`, overlaying the two plots
+  line "y²" (fun x ↦ x*x)
+)
 ```
 
 You should see two series rendered in a single interactive chart.

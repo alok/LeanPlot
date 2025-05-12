@@ -23,8 +23,10 @@ structure LegendProps where
   javascript := Recharts.javascript
   «export» := "Legend"
 
-/- Alias so callers can import `(LegendComp)` instead of `(Legend)`, mirroring
-   other component naming conventions in this library. -/
+/- Alias for `Legend` to align with other *Component* naming conventions in
+    LeanPlot.  Use `LegendComp` when you want to import a shorter, explicit
+    symbol without shadowing the underlying `Legend` constructor.  Functionally
+    identical to `Legend`. -/
 @[inline] def LegendComp : ProofWidgets.Component LegendProps := Legend
 
 end LeanPlot.Legend
