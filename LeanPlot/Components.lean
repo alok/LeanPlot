@@ -17,7 +17,7 @@ functions and visualise the result in Recharts with one call.
 open Lean ProofWidgets
 open ProofWidgets.Recharts (LineChart Line LineType)
 open LeanPlot.Axis
-open LeanPlot.Legend (Legend)
+open LeanPlot.Legend (LegendComp)
 open LeanPlot
 open LeanPlot.Utils
 open scoped ProofWidgets.Jsx
@@ -116,7 +116,7 @@ plots.
     <LineChart width={w} height={h} data={data}>
       <XAxis dataKey?="x" label?={xLabel?} />
       <YAxis label?={yLabel?} />
-      <Legend />
+      <LegendComp />
       {...
         seriesStrokes.map (fun (name, color) =>
           <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
@@ -183,5 +183,65 @@ dots instead of a line.  The point color is supplied via `fillColor`.
     .element "div" #[] #[warningHtml, chartHtml]
   else
     chartHtml
+
+/-! ## New chart types: Area and Bar
+
+We extend the Thin Lean wrappers to cover Recharts `<AreaChart>`/`<Area>` and
+`<BarChart>`/`<Bar>` so that higher-level helpers can support additional chart
+types without depending on upstream ProofWidgets releases.  Only a **minimal**
+set of props is exposed for now. -/
+
+/-- Props for a Recharts `<AreaChart>`. -/
+structure AreaChartProps where
+  /-- Width of the SVG container in pixels. -/
+  width  : Nat
+  /-- Height of the SVG container in pixels. -/
+  height : Nat
+  /-- Dataset array. -/
+  data   : Array Json
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<AreaChart>`. -/
+@[inline] def AreaChart : ProofWidgets.Component AreaChartProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "AreaChart"
+
+/-- Props for a Recharts `<Area>` series.  We expose the usual `dataKey`,
+`fill` and `stroke` colours.  Additional Recharts props can be added later. -/
+structure AreaProps where
+  dataKey : Json := Json.str "y"
+  /-- Fill colour of the area. -/
+  fill    : String
+  /-- Stroke colour of the area border.  Defaults to the same as `fill`. -/
+  stroke  : String := ""
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<Area>`. -/
+@[inline] def Area : ProofWidgets.Component AreaProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "Area"
+
+/-- Props for a Recharts `<BarChart>`. -/
+structure BarChartProps where
+  width  : Nat
+  height : Nat
+  data   : Array Json
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<BarChart>`. -/
+@[inline] def BarChart : ProofWidgets.Component BarChartProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "BarChart"
+
+/-- Props for a Recharts `<Bar>` series. -/
+structure BarProps where
+  dataKey : Json := Json.str "y"
+  fill    : String
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<Bar>`. -/
+@[inline] def Bar : ProofWidgets.Component BarProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "Bar"
 
 end LeanPlot.Components

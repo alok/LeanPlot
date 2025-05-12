@@ -242,11 +242,17 @@ abbrev RenderSeries (α : Type) := RenderFragment α
 instance : RenderFragment LayerSpec where
   render (s : LayerSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
     if s.type == "line" then
-      
+
       (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some (s.dot.getD false)} /> : Html)
     else if s.type == "scatter" then
       let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
       (<LeanPlot.Components.Scatter {...scatterProps} /> : Html)
+    else if s.type == "area" then
+      let areaProps : LeanPlot.Components.AreaProps := { dataKey := toJson s.dataKey, fill := s.color, stroke := s.color }
+      (<LeanPlot.Components.Area {...areaProps} /> : Html)
+    else if s.type == "bar" then
+      let barProps : LeanPlot.Components.BarProps := { dataKey := toJson s.dataKey, fill := s.color }
+      (<LeanPlot.Components.Bar {...barProps} /> : Html)
     else
       (Html.text s!"Unsupported series type: {s.type}" : Html)
 
