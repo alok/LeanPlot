@@ -140,3 +140,17 @@
 - Renamed the `RenderSeries` typeclass to `RenderFragment` and its method `renderSeries` to `render`. `SeriesSpec` and `RenderSeries` are kept as deprecated `abbrev`s for backward compatibility.
 - Added a dummy `RenderFragment AxisSpec` instance to demonstrate polymorphism of the rendering pipeline.
 - Added `PlotSpec.overlay` (alias `stack`) and an `HAdd` instance so two `PlotSpec`s can be combined with the `+` operator.
+
+## [0.3.1] - 2025-05-12:TBD
+
+### Fixed
+
+- Added `LegendComp` alias in `LeanPlot.Legend` so existing call-sites (`mkLineChartFull`) compile without change.
+
+### Changed
+
+- None.
+
+### Added
+
+- Documentation update in `TODO.md` ticking off completed items.
