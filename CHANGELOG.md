@@ -150,9 +150,40 @@
 
 ### Changed
 
-- None.
+- LegendProps now supports `layout`, `verticalAlign`, and `align` optional fields for finer control over legend positioning.  Existing call‐sites remain unchanged as these options default to `none`.  (*)
 
 ### Added
 
-- Documentation update in `TODO.md` ticking off completed items.
-- New `LeanPlot.Specification.area` and `.bar` helpers with matching constructors in `PlotSpec` for easy rendering of area and bar charts.
+- Documentation update in `TODO.md`
+
+## [0.3.2] – 2025-05-12:13:27 UTC
+
+### Fixed
+
+- **Correct x-domain sampling in `Components.sample`:** The default sampling
+  interval reverted to `[0,1]`, replacing an erroneous call to `autoDomain`
+  which is meant for **y-axis** heuristics.  The previous behaviour caused
+  the chart to sample x-values in the range of the function's *output*,
+  leading to distorted or empty plots for functions with large magnitude.
+  All Tier-0 helpers (`lineChart`, etc.) now behave as documented again.
+
+### Changed
+
+- Removed the silent dependency on `LeanPlot.AutoDomain` in
+  `LeanPlot.Components`.  The heuristic is still available for future use
+  but no longer misapplied.
+
+## [0.3.3] – 2025-05-13:22:49 UTC
+
+### Added
+
+- **Compile‐time JSON key validation:** new `LeanPlot.AssertKeys` module introducing the `#assert_keys` command.
+  This command evaluates a JSON expression at compile time and fails if the specified keys are missing, preventing malformed literal JSON from slipping into generated artifacts.
+
+### Changed
+
+- N/A
+
+### Fixed
+
+- Removed experimental `aliasA` command prototype to avoid syntax errors in `AssertKeys.lean`.
