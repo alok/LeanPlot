@@ -187,3 +187,12 @@
 ### Fixed
 
 - Removed experimental `aliasA` command prototype to avoid syntax errors in `AssertKeys.lean`.
+
+## [0.3.4] – 2025-05-19:15:32
+
+### Changed
+- Temporarily commented out the `#assert_keys` macro and its elaborator in `LeanPlot.AssertKeys` due to a persistent quasiquotation parsing issue. This ensures project build stability. The feature is not currently used elsewhere and can be revisited.
+- Updated `.gitignore` to include `.DS_Store` files.
+
+### Fixed
+- Removed an empty, untracked directory `LeanPlot/LeanPlot/Demos/` from the repository structure (no functional change as it was empty and likely already ignored or removed from git cache).
