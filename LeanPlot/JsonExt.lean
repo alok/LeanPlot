@@ -1,4 +1,7 @@
 import Lean.Data.Json
+import Lean.Elab.Command
+import Lean.Meta.Reduce
+import Lean.Meta.Tactic.Simp -- Though unused now, it was in the plan, keeping it for now.
 open Lean
 
 /-! # LeanPlot.JsonExt
@@ -62,3 +65,53 @@ instance (j : Lean.Json) (req : Array String) : Decidable (HasKeys j req) := by
   infer_instance
 
 end LeanPlot
+
+/-- Macro to assert that a `Json` object has a specific set of keys at compile time.
+If the assertion fails, a compile-time error is raised.
+
+Example:
+```lean
+def myJson : Json := Json.mkObj [(\"foo\", 1), (\"bar\", \"baz\")]
+-- This assertion passes:
+#assert_keys myJson #[\"foo\", \"bar\"]
+
+-- This assertion would fail at compile time:
+-- #assert_keys myJson #[\"foo\", \"qux\"]
+```
+-/
+syntax (name := assertKeys) "#assert_keys " term:max ppSpace term:max : command
+
+/-- Elaborator for the `#assert_keys` macro. -/
+@[command_elab assertKeys]
+def elabAssertKeys : Elab.Command.CommandElab := fun stx => do
+  match stx with
+  | `(#assert_keys $jsonTerm $keysTerm) => do
+    Elab.Command.liftTermElabM do
+      let jsonExpr ← Elab.Term.elabTerm jsonTerm none
+      let keysExpr ← Elab.Term.elabTerm keysTerm none
+      let jsonType ← Meta.inferType jsonExpr
+      let keysType ← Meta.inferType keysExpr
+      unless (← Meta.isDefEq jsonType (mkConst ``Json)) do
+        throwErrorAt jsonTerm "Expected term of type Json, got {jsonType}"
+
+      -- More robust check for Array String type
+      let stringTypeExpr := mkConst ``String
+      let arrayStringTypeExpected := mkApp (mkConst ``Array) stringTypeExpr
+      unless (← Meta.isDefEq keysType arrayStringTypeExpected) do
+        -- Fallback check if direct isDefEq fails due to metavariables
+        if !(keysType.isAppOfArity ``Array 1 && (← Meta.isDefEq keysType.appArg! stringTypeExpr)) then
+          throwErrorAt keysTerm m!"Expected term of type Array String, got {keysType}"
+
+      let hasKeysProp := mkAppN (mkConst ``LeanPlot.HasKeys) #[jsonExpr, keysExpr]
+      let decidableInst ← Meta.synthInstance (mkApp (mkConst ``Decidable) hasKeysProp)
+      let decidedTerm := mkAppN (mkConst ``decide) #[hasKeysProp, decidableInst]
+
+      let reducedTerm ← Lean.Meta.reduce (skipTypes := false) (skipProofs := false) decidedTerm
+
+      if reducedTerm.isConstOf ``Bool.false then
+        throwError "Compile-time key assertion failed: Json does not have all required keys.\\nJSON: {jsonExpr}\\nKeys: {keysExpr}"
+      else if reducedTerm.isConstOf ``Bool.true then
+        logInfoAt stx m!"Compile-time key assertion succeeded for {jsonExpr} with keys {keysExpr}"
+      else
+        throwError "Could not reduce 'decide (HasKeys ...)' to a boolean literal (true/false). Reduction result: {reducedTerm}"
+  | _ => Lean.Elab.throwUnsupportedSyntax

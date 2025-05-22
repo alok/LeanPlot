@@ -42,6 +42,10 @@ hooks-install:
 overlay:
 	@echo "Open LeanPlot/Demos/OverlayPlot.lean and put cursor on #html overlay"
 
+# Run JsonKeyCheck tests
+test-json-keys:
+	lake exe jsonKeyCheckTest
+
 # Update changelog timestamp
 changelog-update:
 	python - <<'PY'

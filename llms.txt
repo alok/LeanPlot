@@ -378,3 +378,33 @@ Next tasks
 1. Implement `macro "#assert_keys"` that elaborates to `staticAssert!` using `decide (HasKeys …)`.  
 2. Add unit test under `LeanPlot.Test.JsonKeyCheck`.  
 3. Replace manual `keysToCheck` runtime guard in helpers with compile-time assertions where possible. 
+
+NEW_LOG_ENTRY_BELOW
+2025-05-22:07:16 UTC – `#assert_keys` macro implementation and testing
+----------------------------------------------------------------------
+- Implemented the `#assert_keys` macro in `LeanPlot.JsonExt`.
+- Added `Decidable` instance for `LeanPlot.HasKeys`.
+- Created a test suite `LeanPlot.Test.JsonKeyCheck.lean`.
+- Added `jsonKeyCheckTest` executable to `lakefile.toml` and a corresponding `just test-json-keys` command.
+- Iteratively debugged and fixed issues in the macro and test setup, including:
+    - Correcting Lean API usage (`CommandElab`, `reduce`, `logInfoAt`, type checking for `Array String`).
+    - Ensuring the test executable had a `main` function.
+    - Adding missing docstrings.
+- The `keysToCheck` runtime guards are for a different purpose (checking for NaN/Infinity in data values) and are not directly replaceable by `#assert_keys` which checks for key presence in specifications at compile time.
+
+Updated nested checkbox view:
+- [x] Compile-time JSON key check
+  - [x] `Json.keys` helper (placeholder, not strictly needed by current `HasKeys`)
+  - [x] `HasKeys` typeclass + instance
+  - [x] `#assert_keys` macro
+  - [x] Tests
+- [ ] Dependent `SeriesDSpec`
+  - [ ] `SeriesKind` enum
+  - [ ] Detail structs
+  - [ ] `SeriesDSpec` Σ-type
+  - [ ] `RenderFragment` refactor
+  - [ ] Conversion layer
+  - [ ] Demo/documentation update
+
+Next Major Task:
+- Explore dependent `SeriesDSpec` design for heterogeneous layer rendering (as outlined 2025-05-06:10:30 & 2025-05-12:13:35). 

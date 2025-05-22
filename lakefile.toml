@@ -26,6 +26,10 @@ globs = ["LeanPlot.*"]
 name = "leanplot"
 root = "Main"
 
+[[lean_exe]]
+name = "jsonKeyCheckTest"
+root = "LeanPlot.Test.JsonKeyCheck"
+
 [[require]]
 name = "proofwidgets"
 scope = "leanprover-community"

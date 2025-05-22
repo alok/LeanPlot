@@ -198,3 +198,19 @@
 ### Fixed
 
 - Removed an empty, untracked directory `LeanPlot/LeanPlot/Demos/` from the repository structure (no functional change as it was empty and likely already ignored or removed from git cache).
+
+## [0.3.5] – 2025-05-22:07:16
+
+### Added
+
+- **Compile-time JSON Key Assertion Macro (`#assert_keys`)**: Re-introduced and finalized the `#assert_keys` macro in `LeanPlot.JsonExt` (formerly `LeanPlot.AssertKeys`). This macro allows compile-time verification that a given `Json` term contains a specified set of keys.
+  - Includes a `Decidable` instance for `LeanPlot.HasKeys` to support compile-time evaluation.
+  - Test suite `LeanPlot.Test.JsonKeyCheck` added to `lakefile.toml` and `Justfile` to verify macro functionality.
+
+### Changed
+
+- The module `LeanPlot.AssertKeys` was consolidated into `LeanPlot.JsonExt`.
+
+### Fixed
+
+- Resolved several compilation and linker errors related to the `#assert_keys` macro implementation and its test executable, including incorrect type checks, missing `main` function in tests, and linter warnings.
