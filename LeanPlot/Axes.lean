@@ -22,8 +22,10 @@ structure AxisProps where
   /-- How values along this axis should be interpreted. The Recharts default is
   `category`. -/
   type : AxisType := .number
-  /-- Text label for the axis. Appears at the end of the axis by default. -/
-  label? : Option String := none
+  /-- Text label (or full label specification) for the axis. `Option Json` so
+  callers can supply rich objects with rotation/offset metadata. Use
+  `Json.str "my-label"` for plain text. -/
+  label? : Option Json := none
   deriving FromJson, ToJson
 
 /-- See https://recharts.org/en-US/api/XAxis. -/

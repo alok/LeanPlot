@@ -22,7 +22,7 @@
 ### Ergonomics
 - [x] Axis & legend labels support (`LeanPlot.Axis`, `mkLineChartWithLabels`)
 - [x] Legend component wrapper (`LeanPlot.Legend`) + helper `mkLineChartFull`
-- [x] Auto colour palette
+- [x] Auto color palette
 - [x] `#plot` command alias for `#html` (LeanPlot.PlotCommand)
 - [ ] Auto domain inference
 - [ ] Auto axis labels from binder names (metaprogramming extraction of plotting function parameters)
@@ -30,8 +30,8 @@
 ### More chart types
 - [ ] Log / linear scale toggle
 - [ ] Additional chart types
-  - [ ] Area
-  - [ ] Bar
+  - [x] Area
+  - [x] Bar
   - [x] Scatter
 - [ ] Interactive domain sliders / zooming
 

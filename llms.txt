@@ -23,7 +23,7 @@ Sub-tasks:
 1. API surface
    1.1 Decide module: `LeanPlot.API` (re-export helpers)?
    1.2 Define `lineChart : (Float → β) → Html` with implicits:
-       • default N = 200, range = auto, colours = auto, size 400×300.
+       • default N = 200, range = auto, colors = auto, size 400×300.
    1.3 Provide `scatterChart : Array (Float × Float) → Html` with same defaults.
 
 2. Implementation plumbing
@@ -32,7 +32,7 @@ Sub-tasks:
        – naive: collect first 100 sample pts on [-1,1]; take min/max; widen 5 %.
    2.3 Wrapper simply maps to existing `mkLineChart`.
 
-3. Colour defaults
+3. Color defaults
    3.1 Expose `Palette.defaultPalette.head!` for single-series stroke.
 
 4. Size defaults
@@ -58,8 +58,8 @@ Sub-tasks:
 2025-05-03:07:14 UTC – Nested checkbox view
 ------------------------------------------------
 - [ ] Tier-0 chart wrappers
-  - [ ] `lineChart` wrapper (defaults N, domain, colours, size)
-  - [ ] `scatterChart` wrapper (defaults size, colours)
+  - [ ] `lineChart` wrapper (defaults N, domain, colors, size)
+  - [ ] `scatterChart` wrapper (defaults size, colors)
 - [ ] Core plumbing
   - [ ] Extend `sample` to accept optional domain
   - [ ] Implement `autoDomain` helper
@@ -83,20 +83,20 @@ Sub-tasks:
 --------------------------------------------------------
 • Implemented `LeanPlot.Constants` with `defaultW`/`defaultH`.
 • Added `LeanPlot.API` with `lineChart` and (stub) `scatterChart` helpers.
-• `Palette.autoColours` in place; zero-config colours working.
+• `Palette.autoColors` in place; zero-config colors working.
 • Demos still reference old constructors; migration pending.
 
 Updated nested checkbox view
 - [x] Tier-0 chart wrappers
-  - [x] `lineChart` wrapper (defaults N, domain, colours, size)
-  - [x] `scatterChart` wrapper (defaults size, colours)  <!-- stub for now -->
+  - [x] `lineChart` wrapper (defaults N, domain, colors, size)
+  - [x] `scatterChart` wrapper (defaults size, colors)  <!-- stub for now -->
 - [x] Core plumbing
   - [x] Extend `sample` to accept optional domain
   - [x] Implement `autoDomain` helper
   - [x] Wire wrappers to `mkLineChart` (Done for `lineChart` via `sample`)
 - [x] Constants & palette
   - [x] `LeanPlot.Constants` with `defaultW`, `defaultH`
-  - [x] Expose `Palette.defaultPalette.head!` via `autoColours`
+  - [x] Expose `Palette.defaultPalette.head!` via `autoColors`
 - [ ] Documentation & demos
   - [ ] README quick-start snippet updated
   - [x] `LeanPlot.Demos.CubicDemo` (Tier-0 usage)
@@ -306,3 +306,75 @@ Next tasks:
 1. Investigate compile-time JSON key check via `Decide` and `Lean.Meta.eval`.
 2. Explore dependent `SeriesDSpec` design for heterogeneous layer rendering.
 3. Add Recharts `Legend` props (layout, verticalAlign) to `LegendProps`. 
+
+2025-05-12:13:30 UTC – Compile-time JSON key check design
+----------------------------------------------------------
+• Brainstorm compile-time validation: Provide `Decide JSONKeyExists` typeclass that uses reflection to inspect `PlotSpec` generated JSON fields at compile time and assert presence of required keys.
+• Approach: Leverage `Lean.Expr` evaluation via `Lean.Meta.evalExpr` to compute `PlotSpec.toJson` at elaboration phase; then traverse resulting `Json` object.
+• Failure mode: raise `panic!` or emit `warning` level lint.
+• Integrate into existing linter pipeline (`just linter`).
+
+Immediate action items:
+  - [ ] Define `Json.keys` helper returning `Array String`.
+  - [ ] Implement `class HasKeys (α) (req : Array String) : Prop` along with `decide` instance using meta eval.
+  - [ ] Write macro `#assert_keys` for DSL convenience: `#assert_keys plotSpec ["x", "y"]`.
+  - [ ] Add unit test in `LeanPlot.Test.JsonKeyCheck`.
+
+2025-05-12:13:35 UTC – Dependent `SeriesDSpec` prototype path
+-------------------------------------------------------------
+• Adopt Σ-type approach outlined on 2025-05-06:10:30; refactor to enable heterogeneous series polymorphism.
+• Tasks breakdown:
+  1. [ ] Introduce `SeriesKind` enum (`line | scatter | bar`).
+  2. [ ] Define detail structs `LineSeriesDetails`, `ScatterSeriesDetails`, ...
+  3. [ ] Implement `SeriesDSpec` with dependent `details` field.
+  4. [ ] Refactor `RenderFragment` typeclass to depend on `SeriesKind`.
+  5. [ ] Provide conversion layer from legacy `LayerSpec` to `SeriesDSpec`.
+  6. [ ] Update demos and documentation.
+
+Pending decisions:
+• Whether to maintain `LayerSpec` as primary API or fully migrate to dependent approach.
+• Establish derivation helpers to keep API ergonomic.
+
+Updated nested checkbox view
+- [ ] Compile-time JSON key check
+  - [ ] `Json.keys` helper
+  - [ ] `HasKeys` typeclass + instance
+  - [ ] `#assert_keys` macro
+  - [ ] Tests
+- [ ] Dependent `SeriesDSpec`
+  - [ ] `SeriesKind` enum
+  - [ ] Detail structs
+  - [ ] `SeriesDSpec` Σ-type
+  - [ ] `RenderFragment` refactor
+  - [ ] Conversion layer
+  - [ ] Demo/documentation update 
+
+NEW_LOG_ENTRY_BELOW
+2025-05-12:15:22 UTC – Roadmap ranking & compile-time key check groundwork
+--------------------------------------------------------------------------
+• **Ranking of improvement avenues (highest leverage first)**
+  1. Ergonomics & API design – keep first-touch experience friction-free.
+  2. Compile-time validation & safety – fail fast, eliminate whole class of runtime errors.
+  3. Tooling & DX – shorten feedback loops (`just watch`, pre-commit hooks).
+  4. Documentation & learning materials – accelerate onboarding & adoption.
+  5. Extensibility architecture – third-party back-ends / data sources.
+  6. Visual features – interactions, responsive layout, theming.
+  7. Performance & footprint – compile-time pre-computation, caching.
+  8. Data-oriented features – DataFrame bridge, streaming plots.
+
+• **Started work on item #2 (compile-time validation):**
+  – Added `jsonHasKeys` boolean helper and propositional `HasKeys` in `LeanPlot.JsonExt`.
+  – Stubbed `Json.keys` placeholder (not currently required since `jsonHasKeys` uses `getObjVal?`).
+  – Provided `Decidable` instance so users can write `decide (HasKeys j #[…])`.
+
+Updated nested checkbox view
+- [x] Compile-time JSON key check
+  - [x] `Json.keys` helper (placeholder for now)
+  - [x] `HasKeys` typeclass + instance
+  - [ ] `#assert_keys` macro
+  - [ ] Tests
+
+Next tasks
+1. Implement `macro "#assert_keys"` that elaborates to `staticAssert!` using `decide (HasKeys …)`.  
+2. Add unit test under `LeanPlot.Test.JsonKeyCheck`.  
+3. Replace manual `keysToCheck` runtime guard in helpers with compile-time assertions where possible. 

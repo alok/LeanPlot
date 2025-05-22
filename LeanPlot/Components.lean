@@ -30,11 +30,16 @@ namespace LeanPlot.Components
 converted to a JavaScript-friendly `Float` for serialisation. -/
 @[inline] def sample {β} [ToFloat β]
   (f : Float → β) (steps : Nat := 200) (domainOpt : Option (Float × Float) := none) : Array Json :=
+  -- Decide on the **x‐domain** to sample.
+  -- • If the caller supplies an explicit `domainOpt` we honour it.
+  -- • Otherwise we fall back to the canonical unit interval `[0,1]` used
+  --   by Tier-0 helpers.  The earlier implementation mistakenly delegated
+  --   to `autoDomain`, which is intended for **y-axis** heuristics and
+  --   therefore produced misleading samples when the codomain of `f`
+  --   had large magnitude.
   let (minVal, maxVal) : Float × Float := match domainOpt with
     | some (minD, maxD) => (minD, maxD)
-    | none =>
-      if steps == 0 then (0.0, 1.0) -- Default for zero steps if autoDomain isn't ideal
-      else autoDomain f steps
+    | none => (0.0, 1.0)
   if steps == 0 then
     #[] -- Return empty array if steps is zero
   else
@@ -67,8 +72,8 @@ Turn an array of JSON rows into a Recharts line chart.
 @[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
   let chartHtml :=
     <LineChart width={w} height={h} data={data}>
-      <XAxis dataKey?="x" />
-      <YAxis />
+      <LeanPlot.Axis.XAxis dataKey?="x" />
+      <LeanPlot.Axis.YAxis />
       {... seriesStrokes.map (fun (name, color) =>
         <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
     </LineChart>
@@ -86,10 +91,14 @@ Turn an array of JSON rows into a Recharts line chart.
     (seriesStrokes : Array (String × String))
     (xLabel? : Option String := none) (yLabel? : Option String := none)
     (w h : Nat := 400) : Html :=
-  let chartHtml :=
+  let xLabelJson? : Option Json := xLabel?.map fun l => (json% $l)
+  let yLabelJson? : Option Json := yLabel?.map fun l =>
+    json% { value: $l, angle: -90, position: "left" }
+
+  let chartHtml : Html :=
     <LineChart width={w} height={h} data={data}>
-      <XAxis dataKey?="x" label?={xLabel?} />
-      <YAxis label?={yLabel?} />
+      <LeanPlot.Axis.XAxis dataKey?="x" label?={xLabelJson?} />
+      <LeanPlot.Axis.YAxis label?={yLabelJson?} />
       {... seriesStrokes.map (fun (name, color) =>
         <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
     </LineChart>
@@ -112,10 +121,18 @@ plots.
     (seriesStrokes : Array (String × String))
     (xLabel? : Option String := none) (yLabel? : Option String := none)
     (w h : Nat := 400) : Html :=
+  let xLabelJson? : Option Json := xLabel?.map Json.str
+  let yLabelJson? : Option Json := yLabel?.map fun l =>
+    Json.mkObj [
+      ("value", Json.str l),
+      ("angle", toJson (-90.0)),
+      ("position", Json.str "left")
+    ]
+
   let chartHtml :=
     <LineChart width={w} height={h} data={data}>
-      <XAxis dataKey?="x" label?={xLabel?} />
-      <YAxis label?={yLabel?} />
+      <LeanPlot.Axis.XAxis dataKey?="x" label?={xLabelJson?} />
+      <LeanPlot.Axis.YAxis label?={yLabelJson?} />
       <LegendComp />
       {...
         seriesStrokes.map (fun (name, color) =>
@@ -171,8 +188,8 @@ dots instead of a line.  The point color is supplied via `fillColor`.
     (w h : Nat := 400) : Html :=
   let chartHtml :=
     <ScatterChart width={w} height={h} data={data}>
-      <XAxis dataKey?="x" />
-      <YAxis />
+      <LeanPlot.Axis.XAxis dataKey?="x" />
+      <LeanPlot.Axis.YAxis />
       <Scatter dataKey={Json.str "y"} fill={fillColor} />
     </ScatterChart>
 
@@ -207,12 +224,14 @@ structure AreaChartProps where
   «export»   := "AreaChart"
 
 /-- Props for a Recharts `<Area>` series.  We expose the usual `dataKey`,
-`fill` and `stroke` colours.  Additional Recharts props can be added later. -/
+`fill` and `stroke` colors.  Additional Recharts props can be added later. -/
 structure AreaProps where
+  /-- Which field of the JSON row encodes the y-value to plot. Defaults to
+  `"y"`. -/
   dataKey : Json := Json.str "y"
-  /-- Fill colour of the area. -/
+  /-- Fill color of the area. -/
   fill    : String
-  /-- Stroke colour of the area border.  Defaults to the same as `fill`. -/
+  /-- Stroke color of the area border.  Defaults to the same as `fill`. -/
   stroke  : String := ""
   deriving FromJson, ToJson
 
@@ -223,8 +242,11 @@ structure AreaProps where
 
 /-- Props for a Recharts `<BarChart>`. -/
 structure BarChartProps where
+  /-- Width of the SVG container in pixels. -/
   width  : Nat
+  /-- Height of the SVG container in pixels. -/
   height : Nat
+  /-- Dataset array. -/
   data   : Array Json
   deriving FromJson, ToJson
 
@@ -235,7 +257,10 @@ structure BarChartProps where
 
 /-- Props for a Recharts `<Bar>` series. -/
 structure BarProps where
+  /-- Which field of the JSON row encodes the y-value to plot. Defaults to
+  `"y"`. -/
   dataKey : Json := Json.str "y"
+  /-- CSS color for the bars. -/
   fill    : String
   deriving FromJson, ToJson
 
@@ -243,5 +268,27 @@ structure BarProps where
 @[inline] def Bar : ProofWidgets.Component BarProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "Bar"
+
+/--
+Turn an array of JSON rows into a Recharts **bar chart** containing a single
+series named `y`.  The helper mirrors `mkScatterChart` but renders bars instead
+of dots.  The bar color is supplied via `fillColor`.
+-/
+@[inline] def mkBarChart (data : Array Json) (fillColor : String)
+    (w h : Nat := 400) : Html :=
+  let chartHtml :=
+    <BarChart width={w} height={h} data={data}>
+      <LeanPlot.Axis.XAxis dataKey?="x" />
+      <LeanPlot.Axis.YAxis />
+      <Bar dataKey={Json.str "y"} fill={fillColor} />
+    </BarChart>
+
+  let keysToCheck := #["x", "y"]
+  if jsonDataHasInvalidFloats data keysToCheck then
+    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := WarningBanner warningProps
+    .element "div" #[] #[warningHtml, chartHtml]
+  else
+    chartHtml
 
 end LeanPlot.Components

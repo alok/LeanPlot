@@ -11,11 +11,16 @@ lintDriver = "batteries/runLinter"
 
 [leanOptions]
 pp.unicode.fun = true
+autoImplicit = true
+relaxedAutoImplicit = false
 linter.missingDocs = true
+# AGENT: make this true for essentially a compiler-generated TODO list.
+warningAsError = false
 
 
 [[lean_lib]]
 name = "LeanPlot"
+globs = ["LeanPlot.*"]
 
 [[lean_exe]]
 name = "leanplot"
@@ -23,10 +28,8 @@ root = "Main"
 
 [[require]]
 name = "proofwidgets"
-git = "https://github.com/leanprover-community/ProofWidgets4.git"
-rev = "v0.0.57"
+scope = "leanprover-community"
 
 [[require]]
 name = "verso"
-git = "https://github.com/leanprover/verso.git"
-rev = "main"
+scope = "leanprover"

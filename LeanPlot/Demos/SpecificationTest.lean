@@ -1,6 +1,6 @@
 import LeanPlot
-import LeanPlot.Utils -- For Float.pi if not already available
-
+import LeanPlot.Constants
+open LeanPlot.Constants
 open LeanPlot
 
 -- Test Case 1: Simple Line Plot (y = x^2)
@@ -17,7 +17,7 @@ def scatterPointsSpec : PlotSpec :=
 
 -- Test Case 3: Customized Line Plot (y = sin x)
 def sineWaveSpec : PlotSpec :=
-  let pi := LeanPlot.Utils.Float.pi -- Assuming pi is in LeanPlot.Utils or accessible
+  let pi := Float.pi -- Assuming pi is in LeanPlot.Utils or accessible
   (line (fun x => Float.sin x) (name := "sin(x)") (domainOpt := some (0, 2 * pi)) (color := some "#0074D9"))
     |> PlotSpec.withTitle "Sine Wave"
     |> PlotSpec.withXLabel "Angle (radians)"

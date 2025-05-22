@@ -1,3 +1,4 @@
+import Lean
 import LeanPlot
 
 /--
@@ -8,3 +9,4 @@ binary wiring works correctly.
 
 def main : IO Unit :=
   IO.println s!"Hello, {hello}!"
+

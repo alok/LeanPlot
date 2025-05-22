@@ -1,46 +1,28 @@
 # LeanPlot
 
-LeanPlot is a **tiny plotting wrapper for Lean 4's [`ProofWidgets4`](https://github.com/leanprover-community/ProofWidgets4) ecosystem**.  It lets you write Lean code that produces interactive charts—rendered directly in VS Code's infoview—using the rich [Recharts](https://recharts.org) React library.
+<p align="center">
+  <img src="docs/img/line_y_equals_x.png" width="220" alt="Line y = x">
+  <img src="docs/img/quadratic_y_equals_x2.png" width="220" alt="Quadratic y = x²">
+  <img src="docs/img/overlay_yx_and_x2.png" width="220" alt="Overlay of y = x and y = x²">
+</p>
 
-The goal is to grow a _grammar-of-graphics_ style API over time.  For now we provide convenience helpers around the most common use-cases: sampling Lean functions and visualising the result as line charts.
-
----
-
-## ✨ Features (0.2.x)
-## Legacy features (0.2.x – superseded)
-
-* **Tier-0 zero-config helpers** `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function *or* an array of points to an interactive plot with **one line of Lean**.
-* **Composable graphics algebra** – build plots from smaller pieces and overlay them with the ordinary `+` operator:
-  ```lean
-  import LeanPlot.Algebra; open LeanPlot.Algebra
-
-  #plot (line "y"  (fun x ↦ x) +
-         line "y²" (fun x ↦ x*x))
-  ```
-* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
-* `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
-* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, area, bar).
-
-## ✨ Features (0.3.x-alpha)
-
-* **Tier-0 zero-config helpers** `LeanPlot.API.lineChart` and `scatterChart` – go from a Lean function *or* an array of points to an interactive plot with **one line of Lean**.
-* **Composable graphics algebra** – build plots from smaller pieces and overlay them with the ordinary `+` operator *or* the explicit `PlotSpec.stack` helper:
-  ```lean
-  import LeanPlot.Algebra; open LeanPlot.Algebra
-
-  #plot (line "y"  (fun x ↦ x) +
-         line "y²" (fun x ↦ x*x))
-  ```
-* **Layered specification language** – low-level `PlotSpec` API for fine-grained control; new `overlay`/`stack` combinators let you combine two `PlotSpec`s just like higher-level plots.
-* `sample` / `sampleMany` – lower-level helpers to uniformly sample functions on an interval (works for any codomain that has a `[ToFloat]` instance).
-* `mkLineChart` / `mkScatterChart` – escape hatches that let you customise every Recharts prop once you outgrow Tier-0.
-* Ready-to-run demos under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, area, bar, **stack**).
+LeanPlot turns Lean 4 code into **interactive, React-powered charts that render right inside VS Code's infoview**.  Built on top of [ProofWidgets4](https://github.com/leanprover-community/ProofWidgets4) and [Recharts](https://recharts.org), it lets you inspect functions and data visually while you prove.
 
 ---
 
-## 📦 Installation
+## ✨ Key features
 
-Add LeanPlot as a dependency in your project's `lakefile.toml`:
+* **One-liner helpers `lineChart` / `scatterChart`** – produce a plot from a Lean function or an array of points with zero configuration.
+* **Composable graphics algebra** – overlay or stack plots with the `+` operator or `PlotSpec.stack`.
+* **Layered API** – start at the high level and drop down to `PlotSpec` or the raw Recharts props whenever you need fine-grained control.
+* **Sampling utilities** – `sample` / `sampleMany` uniformly sample any codomain that implements `[ToFloat]`.
+* **Demo gallery** – ready-to-run examples under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, stack, bar, area…).
+
+---
+
+## 🏗 Installation
+
+Add LeanPlot to your project's `lakefile.toml`:
 
 ```toml
 [[require]]
@@ -48,27 +30,27 @@ name = "LeanPlot"
 url = "https://github.com/alok/LeanPlot"
 ```
 
-or in `lakefile.lean`:
+or to `lakefile.lean`:
 
 ```lean
 require LeanPlot from git
   "https://github.com/alok/LeanPlot" @ "main"
 ```
 
-Then run:
+Then fetch and build the deps:
 
 ```bash
 lake update
 lake build
 ```
 
-Make sure you have node/npm installed—the ProofWidgets build will take care of JS bundling automatically.
+(You'll need `node`/`npm` on your PATH – ProofWidgets handles the bundling automatically.)
 
 ---
 
 ## 🚀 Quick start
 
-Open a `.lean` file in VS Code with the infoview visible and paste:
+Create a new `.lean` file, open the infoview, and paste:
 
 ```lean
 import LeanPlot.Algebra
@@ -76,50 +58,37 @@ import LeanPlot.Algebra
 open LeanPlot.Algebra
 
 #plot (
-  line "y"  (fun x : Float ↦ x)
-  + -- '+' is an alias for `PlotSpec.stack`, overlaying the two plots
+  line "y"  (fun x : Float ↦ x) +
   line "y²" (fun x ↦ x*x)
 )
 ```
 
-You should see two series rendered in a single interactive chart.
-
-## 📸 Screenshots
-
-![Line chart (y = x)](docs/img/line_y_equals_x.png)
-
-![Quadratic chart (y = x²)](docs/img/quadratic_y_equals_x2.png)
-
-![Overlay chart (y = x and y = x²)](docs/img/overlay_yx_and_x2.png)
+Hover over `#plot` and you'll see an interactive chart with two series.
 
 ---
 
 ## 🏟 Demo gallery
 
-See `Gallery.md` for the roadmap of examples we plan to support.  The following are already available:
+* `LeanPlot.Demos.LinearDemo`     – `y = x`
+* `LeanPlot.Demos.QuadraticDemo`  – `y = x²`
+* `LeanPlot.Demos.CubicDemo`      – `y = x³`
+* `LeanPlot.Demos.OverlayDemo`    – overlay of `y = x` and `y = x²`
+* `LeanPlot.Demos.StackDemo`      – stacking via `+` and `PlotSpec.stack`
 
-* `LeanPlot.Demos.LinearDemo`   – `y = x`
-* `LeanPlot.Demos.QuadraticDemo` – `y = x²`
-* `LeanPlot.Demos.CubicDemo`    – `y = x³`
-* `LeanPlot.Demos.OverlayDemo`  – overlay of `y = x` and `y = x²`
-* `LeanPlot.Demos.StackDemo`   – stacking/overlay via `+` and `stack` helpers
-
-Run them by putting your cursor over the `#html` command in each file.
+Open any demo and hover the `#html` command to run it.
 
 ---
 
 ## 🛠 Development
 
 ```bash
-just build        # = lake build
-just linter       # run Std.Tactic.Lint (setup WIP)
-just docs         # regenerate docs (TBD)
+just build   # lake build
+just linter  # run Std.Tactic.Lint (WIP)
+just docs    # regenerate docs (TBD)
 ```
 
-Contributions welcome!  Check the TODO list and open a PR or issue.
-
----
+Contributions welcome – check `TODO.md` and open an issue or PR.
 
 ## 📄 License
 
-LeanPlot is released under the Apache License, Version 2.0.  See `LICENSE.txt` for details.
+LeanPlot is released under the Apache License 2.0; see `LICENSE` for details.

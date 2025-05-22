@@ -11,4 +11,4 @@ When you are **debugging a new chart component** or tweaking visual details, gen
 * Save images under `docs/img/` with the naming scheme `<Module>-<Feature>-<step>.png`.
 * Link the snapshot from the relevant Markdown docs (e.g. [`README.md`](mdc:README.md) or [`Gallery.md`](mdc:Gallery.md)) so future contributors can see the before/after.
 
-This practice helps catch off-by-one pixel issues and colour-palette regressions that are hard to notice in the live preview alone.
+This practice helps catch off-by-one pixel issues and color-palette regressions that are hard to notice in the live preview alone.

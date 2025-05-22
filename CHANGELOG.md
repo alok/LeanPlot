@@ -69,7 +69,7 @@
 
 ### Changed
 
-- Palette helpers now expose `colourFor` for single series selection.
+- Palette helpers now expose `colorFor` for single series selection.
 
 ### Fixed
 
@@ -82,7 +82,7 @@
 - Introduced `LeanPlot.Core` with the general `Render`, `Layer`, `Plot` abstractions.
 - Added low-priority generic `HAdd` instance that overlays any `[ToPlot]` values via `Plot.overlay`.
 - Migrated `LeanPlot.Algebra` to these abstractions, deleting duplicated `Render`/`CoeTC` and bespoke `HAdd`.
-- `LinePlot` now only provides a `[ToLayer]` instance and inherits `+` overlay behaviour from the core instance.
+- `LinePlot` now only provides a `[ToLayer]` instance and inherits `+` overlay behavior from the core instance.
 
 ## [0.2.2] – 2025-05-07:19:00
 
@@ -162,7 +162,7 @@
 
 - **Correct x-domain sampling in `Components.sample`:** The default sampling
   interval reverted to `[0,1]`, replacing an erroneous call to `autoDomain`
-  which is meant for **y-axis** heuristics.  The previous behaviour caused
+  which is meant for **y-axis** heuristics.  The previous behavior caused
   the chart to sample x-values in the range of the function's *output*,
   leading to distorted or empty plots for functions with large magnitude.
   All Tier-0 helpers (`lineChart`, etc.) now behave as documented again.
@@ -191,8 +191,10 @@
 ## [0.3.4] – 2025-05-19:15:32
 
 ### Changed
+
 - Temporarily commented out the `#assert_keys` macro and its elaborator in `LeanPlot.AssertKeys` due to a persistent quasiquotation parsing issue. This ensures project build stability. The feature is not currently used elsewhere and can be revisited.
 - Updated `.gitignore` to include `.DS_Store` files.
 
 ### Fixed
+
 - Removed an empty, untracked directory `LeanPlot/LeanPlot/Demos/` from the repository structure (no functional change as it was empty and likely already ignored or removed from git cache).

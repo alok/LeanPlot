@@ -17,7 +17,7 @@ namespace LeanPlot.PlotCommand
 open Lean Server ProofWidgets
 
 /-- Any term `t` that can be evaluated to `Html` (via `ProofWidgets.HtmlEval`)
-can be displayed with `#plot t`.  This mirrors the behaviour of `#html`. -/
+can be displayed with `#plot t`.  This mirrors the behavior of `#html`. -/
 syntax (name := plotCmd) "#plot " term : command
 
 open Elab Command ProofWidgets.HtmlCommand in

@@ -19,7 +19,7 @@ Put your cursor on the `#plot` line to render. -/
 def linearPlotSpecification : PlotSpec :=
   withXLabel
     (withTitle
-      (line (fun x => x) (name := "y=x")) -- Added name for clarity on y-axis
+      (line (fun x => x) (name := "y=x")) 
       "Linear Function (y=x)")
     "Input (x)"
 

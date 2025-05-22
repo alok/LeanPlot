@@ -59,9 +59,12 @@ Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
   -- Assign a color for the single series "y" using the default palette.
   let seriesStrokes := LeanPlot.Palette.autoColors #["y"]
 
+  let xLabelJson : Json := json% "x"
+  let yLabelJson : Json := json% { value: "y", angle: -90, position: "left" }
+
   (<LineChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" label?="x" />
-    <YAxis dataKey?="y" label?="y" />
+    <XAxis dataKey?="x" label?={some xLabelJson} />
+    <YAxis dataKey?="y" label?={some yLabelJson} />
     {... seriesStrokes.map (fun (name, color) =>
       <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
   </LineChart>)

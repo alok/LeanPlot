@@ -17,6 +17,7 @@ open Lean ProofWidgets ProofWidgets.Recharts LeanPlot.Constants
 open LeanPlot -- For WarningBannerProps, WarningBanner, Render
 open LeanPlot.Utils -- For jsonDataHasInvalidFloats
 open LeanPlot.Legend (Legend) -- Open Legend for direct use
+open LeanPlot.Components (BarChart AreaChart)
 open scoped ProofWidgets.Jsx -- This enables JSX syntax
 namespace LeanPlot
 
@@ -95,7 +96,7 @@ def line {β} [ToFloat β]
   let (minVal, maxVal) : Float × Float :=
     match domainOpt with
     | some d => d
-    | none   => if steps == 0 then (0.0,1.0) else LeanPlot.AutoDomain.autoDomain fn steps
+    | none   => (-1.0, 1.0)
 
   let data : Array Json :=
     if steps == 0 then #[] else
@@ -139,6 +140,102 @@ def scatter (points : Array (Float × Float)) (name : String := "y")
     xAxis     := some { dataKey := "x", label := some "x" }, -- Default x-axis label
     yAxis     := some { dataKey := "y", label := some name },
     legend    := !(name == "y")
+  }
+
+/-- Construct a bar chart from an array of points.
+Each tuple encodes an `(x,y)` pair which will be converted to the
+`{x := _, y := _}` JSON objects expected by Recharts. -/
+@[inline]
+def bar (points : Array (Float × Float)) (name : String := "y")
+  (color : Option String := none) : PlotSpec :=
+  let data := LeanPlot.API.xyArrayToJson points
+  let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
+  {
+    chartData := data,
+    series := #[{
+      name      := name,
+      dataKey   := "y", -- `xyArrayToJson` produces objects with `y` by default
+      color     := seriesColor,
+      type      := "bar"
+    }],
+    xAxis     := some { dataKey := "x", label := some "x" },
+    yAxis     := some { dataKey := "y", label := some name },
+    legend    := !(name == "y")
+  }
+
+/-- Construct an area chart from a function. -/
+@[inline]
+def area {β} [ToFloat β]
+  (fn : Float → β) (name : String := "y") (steps : Nat := 200)
+  (domainOpt : Option (Float × Float) := none)
+  (color : Option String := none) : PlotSpec :=
+  let (minVal, maxVal) : Float × Float :=
+    match domainOpt with
+    | some d => d
+    | none   => (-1.0, 1.0)
+
+  let data : Array Json :=
+    if steps == 0 then #[] else
+      (List.range (steps.succ)).toArray.map fun i =>
+        let x : Float := minVal + (maxVal - minVal) * i.toFloat / steps.toFloat
+        let y : β := fn x
+        Json.mkObj [
+          ("x", toJson x),
+          (name, toJson (toFloat y))
+        ]
+
+  let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
+  {
+    chartData := data,
+    series := #[{
+      name      := name,
+      dataKey   := name,
+      color     := seriesColor,
+      type      := "area"
+    }],
+    xAxis     := some { dataKey := "x", label := some "x" },
+    yAxis     := some { dataKey := name, label := some name },
+    legend    := true
+  }
+
+/-- Construct a multi-line chart from several functions sampled on a common domain.
+Each `(name, fn)` pair becomes its own series. The colors are automatically
+assigned from the default palette unless `colors?` is provided. -/
+@[inline]
+def lines {β} [Inhabited β] [ToFloat β]
+  (fns : Array (String × (Float → β)))
+  (steps : Nat := 200)
+  (domainOpt : Option (Float × Float) := none)
+  (colors? : Option (Array String) := none) : PlotSpec :=
+  let (minVal, maxVal) : Float × Float :=
+    match domainOpt with
+    | some d => d
+    | none   => (-1.0, 1.0)
+  let data : Array Json :=
+    if steps == 0 then #[] else
+      LeanPlot.Components.sampleMany fns steps minVal maxVal
+  -- Determine colors
+  let chosenColors : Array String :=
+    match colors? with
+    | some cs =>
+      if cs.size >= fns.size then cs
+      else
+        cs ++ (List.range (fns.size - cs.size)).toArray.map (fun i => LeanPlot.Palette.colorFromNat (cs.size + i))
+    | none => (List.range fns.size).toArray.map LeanPlot.Palette.colorFromNat
+  let seriesArr : Array LayerSpec :=
+    (List.range fns.size).toArray.map fun idx =>
+      let (name, _) := fns[idx]!; {
+        name      := name,
+        dataKey   := name,
+        color     := chosenColors[idx]!,
+        type      := "line"
+      : LayerSpec }
+  {
+    chartData := data,
+    series    := seriesArr,
+    xAxis     := some { dataKey := "x", label := some "x" },
+    yAxis     := none, -- let Recharts auto-label or user can set later
+    legend    := true
   }
 
 -- Combinators
@@ -227,6 +324,7 @@ instance : HAdd PlotSpec PlotSpec PlotSpec where
   hAdd := overlay
 
 -- Renderer Typeclass
+
 /-- A typeclass for rendering a layer specification into HTML. -/
 class RenderFragment (α : Type) where
   /-- Renders a layer specification into HTML.
@@ -237,12 +335,10 @@ class RenderFragment (α : Type) where
 /-- Deprecated: Use `RenderFragment` instead. -/
 abbrev RenderSeries (α : Type) := RenderFragment α
 
--- Default instance for LayerSpec using its `type` field.
--- This moves the old if/else logic into the typeclass instance.
+-- Default instance for `LayerSpec` dispatching on its `type` field.
 instance : RenderFragment LayerSpec where
-  render (s : LayerSpec) (_allChartData : Array Json) : Html := -- _allChartData often unused here
+  render (s : LayerSpec) (_allChartData : Array Json) : Html :=
     if s.type == "line" then
-
       (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some (s.dot.getD false)} /> : Html)
     else if s.type == "scatter" then
       let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
@@ -256,67 +352,106 @@ instance : RenderFragment LayerSpec where
     else
       (Html.text s!"Unsupported series type: {s.type}" : Html)
 
-/-- Instance to demonstrate polymorphism. Does not render a meaningful axis yet. -/
 instance : RenderFragment AxisSpec where
   render (_ax : AxisSpec) (_allChartData : Array Json) : Html := (Html.text "AxisSpec Fragment (dummy)" : Html)
 
--- Main Plot Renderer
--- This is a complex part, converting the spec to Recharts JSX
--- For now, we can adapt the existing mkLineChartFull or similar logic
-
-/-- Render the plot. -/
-@[inline]
-def render (spec : PlotSpec) : Html :=
+/-- Render the plot according to its `PlotSpec`. -/
+@[inline] def render (spec : PlotSpec) : Html :=
   let chartComponents := spec.series.map fun s =>
-    RenderFragment.render s spec.chartData -- Use the typeclass instance
-
+    RenderFragment.render s spec.chartData
   let xAxisHtml := match spec.xAxis with
     | some ax =>
-      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := some (toJson ax.dataKey), domain? := ax.domain, label? := ax.label, type := .number }
+      let label? : Option Json := ax.label.map Json.str
+      let axProps : LeanPlot.Axis.AxisProps := {
+        dataKey? := some (toJson ax.dataKey),
+        domain? := ax.domain,
+        label? := label?,
+        type := .number
+      }
       (<LeanPlot.Axis.XAxis {...axProps} /> : Html)
     | none => (Html.text "" : Html)
 
+  -- Rotate the Y-axis label by –90 ° and place it to the left of the tick labels
   let yAxisHtml := match spec.yAxis with
     | some ax =>
-      let axProps : LeanPlot.Axis.AxisProps := { dataKey? := some (toJson ax.dataKey), domain? := ax.domain, label? := ax.label, type := .number }
+      let labelJson? : Option Json := ax.label.map fun l =>
+        Json.mkObj [
+          ("value", Json.str l),
+          ("angle", toJson (-90.0)),
+          ("position", Json.str "left")
+        ]
+      let axProps : LeanPlot.Axis.AxisProps := {
+        dataKey? := some (toJson ax.dataKey),
+        domain? := ax.domain,
+        label? := labelJson?,
+        type := .number
+      }
       (<LeanPlot.Axis.YAxis {...axProps} /> : Html)
     | none => (Html.text "" : Html)
 
   let legendHtml := if spec.legend then (<Legend /> : Html) else (Html.text "" : Html)
 
-  let mainChartComponent :=
-    -- Always use LineChart as the main container, it can host Scatter series too.
-    (<LineChart width={spec.width} height={spec.height} data={spec.chartData}>
-      {xAxisHtml}
-      {yAxisHtml}
-      {legendHtml}
-      {... chartComponents}
-    </LineChart> : Html)
+  /-
+  Choose an appropriate Recharts *chart container* depending on the
+  kinds of series contained in `spec.series`.
+
+  • If **all** layers are of type `"bar"` we use `<BarChart>`.
+  • Else if all layers are of type `"area"` we use `<AreaChart>`.
+  • Otherwise we fall back to `<LineChart>` which handles lines and
+    scatters fine.
+
+  NOTE: A more complete solution would select `ComposedChart` when we
+  eventually add a Lean wrapper, but this heuristic gets all current
+  demos working (simple bar charts now show their bars).
+  -/
+
+  let allAre (t : String) : Bool := spec.series.all (fun s => s.type == t)
+
+  let mainChartComponent : Html :=
+    if allAre "bar" then
+      (<BarChart width={spec.width} height={spec.height} data={spec.chartData}>
+        {xAxisHtml}
+        {yAxisHtml}
+        {legendHtml}
+        {... chartComponents}
+      </BarChart> : Html)
+    else if allAre "area" then
+      (<AreaChart width={spec.width} height={spec.height} data={spec.chartData}>
+        {xAxisHtml}
+        {yAxisHtml}
+        {legendHtml}
+        {... chartComponents}
+      </AreaChart> : Html)
+    else
+      (<LineChart width={spec.width} height={spec.height} data={spec.chartData}>
+        {xAxisHtml}
+        {yAxisHtml}
+        {legendHtml}
+        {... chartComponents}
+      </LineChart> : Html)
 
   let finalHtml := match spec.title with
-    | some t =>
-      (<div><h4>{Html.text t}</h4>{mainChartComponent}</div> : Html)
+    | some t => (<div><h4>{Html.text t}</h4>{mainChartComponent}</div> : Html)
     | none => mainChartComponent
-
   let keysToCheck := spec.series.map (fun s => s.dataKey) |>.push "x"
-  if jsonDataHasInvalidFloats spec.chartData keysToCheck then
-    let warningProps : WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
-    let warningHtml := WarningBanner warningProps
+  if LeanPlot.Utils.jsonDataHasInvalidFloats spec.chartData keysToCheck then
+    let warningProps : LeanPlot.WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
+    let warningHtml := LeanPlot.WarningBanner warningProps
     (.element "div" #[] #[warningHtml, finalHtml] : Html)
   else
     finalHtml
 
-/-- Render the plot. -/
-instance : Render PlotSpec where -- Render is from LeanPlot.Core, brought in by 'open LeanPlot'
+instance : Render PlotSpec where
   render := render
 
-/-- Allow PlotSpec to be evaluated by #plot command. -/
 instance : HtmlEval PlotSpec where
-  eval spec := do
-    -- Since render is pure, we just return it directly.
-    -- If render needed IO/Rpc actions, they would happen here.
-    return render spec
+  eval spec := pure (render spec)
 
 end PlotSpec
+
+universe u
+
+instance {β : Type u} [Inhabited β] : Inhabited (String × (Float → β)) where
+  default := ("", fun _ => default)
 
 end LeanPlot

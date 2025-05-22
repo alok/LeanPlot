@@ -1,8 +1,6 @@
-# LeanPlot Test-Case Gallery
+# LeanPlot Gallery
 
-> **Note:** The long-term plan is to _mirror most of the official [Recharts examples](https://recharts.org/en-US/examples)_ using equivalent Lean code.  Each bullet below can therefore be cross-checked with a counterpart in the upstream gallery — once a Lean demo reproduces the visual & interactive behaviour, tick it off.
-
-A living checklist of demo/test cases we want LeanPlot to support.  Tick items off as they are implemented.
+A living checklist of demo / test cases LeanPlot supports. Tick items off as they are implemented. Each example mirrors an official [Recharts example](https://recharts.org/en-US/examples).
 
 ## Line charts
 - [x] 1-variable linear  `y = x`
@@ -17,11 +15,13 @@ A living checklist of demo/test cases we want LeanPlot to support.  Tick items o
 - [ ] Parameter sweep (slider)  `y = sin(ωx)` for `ω ∈ {1 … 10}`
 
 ## Scatter / point clouds
+- [x] Quadratic points demo (simple scatter)
 - [ ] IID Gaussian  `(x,y) ~ 𝒩(0,1)²`
 - [ ] Uniform ring in ℝ²
 - [ ] Cluster mixture  (two Gaussian blobs)
 
 ## Area & bar
+- [x] Simple bar chart (five values)
 - [ ] Cumulative distribution (area chart)
 - [ ] Histogram of Gaussian samples
 - [ ] Stacked bar  (counts of {A,B,C} across 4 groups)
@@ -34,5 +34,5 @@ A living checklist of demo/test cases we want LeanPlot to support.  Tick items o
 - [ ] Very large N (10 000 pts)  `y = sin(x)`
 - [ ] Zero-length data (empty chart)
 - [ ] Negative-only domain  `y = −x²`
-- [ ] Custom colour palette mapping
-- [ ] Axis units / formatting demo 
+- [ ] Custom color palette mapping
+- [ ] Axis units / formatting demo
