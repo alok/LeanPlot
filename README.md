@@ -84,6 +84,14 @@ open LeanPlot.Algebra
 
 You should see two series rendered in a single interactive chart.
 
+## 📸 Screenshots
+
+![Line chart (y = x)](docs/img/line_y_equals_x.png)
+
+![Quadratic chart (y = x²)](docs/img/quadratic_y_equals_x2.png)
+
+![Overlay chart (y = x and y = x²)](docs/img/overlay_yx_and_x2.png)
+
 ---
 
 ## 🏟 Demo gallery
@@ -112,6 +120,6 @@ Contributions welcome!  Check the TODO list and open a PR or issue.
 
 ---
 
-## 📄 Licence
+## 📄 License
 
 LeanPlot is released under the Apache License, Version 2.0.  See `LICENSE.txt` for details.
