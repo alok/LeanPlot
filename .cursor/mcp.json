@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "lean-explore": {
+        "command": "uv",
+        "args": ["run", "--directory", "/Users/alokbeniwal/lean-explore", "leanexplore", "mcp", "serve" , "--api-key","00wrZq5IggKCemno8f9yTsSYxu2Zdc4FNip-V9aAjUo" ]
+      }
+    }
+  }

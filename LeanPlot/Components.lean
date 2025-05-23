@@ -269,6 +269,21 @@ structure BarProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "Bar"
 
+/-- Props for a Recharts `<ComposedChart>` for mixed chart types. -/
+structure ComposedChartProps where
+  /-- Width of the SVG container in pixels. -/
+  width  : Nat
+  /-- Height of the SVG container in pixels. -/
+  height : Nat
+  /-- Dataset array. -/
+  data   : Array Json
+  deriving FromJson, ToJson
+
+/-- Lean wrapper for Recharts `<ComposedChart>` which supports mixing different chart types. -/
+@[inline] def ComposedChart : ProofWidgets.Component ComposedChartProps where
+  javascript := ProofWidgets.Recharts.Recharts.javascript
+  «export»   := "ComposedChart"
+
 /--
 Turn an array of JSON rows into a Recharts **bar chart** containing a single
 series named `y`.  The helper mirrors `mkScatterChart` but renders bars instead

@@ -8,6 +8,7 @@ import LeanPlot.Demos.LinearDemo
 import LeanPlot.Demos.QuadraticDemo
 import LeanPlot.Demos.OverlayDemo
 import LeanPlot.Demos.LogScaleDemo
+import LeanPlot.Demos.MixedChartDemo
 import LeanPlot.Palette
 import LeanPlot.Specification
 import LeanPlot.Scale

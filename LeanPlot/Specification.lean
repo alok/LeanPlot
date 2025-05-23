@@ -18,7 +18,7 @@ open Lean ProofWidgets ProofWidgets.Recharts LeanPlot.Constants
 open LeanPlot -- For WarningBannerProps, WarningBanner, Render
 open LeanPlot.Utils -- For jsonDataHasInvalidFloats
 open LeanPlot.Legend (Legend) -- Open Legend for direct use
-open LeanPlot.Components (BarChart AreaChart)
+open LeanPlot.Components (BarChart AreaChart ComposedChart)
 open scoped ProofWidgets.Jsx -- This enables JSX syntax
 namespace LeanPlot
 
@@ -408,8 +408,20 @@ instance : RenderFragment AxisSpec where
 
   let allAre (t : String) : Bool := spec.series.all (fun s => s.type == t)
 
+  -- Check if we have mixed chart types
+  let chartTypes := spec.series.map (fun s => s.type) |>.toList.eraseDups
+  let isMixed := chartTypes.length > 1
+
   let mainChartComponent : Html :=
-    if allAre "bar" then
+    if isMixed then
+      -- Use ComposedChart for mixed types
+      (<ComposedChart width={spec.width} height={spec.height} data={spec.chartData}>
+        {xAxisHtml}
+        {yAxisHtml}
+        {legendHtml}
+        {... chartComponents}
+      </ComposedChart> : Html)
+    else if allAre "bar" then
       (<BarChart width={spec.width} height={spec.height} data={spec.chartData}>
         {xAxisHtml}
         {yAxisHtml}

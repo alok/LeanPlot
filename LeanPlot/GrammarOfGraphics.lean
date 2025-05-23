@@ -6,9 +6,11 @@ import Lean.Data.Json
 
 /-! # LeanPlot.GrammarOfGraphics
 
-This module provides a fluent DSL for building plots using a grammar-of-graphics
-approach, inspired by ggplot2 and similar libraries. The core idea is to build
-plots through composition of layers, scales, and aesthetic mappings.
+This module provides a functional DSL for building plots using a grammar-of-graphics
+approach, inspired by ggplot2 and similar libraries.
+
+The design philosophy emphasizes functional composition over builder patterns,
+leveraging Lean's partial application and function composition operators.
 -/
 
 namespace LeanPlot.GrammarOfGraphics
@@ -65,37 +67,64 @@ namespace PlotBuilder
 /-- Create a new plot builder -/
 @[inline] def new : PlotBuilder := {}
 
+/-- Create a plot builder from an existing PlotSpec -/
+@[inline] def fromSpec (spec : PlotSpec) : PlotBuilder := { spec := spec }
+
 /-- Add a title to the plot -/
 @[inline] def withTitle (pb : PlotBuilder) (title : String) : PlotBuilder :=
-  { pb with spec := { pb.spec with title := some title } }
+  { pb with spec := pb.spec.withTitle title }
 
 /-- Set the plot dimensions -/
 @[inline] def withSize (pb : PlotBuilder) (width height : Nat) : PlotBuilder :=
-  { pb with spec := { pb.spec with width := width, height := height } }
+  { pb with spec := pb.spec.withSize width height }
 
 /-- Toggle legend visibility -/
 @[inline] def withLegend (pb : PlotBuilder) (showLegend : Bool := true) : PlotBuilder :=
-  { pb with spec := { pb.spec with legend := showLegend } }
+  { pb with spec := pb.spec.withLegend showLegend }
+
+/-- Set x-axis label -/
+@[inline] def withXLabel (pb : PlotBuilder) (label : String) : PlotBuilder :=
+  { pb with spec := pb.spec.withXLabel label }
+
+/-- Set y-axis label -/
+@[inline] def withYLabel (pb : PlotBuilder) (label : String) : PlotBuilder :=
+  { pb with spec := pb.spec.withYLabel label }
+
+/-- Set x-axis domain -/
+@[inline] def withXDomain (pb : PlotBuilder) (min max : Float) : PlotBuilder :=
+  { pb with spec := pb.spec.withXDomain min max }
+
+/-- Set y-axis domain -/
+@[inline] def withYDomain (pb : PlotBuilder) (min max : Float) : PlotBuilder :=
+  { pb with spec := pb.spec.withYDomain min max }
 
 /-- Set global aesthetic mappings -/
 @[inline] def aes (pb : PlotBuilder) (x : String) (y : String) : PlotBuilder :=
   { pb with globalAes := { x := some x, y := some y } }
 
+/-- Add a layer with custom data and geometry -/
+@[inline] def addLayer (pb : PlotBuilder) (layer : Layer) : PlotBuilder :=
+  { pb with layers := pb.layers.push layer }
+
 /-- Add a point layer -/
 @[inline] def addPoints (pb : PlotBuilder) (data : Array Json) (name : String := "points") : PlotBuilder :=
-  { pb with layers := pb.layers.push { data := data, geom := Geom.Point, name := some name } }
+  pb.addLayer { data := data, geom := Geom.Point, name := some name }
 
 /-- Add a line layer -/
 @[inline] def addLine (pb : PlotBuilder) (data : Array Json) (name : String := "line") : PlotBuilder :=
-  { pb with layers := pb.layers.push { data := data, geom := Geom.Line, name := some name } }
+  pb.addLayer { data := data, geom := Geom.Line, name := some name }
 
 /-- Add a bar layer -/
 @[inline] def addBars (pb : PlotBuilder) (data : Array Json) (name : String := "bars") : PlotBuilder :=
-  { pb with layers := pb.layers.push { data := data, geom := Geom.Bar, name := some name } }
+  pb.addLayer { data := data, geom := Geom.Bar, name := some name }
 
 /-- Add an area layer -/
 @[inline] def addArea (pb : PlotBuilder) (data : Array Json) (name : String := "area") : PlotBuilder :=
-  { pb with layers := pb.layers.push { data := data, geom := Geom.Area, name := some name } }
+  pb.addLayer { data := data, geom := Geom.Area, name := some name }
+
+/-- Add an existing PlotSpec as a layer -/
+@[inline] def addSpec (pb : PlotBuilder) (spec : PlotSpec) : PlotBuilder :=
+  { pb with spec := pb.spec.overlay spec }
 
 /-- Set logarithmic scale on x-axis -/
 @[inline] def logX (pb : PlotBuilder) (base : Float := 10.0) : PlotBuilder :=
@@ -138,11 +167,6 @@ namespace PlotBuilder
 
 end PlotBuilder
 
--- Infix operators for the DSL
-
-/-- Forward pipe operator for fluent API -/
-infixl:50 " |> " => Function.comp
-
 /-- Create a plot from a function using the DSL -/
 @[inline] def plot {β} [ToFloat β] (f : Float → β) : PlotBuilder :=
   let spec := LeanPlot.line f
@@ -162,5 +186,67 @@ infixl:50 " |> " => Function.comp
 @[inline] def areaPlot {β} [ToFloat β] (f : Float → β) : PlotBuilder :=
   let spec := LeanPlot.area f
   { spec := spec }
+
+/-- Transform a function into a line plot -/
+@[inline] def plotLine {β} [ToFloat β] (f : Float → β)
+    (name : String := "y") (steps : Nat := 200)
+    (domain : Option (Float × Float) := none) : PlotSpec :=
+  LeanPlot.line f name steps domain
+
+/-- Transform points into a scatter plot -/
+@[inline] def plotScatter (points : Array (Float × Float))
+    (name : String := "y") : PlotSpec :=
+  LeanPlot.scatter points name
+
+/-- Transform points into a bar plot -/
+@[inline] def plotBar (points : Array (Float × Float))
+    (name : String := "y") : PlotSpec :=
+  LeanPlot.bar points name
+
+/-- Transform a function into an area plot -/
+@[inline] def plotArea {β} [ToFloat β] (f : Float → β)
+    (name : String := "y") (steps : Nat := 200)
+    (domain : Option (Float × Float) := none) : PlotSpec :=
+  LeanPlot.area f name steps domain
+
+/-- Add a line layer to an existing plot -/
+@[inline] def addLine {β} [ToFloat β] (spec : PlotSpec)
+    (f : Float → β) (name : String) (color : Option String := none) : PlotSpec :=
+  let newSpec := LeanPlot.line f name 200 none color
+  spec.overlay newSpec
+
+/-- Add a scatter layer to an existing plot -/
+@[inline] def addScatter (spec : PlotSpec)
+    (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
+  let newSpec := LeanPlot.scatter points name color
+  spec.overlay newSpec
+
+/-- Add a bar layer to an existing plot -/
+@[inline] def addBar (spec : PlotSpec)
+    (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
+  let newSpec := LeanPlot.bar points name color
+  spec.overlay newSpec
+
+/-- Set logarithmic scale on x-axis -/
+@[inline] def logX (spec : PlotSpec) (base : Float := 10.0) : PlotSpec :=
+  -- For now, we just return the spec unchanged since scale transformations
+  -- need to be implemented in the renderer
+  spec
+
+/-- Set logarithmic scale on y-axis -/
+@[inline] def logY (spec : PlotSpec) (base : Float := 10.0) : PlotSpec :=
+  -- For now, we just return the spec unchanged since scale transformations
+  -- need to be implemented in the renderer
+  spec
+
+/-- Compose multiple functions into a multi-line plot -/
+@[inline] def plotLines {β} [Inhabited β] [ToFloat β]
+    (fns : Array (String × (Float → β)))
+    (steps : Nat := 200)
+    (domain : Option (Float × Float) := none) : PlotSpec :=
+  LeanPlot.lines fns steps domain
+
+/-- Alternative syntax using sections for cleaner composition -/
+notation:50 x:50 " >> " f:51 => f x
 
 end LeanPlot.GrammarOfGraphics
