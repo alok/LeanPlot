@@ -16,9 +16,11 @@ LeanPlot turns Lean 4 code into **interactive, React-powered charts that render 
 * **Composable graphics algebra** – overlay or stack plots with the `+` operator or `PlotSpec.stack`.
 * **Grammar of Graphics DSL** – build complex visualizations using a fluent builder pattern inspired by ggplot2.
 * **Log/linear scale support** – visualize exponential growth and power laws with logarithmic axes.
+* **Data transformations** – apply scales (log, sqrt, power, symlog), normalize data, and smooth with moving averages via `LeanPlot.Transform`.
+* **Advanced plot composition** – create subplot grids, vertically stacked plots with shared axes, and apply consistent styling across multiple plots with `LeanPlot.PlotComposition`.
 * **Layered API** – start at the high level and drop down to `PlotSpec` or the raw Recharts props whenever you need fine-grained control.
 * **Sampling utilities** – `sample` / `sampleMany` uniformly sample any codomain that implements `[ToFloat]`.
-* **Demo gallery** – ready-to-run examples under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, stack, bar, area, log scales, grammar of graphics…).
+* **Demo gallery** – ready-to-run examples under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, stack, bar, area, log scales, grammar of graphics, data transformations…).
 
 ---
 
@@ -98,6 +100,7 @@ open LeanPlot.GrammarOfGraphics
 * `LeanPlot.Demos.StackDemo`      – stacking via `+` and `PlotSpec.stack`
 * `LeanPlot.Demos.LogScaleDemo`   – exponential growth with linear and log scales
 * `LeanPlot.Demos.GrammarDemo`    – showcase of the Grammar of Graphics DSL
+* `LeanPlot.Demos.TransformDemo`  – data transformations: scales, normalization, smoothing
 
 Open any demo and hover the `#html` command to run it.
 
