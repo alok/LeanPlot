@@ -216,3 +216,23 @@
 ### Fixed
 
 - Resolved several compilation and linker errors related to the `#assert_keys` macro implementation and its test executable, including incorrect type checks, missing `main` function in tests, and linter warnings.
+
+## [v0.4.1] - 2025-05-23:01:39
+
+### Added
+- Support for mixed chart types using ProofWidgets' ComposedChart
+- New demo: `MixedChartDemo` showing bars and lines in a single plot
+
+### Changed
+- **BREAKING**: Refactored Grammar of Graphics DSL to use functional composition instead of builder pattern
+  - Removed `PlotBuilder`, `Aesthetic`, `Geom`, and `Layer` structures
+  - New API uses simple functions with partial application
+  - More idiomatic Lean code leveraging function composition
+- Improved architecture by reducing code duplication across modules
+
+### Fixed
+- Mixed chart types now properly render using ComposedChart instead of fallback to LineChart
+
+## [v0.4.0] - 2025-05-23:01:20
+
+// ... existing code ...

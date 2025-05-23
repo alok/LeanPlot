@@ -451,3 +451,28 @@ Next Major Task:
 - Time series support with date/time axes
 - 3D plotting capabilities
 - Animation support
+
+## Architecture Notes (2025-05-23:01:39)
+
+### Design Philosophy
+- Prefer functional composition over builder patterns
+- Use partial application for API fluency
+- Leverage Lean's type system for safety
+
+### Module Structure
+1. **Low Level**: `Components.lean` - Direct ProofWidgets wrappers
+2. **Mid Level**: `Specification.lean` - PlotSpec data model and combinators
+3. **High Level**: `GrammarOfGraphics.lean` - Functional DSL
+
+### Key Patterns
+- PlotSpec combinators: `spec |> withTitle "..." |> withSize 600 400`
+- Layer composition: `plotBar data |> addLine fn |> addScatter points`
+- No builder objects - just functions transforming PlotSpec
+
+### Chart Type Selection
+- Single type charts use specific containers (LineChart, BarChart, etc)
+- Mixed type charts automatically use ComposedChart
+- Detection happens in `Specification.render` based on series types
+
+## TODO Items
+- Mixed chart types (bars + lines) now work with ComposedChart (2025-05-23:01:39)

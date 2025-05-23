@@ -17,7 +17,7 @@
   - [ ] Provide Justfile recipes
   - [ ] Set up pre-commit git hook: `lake env lean --run Std.Tactic.Lint` (or similar)
 
-## Post-0.1 Roadmap (updated 2025-05-23:01:20 EST)
+## Post-0.1 Roadmap (updated 2025-05-23:01:39 EST)
 
 ### Ergonomics
 - [x] Axis & legend labels support (`LeanPlot.Axis`, `mkLineChartWithLabels`)
@@ -31,18 +31,20 @@
 - [x] Log / linear scale toggle
   - [x] Scale module with linear and logarithmic transforms
   - [x] Demo showing exponential/power law plots with log scales
-- [ ] Additional chart types
+- [x] Additional chart types
   - [x] Area
   - [x] Bar
   - [x] Scatter
+  - [x] Mixed charts (ComposedChart)
 - [ ] Interactive domain sliders / zooming
 
 ### Grammar-of-graphics core
 - [x] `PlotSpec` record & combinators (`withTitle`, `withLegend`, `withAxis`, ...)
-- [x] Builder pattern DSL (`PlotBuilder`)
-- [x] Grammar of Graphics module with fluent API
-- [ ] More sophisticated layer composition
+- [x] Functional composition DSL (replaced builder pattern)
+- [x] Grammar of Graphics module with clean API
+- [x] Layer composition via `overlay`/`stack`
 - [ ] Faceting support
+- [ ] Statistical transformations
 
 ### Tooling & docs
 - [ ] Justfile recipes
@@ -56,3 +58,4 @@
 - [ ] Time series support with date/time axes
 - [ ] 3D plotting capabilities
 - [ ] Animation support
+- [ ] Integrate with Lean's proof visualization needs
