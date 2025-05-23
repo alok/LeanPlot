@@ -259,7 +259,7 @@
 ### Fixed
 - Mixed chart data validation errors when combining different plot types (2025-05-23:02:08)
 
-## [0.3.6] – 2025-05-23:??:??
+## [0.3.6] – 2025-05-23:09:51
 
 ### Added
 
@@ -267,6 +267,10 @@
   - `facetGrid` helper lays out an `Array PlotSpec` in an HTML grid
   - `facetGridNamed` variant adds per-facet captions
 - New demo `LeanPlot.Demos.FacetDemo` showcasing a 2×2 facet grid.
+
+### Changed
+
+- Removed unused variables (`rows`, `forecast`) and stray directories, cleaning up incidental leftovers across the codebase.
 
 ### Documentation
 
