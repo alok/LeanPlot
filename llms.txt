@@ -77,7 +77,7 @@ Sub-tasks:
   - [ ] Optional compile-time JSON check
 - [ ] Git workflow
   - [ ] Create branch `ergonomics/tier0-chart`
-  - [ ] Commit per logical chunk 
+  - [ ] Commit per logical chunk
 
 2025-05-03:08:10 UTC – Progress update on Tier-0 wrappers
 --------------------------------------------------------
@@ -104,7 +104,7 @@ Updated nested checkbox view
 - [ ] Quality gates
   - [x] `lake build` passes
   - [ ] Linter clean (Blocked by upstream `batteries` issue: unknown id `initSrcSearchPath`)
-  - [ ] Optional compile-time JSON check 
+  - [ ] Optional compile-time JSON check
 
 2025-05-03:10:15 UTC – Documentation updates
 ------------------------------------------------
@@ -171,7 +171,7 @@ Next tasks (documentation)
 3. Enable strict docstring lint pass in docs build
 4. Expand README & manual with quick-start + VS Code infoview GIF
 5. Changelog bump to 0.2.2 and record docs pipeline
-6. Optional dev UX polish (docs-preview target, pre-commit diff check) 
+6. Optional dev UX polish (docs-preview target, pre-commit diff check)
 
 2025-05-06:07:05 UTC – Verso manual postponed
 ------------------------------------------------------
@@ -184,7 +184,7 @@ NEW_LOG_ENTRY_BELOW
 ---------------------------------------------------------------------
 - [ ] Investigate and add Recharts Legend component (currently causes "unknown identifier").
 - [x] Implement typeclass-based rendering for `LayerSpec` (formerly `SeriesSpec`).
-- [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots. 
+- [ ] Define `PlotSpec.stack` or `PlotSpec.addSeries` for multi-series plots.
 
 2025-05-06:10:30 UTC – Potential Dependent Type Design for Series Rendering
 ----------------------------------------------------------------------------
@@ -244,7 +244,7 @@ Consider a more type-safe and extensible approach for handling heterogeneous ser
     Map over `spec.series : Array SeriesDSpec`, typeclass resolution finds the correct `RenderFragment` instance based on `s.kind` to render `s.details`.
 
 **Advantages:** Type safety (no string dispatch), better extensibility for new series types, improved tooling support, elimination of "unsupported type" runtime errors for series rendering.
-**Considerations:** Increased initial complexity and potential boilerplate compared to simpler dispatch mechanisms. Good fit for a robust, extensible "grammar of graphics" style library. 
+**Considerations:** Increased initial complexity and potential boilerplate compared to simpler dispatch mechanisms. Good fit for a robust, extensible "grammar of graphics" style library.
 
 2025-05-08:05:29 UTC – RenderFragment & LayerSpec rename plan
 -------------------------------------------------------------
@@ -274,7 +274,7 @@ NEW_LOG_ENTRY_BELOW
 - [x] Updated this `llms.txt` file to reflect the renames and progress.
 - [ ] Run `lake build`.
 - [ ] Run docs pipeline (currently deferred).
-- [ ] Commit per logical chunk; open PR targeting `main`. 
+- [ ] Commit per logical chunk; open PR targeting `main`.
 
 2025-05-09:22:15 UTC – `PlotSpec.stack` implementation
 ------------------------------------------------------
@@ -287,7 +287,7 @@ NEW_LOG_ENTRY_BELOW
 - [ ] Documentation & demos
    - [ ] README quick-start snippet updated
    - [ ] Add StackDemo
-  - [x] Add StackDemo 
+  - [x] Add StackDemo
 
 NEW_LOG_ENTRY_BELOW
 2025-05-10:06:45 UTC – README quick-start & linter cleanup
@@ -299,13 +299,13 @@ NEW_LOG_ENTRY_BELOW
 
 Updated nested checkbox view
 - [ ] Quality gates
-  - [x] Linter clean  
+  - [x] Linter clean
   - [ ] Optional compile-time JSON check (decide)
 
 Next tasks:
 1. Investigate compile-time JSON key check via `Decide` and `Lean.Meta.eval`.
 2. Explore dependent `SeriesDSpec` design for heterogeneous layer rendering.
-3. Add Recharts `Legend` props (layout, verticalAlign) to `LegendProps`. 
+3. Add Recharts `Legend` props (layout, verticalAlign) to `LegendProps`.
 
 2025-05-12:13:30 UTC – Compile-time JSON key check design
 ----------------------------------------------------------
@@ -347,7 +347,7 @@ Updated nested checkbox view
   - [ ] `SeriesDSpec` Σ-type
   - [ ] `RenderFragment` refactor
   - [ ] Conversion layer
-  - [ ] Demo/documentation update 
+  - [ ] Demo/documentation update
 
 NEW_LOG_ENTRY_BELOW
 2025-05-12:15:22 UTC – Roadmap ranking & compile-time key check groundwork
@@ -375,9 +375,9 @@ Updated nested checkbox view
   - [ ] Tests
 
 Next tasks
-1. Implement `macro "#assert_keys"` that elaborates to `staticAssert!` using `decide (HasKeys …)`.  
-2. Add unit test under `LeanPlot.Test.JsonKeyCheck`.  
-3. Replace manual `keysToCheck` runtime guard in helpers with compile-time assertions where possible. 
+1. Implement `macro "#assert_keys"` that elaborates to `staticAssert!` using `decide (HasKeys …)`.
+2. Add unit test under `LeanPlot.Test.JsonKeyCheck`.
+3. Replace manual `keysToCheck` runtime guard in helpers with compile-time assertions where possible.
 
 NEW_LOG_ENTRY_BELOW
 2025-05-22:07:16 UTC – `#assert_keys` macro implementation and testing
@@ -407,4 +407,47 @@ Updated nested checkbox view:
   - [ ] Demo/documentation update
 
 Next Major Task:
-- Explore dependent `SeriesDSpec` design for heterogeneous layer rendering (as outlined 2025-05-06:10:30 & 2025-05-12:13:35). 
+- Explore dependent `SeriesDSpec` design for heterogeneous layer rendering (as outlined 2025-05-06:10:30 & 2025-05-12:13:35).
+
+# LeanPlot Development Notes
+
+## 2025-05-23 Progress
+
+### Log Scale Support
+- Created `LeanPlot.Scale` module with `ScaleType` enum for Linear and Logarithmic scales
+- Implemented transform/inverseTransform functions for applying scale transformations
+- Added `ScaleConfig` structure for configuring x and y axis scales
+- Created `LogScaleDemo.lean` showcasing exponential and power law plots
+
+### Grammar of Graphics DSL
+- Implemented `LeanPlot.GrammarOfGraphics` module with builder pattern
+- Core concepts:
+  - `PlotBuilder` - main builder type with fluent API
+  - `Layer` - represents a data layer with geometry type
+  - `Geom` - geometry types (Point, Line, Bar, Area)
+  - `Aesthetic` - mappings for visual properties
+- Builder methods: `withTitle`, `withSize`, `withLegend`, `addLine`, `addPoints`, `logX`, `logY`
+- Created comprehensive demos in `GrammarDemo.lean`
+
+### Infrastructure
+- Enhanced Justfile with development tasks:
+  - `just build`, `just clean`, `just lint`
+  - `just check-docs` - finds missing documentation
+  - `just watch` - auto-rebuild on changes
+  - `just new-demo NAME` - scaffold new demo files
+- Updated CHANGELOG and README with new features
+
+### Technical Notes
+- JSON field access in Lean uses `obj.getObjVal? "field"` not `find?`
+- The pipe operator `|>` needs explicit lambda wrapping: `|> fun p => f p x`
+- `show` is a reserved keyword in Lean, use different parameter names
+- Always add `open Lean` when using `Json` type
+- Doc strings required for public constructors to avoid linter warnings
+
+### Next Steps
+- Interactive features (tooltips, zoom, pan)
+- Export to static images (SVG/PNG)
+- Statistical layers (regression lines, confidence intervals)
+- Time series support with date/time axes
+- 3D plotting capabilities
+- Animation support
