@@ -7,5 +7,9 @@ import LeanPlot.Plot
 import LeanPlot.Demos.LinearDemo
 import LeanPlot.Demos.QuadraticDemo
 import LeanPlot.Demos.OverlayDemo
+import LeanPlot.Demos.LogScaleDemo
 import LeanPlot.Palette
 import LeanPlot.Specification
+import LeanPlot.Scale
+import LeanPlot.GrammarOfGraphics
+import LeanPlot.Demos.GrammarDemo

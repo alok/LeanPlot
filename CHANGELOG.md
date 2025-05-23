@@ -57,23 +57,25 @@
 
 - `Gallery.md` line-chart checklist now ticks off linear and quadratic demos.
 
-## [0.2.0] – 2025-05-03:09:41
+## [0.2.0] – 2025-05-23
 
 ### Added
+- Log/linear scale support via `LeanPlot.Scale` module
+  - `ScaleType` for linear and logarithmic scales with customizable base
+  - `ScaleConfig` for configuring x and y axis scales
+  - Transform functions for applying scale transformations
+  - Demo: `LogScaleDemo.lean` showcasing exponential and power law plots
 
-- Tier-0 ergonomics layer: new module `LeanPlot.API` with zero-config helpers
-  - `lineChart` – sample a `Float → β` function on `[0,1]` and render.
-  - `scatterChart` – render array of points (first implementation via `mkScatterChart`).
-- Core `LeanPlot.Components` now includes bindings for Recharts `ScatterChart`/`Scatter` and helper `mkScatterChart`.
-- Library-wide defaults centralised in `LeanPlot.Constants` (`defaultW`, `defaultH`).
+- Grammar of Graphics DSL via `LeanPlot.GrammarOfGraphics` module
+  - Builder pattern for composing plots with fluent API
+  - Support for layers with different geometries (Point, Line, Bar, Area)
+  - Methods: `withTitle`, `withSize`, `withLegend`, `addLine`, `addPoints`, etc.
+  - Scale configuration methods: `logX`, `logY`
+  - Demo: `GrammarDemo.lean` showcasing various DSL features
 
-### Changed
-
-- Palette helpers now expose `colorFor` for single series selection.
-
-### Fixed
-
-- None.
+### Documentation
+- Added comprehensive doc strings for Scale module
+- Added documentation for Grammar of Graphics DSL
 
 ## [0.2.1] – 2025-05-03:10:25
 

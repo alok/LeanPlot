@@ -11,6 +11,7 @@ import LeanPlot.Legend -- Add import for Legend
 import ProofWidgets.Component.Recharts
 import ProofWidgets.Data.Html -- Explicit import for Html.empty and Html.text
 import Lean.Server -- For HtmlEval
+import LeanPlot.JsonExt -- For jsonHasKeys helper
 -- import ProofWidgets.Data.Legend
 
 open Lean ProofWidgets ProofWidgets.Recharts LeanPlot.Constants
@@ -441,17 +442,64 @@ instance : RenderFragment AxisSpec where
   else
     finalHtml
 
-instance : Render PlotSpec where
-  render := render
+/-!
+Automatically validate that every row in `spec.chartData` contains **all** keys
+referenced by the plot at *compile-time*.  The required keys are:
+
+* the primary coordinate field used by the x-axis (defaults to `"x"` when the
+  caller does not override `AxisSpec.dataKey`); and
+* every `dataKey` referenced by the series array.
+
+If *any* JSON row is missing *any* of these keys the elaborator raises an
+error, preventing invalid `PlotSpec`s from compiling.  Users therefore no
+longer need to invoke `#assert_keys` manually.
+-/
 
 instance : HtmlEval PlotSpec where
-  eval spec := pure (render spec)
+  eval spec := do
+    -- 1. Collect the x-axis key (defaulting to "x" when absent).
+    let xKey : String :=
+      match spec.xAxis with
+      | some ax => ax.dataKey
+      | none    => "x"
 
-end PlotSpec
+    -- 2. Collect all series data keys and append the x-axis key.
+    let requiredKeys : Array String :=
+      (spec.series.map (fun s => s.dataKey)).push xKey
+
+    -- 3b. Ensure series names and dataKeys are unique – duplicated names lead
+    --     to runtime clashes in Recharts (legend/tooltips).  We detect this
+    --     statically to fail fast.
+    let mut nameSet : Std.HashSet String := {}
+    let mut dataKeySet : Std.HashSet String := {}
+    let mut dupFound := false
+    for s in spec.series do
+      if nameSet.contains s.name || dataKeySet.contains s.dataKey then
+        dupFound := true
+      nameSet := nameSet.insert s.name
+      dataKeySet := dataKeySet.insert s.dataKey
+
+    if dupFound then
+      throwError "LeanPlot: duplicate series name or dataKey detected; they must be unique"
+
+    -- 4. Check every JSON object in `chartData` contains *all* required keys.
+    let allRowsHaveKeys : Bool :=
+      spec.chartData.all fun obj => LeanPlot.jsonHasKeys obj requiredKeys
+
+    unless allRowsHaveKeys do
+      throwError "LeanPlot: chartData is missing required keys {requiredKeys}"
+
+    -- 5. Delegate to the usual renderer when validation succeeds.
+    pure (render spec)
 
 universe u
 
 instance {β : Type u} [Inhabited β] : Inhabited (String × (Float → β)) where
   default := ("", fun _ => default)
+
+instance : Render PlotSpec where
+  render := render
+
+end PlotSpec
 
 end LeanPlot

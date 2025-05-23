@@ -1,12 +1,97 @@
-# LeanPlot Justfile
+# LeanPlot Development Tasks
 
-# Default task
-_default:
+# Default task: show available commands
+default:
 	@just --list
 
 # Build the project
 build:
 	lake build
+
+# Clean build artifacts
+clean:
+	lake clean
+
+# Run linter
+lint:
+	lake env lean --run Std.Tactic.Lint
+
+# Build and test
+test: build
+	lake env lean Test.lean
+
+# Build documentation
+docs:
+	lake build DocsMain
+
+# Format code (placeholder - Lean doesn't have a standard formatter yet)
+format:
+	@echo "No standard formatter for Lean 4 yet"
+
+# Check for missing documentation
+check-docs:
+	@echo "Checking for missing documentation..."
+	@rg "missing doc string" .lake/build/ || echo "No missing docs found!"
+
+# Run all demos
+demos: build
+	@echo "Building all demos..."
+	@find LeanPlot/Demos -name "*.lean" -exec echo "Demo: {}" \;
+
+# Create a new demo file
+new-demo NAME:
+	@echo "Creating new demo: {{NAME}}"
+	@touch "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "import LeanPlot.API" > "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "import LeanPlot.Components" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "namespace LeanPlot.Demos" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "-- Your demo code here" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "" >> "LeanPlot/Demos/{{NAME}}.lean"
+	@echo "end LeanPlot.Demos" >> "LeanPlot/Demos/{{NAME}}.lean"
+
+# Watch for changes and rebuild
+watch:
+	@echo "Watching for changes..."
+	@while true; do \
+		fswatch -1 -r LeanPlot/ *.lean; \
+		clear; \
+		echo "Changes detected, rebuilding..."; \
+		lake build; \
+	done
+
+# Update dependencies
+update-deps:
+	lake update
+
+# Run a specific Lean file
+run FILE:
+	lake env lean {{FILE}}
+
+# Generate ctags for navigation
+tags:
+	@echo "Generating tags..."
+	@fd -e lean | xargs ctags
+
+# Count lines of code
+loc:
+	@echo "Lines of Lean code:"
+	@fd -e lean -x wc -l {} | sort -n
+
+# Check for TODOs and FIXMEs
+todos:
+	@echo "TODOs and FIXMEs:"
+	@rg -i "todo|fixme" --type lean
+
+# Create a release
+release VERSION:
+	@echo "Creating release {{VERSION}}..."
+	@echo "1. Update version in lakefile.toml"
+	@echo "2. Update CHANGELOG.md"
+	@echo "3. Commit changes"
+	@echo "4. Tag release: git tag v{{VERSION}}"
+	@echo "5. Push: git push && git push --tags"
 
 # Release build (optimised)
 release:
@@ -15,17 +100,6 @@ release:
 # Watch build continuously
 watch:
 	lake build -w
-
-# Lint (placeholder – adjust when linter chosen)
-lint:
-	# Ensure Batteries linter modules are freshly built with current Lean version
-	lake build +Batteries.Tactic.Lint
-	# Run Batteries linter script that checks our project modules
-	lake env lean --run .lake/packages/batteries/scripts/runLinter.lean
-
-# Clean build artefacts
-clean:
-	lake clean
 
 # Lean REPL (uses Lake to set env)
 repl:
@@ -62,4 +136,4 @@ changelog-update:
 
 # Docs placeholder
 docs:
-	@echo "TODO: docs generation (e.g., with DocGen4)" 
+	@echo "TODO: docs generation (e.g., with DocGen4)"
