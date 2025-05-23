@@ -2,6 +2,7 @@ import ProofWidgets.Component.HtmlDisplay
 import LeanPlot.Constants
 import LeanPlot.Palette
 import LeanPlot.Components
+import Lean.Data.Json
 
 /-! # LeanPlot.Core – extensible plot layer abstraction
 
@@ -99,6 +100,10 @@ instance : Render Plot where
       Html.element "div"
         #[("key", Json.str (toString idx))]
         #[l.html])
+    let containerStyle : Json := Json.mkObj [
+      ("display",          Json.str "flex"),
+      ("flexDirection",    Json.str "column")
+    ]
     Html.element "div"
-      #[("style", Json.str "display:flex; flex-direction:column;")]
+      #[("style", containerStyle)]
       rows

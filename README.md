@@ -15,6 +15,7 @@ LeanPlot turns Lean 4 code into **interactive, React-powered charts that render 
 * **One-liner helpers `lineChart` / `scatterChart`** – produce a plot from a Lean function or an array of points with zero configuration.
 * **Composable graphics algebra** – overlay or stack plots with the `+` operator or `PlotSpec.stack`.
 * **Grammar of Graphics DSL** – build complex visualizations using a fluent builder pattern inspired by ggplot2.
+* **Faceting support** – lay out multiple sub‐plots in a grid via `LeanPlot.Faceting.facetGrid`.
 * **Log/linear scale support** – visualize exponential growth and power laws with logarithmic axes.
 * **Data transformations** – apply scales (log, sqrt, power, symlog), normalize data, and smooth with moving averages via `LeanPlot.Transform`.
 * **Advanced plot composition** – create subplot grids, vertically stacked plots with shared axes, and apply consistent styling across multiple plots with `LeanPlot.PlotComposition`.
@@ -101,6 +102,7 @@ open LeanPlot.GrammarOfGraphics
 * `LeanPlot.Demos.LogScaleDemo`   – exponential growth with linear and log scales
 * `LeanPlot.Demos.GrammarDemo`    – showcase of the Grammar of Graphics DSL
 * `LeanPlot.Demos.TransformDemo`  – data transformations: scales, normalization, smoothing
+* `LeanPlot.Demos.FacetDemo`      – faceting layout with a grid of small multiples
 
 Open any demo and hover the `#html` command to run it.
 

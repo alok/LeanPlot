@@ -52,7 +52,7 @@
 - [x] Functional composition DSL (replaced builder pattern)
 - [x] Grammar of Graphics module with clean API
 - [x] Layer composition via `overlay`/`stack`
-- [ ] Faceting support
+- [x] Faceting support
 - [ ] Statistical transformations
 
 ### Tooling & docs

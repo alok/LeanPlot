@@ -258,3 +258,17 @@
 
 ### Fixed
 - Mixed chart data validation errors when combining different plot types (2025-05-23:02:08)
+
+## [0.3.6] – 2025-05-23:??:??
+
+### Added
+
+- **Faceting support** via new `LeanPlot.Faceting` module
+  - `facetGrid` helper lays out an `Array PlotSpec` in an HTML grid
+  - `facetGridNamed` variant adds per-facet captions
+- New demo `LeanPlot.Demos.FacetDemo` showcasing a 2×2 facet grid.
+
+### Documentation
+
+- Updated README feature list and demo gallery.
+- Marked Faceting as complete in `TODO.md`.

@@ -3,6 +3,8 @@ import LeanPlot.ToFloat
 import LeanPlot.Palette
 import LeanPlot.Scale
 import Lean.Data.Json
+import LeanPlot.Faceting
+import ProofWidgets.Component.HtmlDisplay
 
 /-! # LeanPlot.GrammarOfGraphics
 
@@ -17,6 +19,7 @@ namespace LeanPlot.GrammarOfGraphics
 
 open LeanPlot
 open Lean
+open ProofWidgets
 
 /-- Aesthetic mapping for a plot layer -/
 structure Aesthetic where
@@ -30,11 +33,23 @@ structure Aesthetic where
   size : Option String := none
   deriving Inhabited
 
-/-- A geometry (geom) represents how data is rendered -/
+/-- Geometric primitive ("geom") describing how data points should be drawn. -/
 inductive Geom where
+  /-- Render each data point as an individual marker (typically a
+  filled circle) without connecting lines.  Use this for classical
+  scatter plots. -/
   | Point
+  /-- Connect successive data points with straight line segments.
+  Suitable for time series, function plots, and any data where an
+  implicit ordering along the *x* axis communicates continuity. -/
   | Line
+  /-- Display each observation as a vertical or horizontal bar whose
+  length encodes the data's value.  Ideal for histograms and discrete
+  comparisons. -/
   | Bar
+  /-- Fill the area under a curve (or between successive points) to
+  emphasise cumulative magnitude.  Useful for density plots and
+  confidence bands. -/
   | Area
   deriving Repr, Inhabited
 
@@ -223,5 +238,81 @@ end PlotBuilder
 
 /-- Alternative syntax using sections for cleaner composition -/
 notation:50 x:50 " >> " f:51 => f x
+
+/-! ## Faceting helpers --------------------------------------------------- -/
+
+namespace Facet
+
+/-- Build a faceted grid from an `Array` of `PlotBuilder`s.  Each builder is
+first turned into a concrete `PlotSpec` via `PlotBuilder.build` before
+delegating to `LeanPlot.Faceting.facetGrid`.  The optional `cols` argument
+controls the number of columns in the resulting grid (default 2). -/
+@[inline] def grid (pbs : Array PlotBuilder) (cols : Nat := 2) : Html :=
+  LeanPlot.Faceting.facetGrid (pbs.map (·.build)) cols
+
+/-- Like `Facet.grid` but additionally associates a caption/title with each
+subplot.  Supply an `Array` of `(title, PlotBuilder)` tuples. -/
+@[inline] def gridNamed (pbs : Array (String × PlotBuilder)) (cols : Nat := 2) : Html :=
+  let arr : Array (String × PlotSpec) := pbs.map (fun (t, pb) => (t, pb.build))
+  LeanPlot.Faceting.facetGridNamed arr cols
+
+end Facet
+
+/-!
+### Infix operator `⫽` (U+2AFD) for quick faceting
+
+We define a *right‐associative* operator that chains `PlotBuilder`s into a
+faceted grid.  Example:
+
+```lean
+open LeanPlot.GrammarOfGraphics
+
+def p1 := plot (fun x : Float => x)          -- y = x
+def p2 := plot (fun x : Float => x * x)      -- y = x²
+def p3 := plot (fun x : Float => x * x * x)  -- y = x³
+
+#html p1 ⫽ p2 ⫽ p3  -- three small plots in one row
+```
+
+The operator collects the chained plots into an `Array` and finally produces
+an `Html` grid (defaults to two columns; override with `Facet.grid`).
+-/
+
+/-- Internal accumulator used by the faceting operator `⫽`.  A
+`_FacetChain` simply gathers the `PlotBuilder`s that should end up in
+the same faceted grid.  Users never construct this type manually; it
+is created implicitly via coercions from `PlotBuilder`. -/
+structure _FacetChain where
+  /-- The growing list of plots that will populate the resulting grid. -/
+  acc : Array PlotBuilder := #[]
+
+/-- Concatenate two faceting chains by appending their accumulated
+`PlotBuilder`s.
+This is the underlying implementation of the `⫽` infix operator. -/
+@[inline] def _FacetChain.concat (c₁ c₂ : _FacetChain) : _FacetChain :=
+  { acc := c₁.acc ++ c₂.acc }
+
+/-- Faceting operator `⫽` (U+2AFD).  Right‐associative (precedence 65). -/
+infixr:65 " ⫽ " => _FacetChain.concat
+
+/-- Coerce a faceting chain into an `Html` grid (default 2 columns). -/
+instance : Coe _FacetChain Html where
+  coe c := Facet.grid c.acc 2
+
+/-- Coerce a single `PlotBuilder` into a `_FacetChain`. -/
+@[inline] instance : Coe PlotBuilder _FacetChain where
+  coe pb := { acc := #[pb] }
+
+/-- Evaluate a faceting chain directly inside `#html` blocks. -/
+instance : ProofWidgets.HtmlEval _FacetChain where
+  eval c := pure (Facet.grid c.acc 2)
+
+/-! ### Live demo --------------------------------------------------------- -/
+
+#html (
+  plot (fun x : Float => x)
+  ⫽ plot (fun x : Float => x * x)
+  ⫽ plot (fun x : Float => x * x * x)
+)
 
 end LeanPlot.GrammarOfGraphics

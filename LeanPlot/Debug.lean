@@ -20,7 +20,7 @@ structure SavePNGProps where
   deriving FromJson, ToJson
 
 /-! Tiny React helper that uses `html2canvas` to download a PNG snapshot. -/
-@[inline] def SavePNG : ProofWidgets.Component SavePNGProps where
+@[widget_module] def SavePNG : ProofWidgets.Component SavePNGProps where
   javascript := "import html2canvas from 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm';\n\nexport function SavePNG(props) {\n  const handleClick = () => {\n    const el = document.getElementById(props.targetId);\n    if (!el) { console.error('SavePNG: target not found'); return; }\n    html2canvas(el).then(canvas => {\n      const link = document.createElement('a');\n      link.download = props.fileName;\n      link.href = canvas.toDataURL();\n      link.click();\n    });\n  };\n  return React.createElement('button', { onClick: handleClick, style: { marginBottom: '4px' } }, 'Save PNG');\n}\n"
   «export» := "SavePNG"
 

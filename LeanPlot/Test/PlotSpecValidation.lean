@@ -20,6 +20,7 @@ open LeanPlot.PlotSpec
 
 namespace LeanPlot.Test.PlotSpecValidation
 
+
 /-! ## Positive cases -/
 
 /- Single-series line plot passes validation. -/
@@ -28,8 +29,9 @@ namespace LeanPlot.Test.PlotSpecValidation
 /- Two distinct series with unique names / keys also pass. -/
 #plot (
   lines #[
-    ("id",  fun x : Float => x),
-    ("sqr", fun x : Float => x * x)
+    ("id",   fun x : Float => x),
+    ("sqr",  fun x : Float => x * x),
+    ("cube", fun x : Float => x * x * x)
   ]
 )
 

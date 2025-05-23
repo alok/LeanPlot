@@ -18,3 +18,5 @@ import LeanPlot.Transform
 import LeanPlot.PlotComposition
 import LeanPlot.GrammarOfGraphics
 import LeanPlot.Demos.GrammarDemo
+import LeanPlot.Demos.FacetDemo
+import LeanPlot.Faceting

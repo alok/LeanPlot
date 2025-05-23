@@ -52,7 +52,6 @@ def grammarMixedDemo : PlotSpec :=
   -- Create base data
   let months := (List.range 12).toArray.map (·.toFloat + 1)
   let actualSales := months.zip (months.map fun m => 100 + 10 * m + 5 * Float.sin (m * Float.pi / 6))
-  let forecast := months.zip (months.map fun m => 100 + 10 * m)
 
   -- Start with bar chart for actual sales
   plotBar actualSales "Actual Sales"

@@ -23,7 +23,7 @@ def mergeAligned (p q : PlotSpec) (steps : Nat := 200) : PlotSpec :=
     | some ax =>
       match ax.domain with
       | some arr =>
-        if h : arr.size >= 2 then
+        if _h : arr.size >= 2 then
           match arr[0]!.getNum?, arr[1]!.getNum? with
           | Except.ok n1, Except.ok n2 => (n1.toFloat, n2.toFloat)
           | _, _ => (0, 1)
@@ -60,11 +60,22 @@ def mergeAligned (p q : PlotSpec) (steps : Nat := 200) : PlotSpec :=
 /-- Create a subplot grid from multiple plot specs.
 This creates a visual grid layout of multiple plots. -/
 def gridLayout (plots : Array PlotSpec) (cols : Nat := 2) : Html :=
-  let rows := (plots.size + cols - 1) / cols
-  let gridStyle := Json.str s!"display: grid; grid-template-columns: repeat({cols}, 1fr); gap: 10px;"
+  -- React expects `style` props to be an **object** rather than a CSS string (#62).
+  -- We therefore build the style as a JSON object so that it is passed through
+  -- to the underlying React component correctly.
+  let gridStyle : Json := Json.mkObj [
+    ("display",             Json.str "grid"),
+    ("gridTemplateColumns", Json.str s!"repeat({cols}, 1fr)"),
+    ("gap",                 Json.str "10px")
+  ]
+
+  let cellStyle : Json := Json.mkObj [
+    ("border",   Json.str "1px solid #ddd"),
+    ("padding",  Json.str "5px")
+  ]
 
   let cells := plots.map fun plot =>
-    Html.element "div" #[("style", Json.str "border: 1px solid #ddd; padding: 5px;")]
+    Html.element "div" #[("style", cellStyle)]
       #[PlotSpec.render plot]
 
   Html.element "div" #[("style", gridStyle)] cells

@@ -554,15 +554,26 @@ instance : HtmlEval PlotSpec where
     --     statically to fail fast.
     let mut nameSet : Std.HashSet String := {}
     let mut dataKeySet : Std.HashSet String := {}
-    let mut dupFound := false
+    let mut dupNames : Std.HashSet String := {}
+    let mut dupKeys  : Std.HashSet String := {}
     for s in spec.series do
-      if nameSet.contains s.name || dataKeySet.contains s.dataKey then
-        dupFound := true
+      if nameSet.contains s.name then
+        dupNames := dupNames.insert s.name
       nameSet := nameSet.insert s.name
+
+      if dataKeySet.contains s.dataKey then
+        dupKeys := dupKeys.insert s.dataKey
       dataKeySet := dataKeySet.insert s.dataKey
 
-    if dupFound then
-      throwError "LeanPlot: duplicate series name or dataKey detected; they must be unique"
+    if !dupNames.isEmpty || !dupKeys.isEmpty then
+      let formatList (hs : Std.HashSet String) : String :=
+        String.intercalate ", " hs.toList
+      let nameMsg :=
+        if dupNames.isEmpty then "" else s!" series names: {formatList dupNames}"
+      let keyMsg  :=
+        if dupKeys.isEmpty  then "" else s!" dataKeys: {formatList dupKeys}"
+      let connector := if !dupNames.isEmpty && !dupKeys.isEmpty then "; " else ""
+      throwError s!"LeanPlot: duplicate{connector}{nameMsg}{keyMsg} detected – each series must use a unique `name` and `dataKey`."
 
     -- 4. Check every JSON object in `chartData` contains *all* required keys.
     let allRowsHaveKeys : Bool :=
