@@ -476,3 +476,38 @@ Next Major Task:
 
 ## TODO Items
 - Mixed chart types (bars + lines) now work with ComposedChart (2025-05-23:01:39)
+
+## Implementation Notes (2025-05-23:02:08)
+
+### Json Number Extraction Issue
+When implementing `PlotSpec.addLine`, discovered that `j.getNum?` returns `Except String JsonNumber`
+rather than the expected `Option JsonNumber`. Solution: Convert Except to Option with pattern matching:
+```lean
+match j.getNum? with
+| Except.ok jsonNum => some (jsonNum.toFloat)
+| Except.error _ => none
+```
+
+This ensures type compatibility while extracting float values from JSON for data merging in mixed charts.
+
+### Mixed Chart Data Architecture
+The `PlotSpec.addLine` now properly merges data into existing chartData:
+- If chartData is empty: generates new data points
+- If chartData exists: maps over existing data, adding new series values to each row
+- This creates "tidy" data format required by Recharts ComposedChart
+
+## Plotting Library Summary
+
+Current checklist:
+- [x] y = x
+- [x] y = x²
+- [x] multiple plots in one graph
+- [x] mixed chart types (bar + line overlay)
+- [x] Grammar of Graphics functional DSL
+- [x] Log scale support
+
+Next steps:
+- [ ] 3D plots
+- [ ] Animation support
+- [ ] Statistical layers (regression, confidence intervals)
+- [ ] Time series with date axes

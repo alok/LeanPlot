@@ -324,6 +324,76 @@ def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
 instance : HAdd PlotSpec PlotSpec PlotSpec where
   hAdd := overlay
 
+/-- Add a line layer to an existing plot, merging its data into the existing chartData. -/
+@[inline] def addLine {β} [ToFloat β]
+    (spec : PlotSpec) (f : Float → β) (name : String) (color : Option String := none)
+    (stepsOverride : Option Nat := none) (domainOverride : Option (Float × Float) := none) : PlotSpec :=
+
+  let xKey := (spec.xAxis.getD {dataKey := "x"}).dataKey
+  let effectiveSteps := stepsOverride.getD 200
+
+  let newLayer : LayerSpec := {
+    name    := name,
+    dataKey := name,
+    color   := color.getD (LeanPlot.Palette.colorFromNat spec.series.size),
+    type    := "line"
+  }
+
+  let toJsonNumAsFloatOption (j : Json) : Option Float :=
+    match j.getNum? with
+    | Except.ok jsonNum => some (jsonNum.toFloat)
+    | Except.error _ => none
+
+  if spec.chartData.isEmpty then
+    let defaultDomain : Float × Float := (-1.0, 1.0)
+    let (minVal, maxVal) : Float × Float :=
+      domainOverride.getD <| spec.xAxis.bind (·.domain) |> fun domOpt =>
+        match domOpt with
+        | some arr =>
+          if arr.size == 2 then
+            match toJsonNumAsFloatOption arr[0]!, toJsonNumAsFloatOption arr[1]! with
+            | some v0, some v1 => (v0, v1)
+            | _, _ => defaultDomain
+          else defaultDomain
+        | none => defaultDomain
+
+    let newData : Array Json :=
+      if effectiveSteps == 0 then #[] else
+        (List.range (effectiveSteps.succ)).toArray.map fun i =>
+          let x : Float := minVal + (maxVal - minVal) * i.toFloat / effectiveSteps.toFloat
+          let yVal := toJson (toFloat (f x))
+          Json.mkObj [(xKey, toJson x), (name, yVal)]
+    { spec with
+        chartData := newData,
+        series    := spec.series.push newLayer,
+        legend    := true }
+  else
+    let updatedChartData := spec.chartData.map fun obj =>
+      match obj.getObjVal? xKey with
+      | Except.ok xJson =>
+        match toJsonNumAsFloatOption xJson with
+        | some xFloat =>
+          let yVal := toJson (toFloat (f xFloat))
+          obj.setObjVal! name yVal
+        | none => obj -- xKey's value was not a number or not a float
+      | Except.error _ => obj -- xKey not found
+    { spec with
+        chartData := updatedChartData,
+        series    := spec.series.push newLayer,
+        legend    := true }
+
+/-- Add a scatter layer to an existing plot. (Needs similar data merging logic as addLine for robust composition) -/
+@[inline] def addScatter
+    (spec : PlotSpec) (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
+  let newSpec := LeanPlot.scatter points name color -- LeanPlot.scatter is in the LeanPlot namespace
+  spec.overlay newSpec
+
+/-- Add a bar layer to an existing plot. -/
+@[inline] def addBar
+    (spec : PlotSpec) (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
+  let newSpec := LeanPlot.bar points name color -- LeanPlot.bar is in the LeanPlot namespace
+  spec.overlay newSpec
+
 -- Renderer Typeclass
 
 /-- A typeclass for rendering a layer specification into HTML. -/

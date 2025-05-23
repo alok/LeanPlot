@@ -70,77 +70,80 @@ namespace PlotBuilder
 /-- Create a plot builder from an existing PlotSpec -/
 @[inline] def fromSpec (spec : PlotSpec) : PlotBuilder := { spec := spec }
 
-/-- Add a title to the plot -/
-@[inline] def withTitle (pb : PlotBuilder) (title : String) : PlotBuilder :=
-  { pb with spec := pb.spec.withTitle title }
+-- Extended projection notation functions
+-- These allow syntax like: myPlot.title "My Title"
 
-/-- Set the plot dimensions -/
-@[inline] def withSize (pb : PlotBuilder) (width height : Nat) : PlotBuilder :=
-  { pb with spec := pb.spec.withSize width height }
+/-- Set title using projection notation -/
+@[inline] def title (title : String) (pb : PlotBuilder) : PlotBuilder :=
+  { pb with spec := { pb.spec with title := title } }
 
-/-- Toggle legend visibility -/
-@[inline] def withLegend (pb : PlotBuilder) (showLegend : Bool := true) : PlotBuilder :=
-  { pb with spec := pb.spec.withLegend showLegend }
+/-- Set dimensions using projection notation -/
+@[inline] def size (width height : Nat) (pb : PlotBuilder) : PlotBuilder :=
+  { pb with spec := { pb.spec with width := width, height := height } }
 
-/-- Set x-axis label -/
-@[inline] def withXLabel (pb : PlotBuilder) (label : String) : PlotBuilder :=
+/-- Set legend visibility using projection notation -/
+@[inline] def legend (showLegend : Bool) (pb : PlotBuilder) : PlotBuilder :=
+  { pb with spec := { pb.spec with legend := showLegend } }
+
+/-- Set x-axis label using projection notation -/
+@[inline] def xLabel (label : String) (pb : PlotBuilder) : PlotBuilder :=
   { pb with spec := pb.spec.withXLabel label }
 
-/-- Set y-axis label -/
-@[inline] def withYLabel (pb : PlotBuilder) (label : String) : PlotBuilder :=
+/-- Set y-axis label using projection notation -/
+@[inline] def yLabel (label : String) (pb : PlotBuilder) : PlotBuilder :=
   { pb with spec := pb.spec.withYLabel label }
 
-/-- Set x-axis domain -/
-@[inline] def withXDomain (pb : PlotBuilder) (min max : Float) : PlotBuilder :=
+/-- Set x-axis domain using projection notation -/
+@[inline] def xDomain (min max : Float) (pb : PlotBuilder) : PlotBuilder :=
   { pb with spec := pb.spec.withXDomain min max }
 
-/-- Set y-axis domain -/
-@[inline] def withYDomain (pb : PlotBuilder) (min max : Float) : PlotBuilder :=
+/-- Set y-axis domain using projection notation -/
+@[inline] def yDomain (min max : Float) (pb : PlotBuilder) : PlotBuilder :=
   { pb with spec := pb.spec.withYDomain min max }
 
-/-- Set global aesthetic mappings -/
-@[inline] def aes (pb : PlotBuilder) (x : String) (y : String) : PlotBuilder :=
+/-- Set global aesthetic mappings using projection notation -/
+@[inline] def aes (x : String) (y : String) (pb : PlotBuilder) : PlotBuilder :=
   { pb with globalAes := { x := some x, y := some y } }
 
-/-- Add a layer with custom data and geometry -/
-@[inline] def addLayer (pb : PlotBuilder) (layer : Layer) : PlotBuilder :=
+/-- Add a layer using projection notation -/
+@[inline] def layer (layer : Layer) (pb : PlotBuilder) : PlotBuilder :=
   { pb with layers := pb.layers.push layer }
 
-/-- Add a point layer -/
-@[inline] def addPoints (pb : PlotBuilder) (data : Array Json) (name : String := "points") : PlotBuilder :=
-  pb.addLayer { data := data, geom := Geom.Point, name := some name }
+/-- Add points using projection notation -/
+@[inline] def points (data : Array Json) (name : String := "points") (pb : PlotBuilder) : PlotBuilder :=
+  pb.layer { data := data, geom := Geom.Point, name := some name }
 
-/-- Add a line layer -/
-@[inline] def addLine (pb : PlotBuilder) (data : Array Json) (name : String := "line") : PlotBuilder :=
-  pb.addLayer { data := data, geom := Geom.Line, name := some name }
+/-- Add a line using projection notation -/
+@[inline] def line (data : Array Json) (name : String := "line") (pb : PlotBuilder) : PlotBuilder :=
+  pb.layer { data := data, geom := Geom.Line, name := some name }
 
-/-- Add a bar layer -/
-@[inline] def addBars (pb : PlotBuilder) (data : Array Json) (name : String := "bars") : PlotBuilder :=
-  pb.addLayer { data := data, geom := Geom.Bar, name := some name }
+/-- Add bars using projection notation -/
+@[inline] def bars (data : Array Json) (name : String := "bars") (pb : PlotBuilder) : PlotBuilder :=
+  pb.layer { data := data, geom := Geom.Bar, name := some name }
 
-/-- Add an area layer -/
-@[inline] def addArea (pb : PlotBuilder) (data : Array Json) (name : String := "area") : PlotBuilder :=
-  pb.addLayer { data := data, geom := Geom.Area, name := some name }
+/-- Add an area using projection notation -/
+@[inline] def area (data : Array Json) (name : String := "area") (pb : PlotBuilder) : PlotBuilder :=
+  pb.layer { data := data, geom := Geom.Area, name := some name }
 
-/-- Add an existing PlotSpec as a layer -/
-@[inline] def addSpec (pb : PlotBuilder) (spec : PlotSpec) : PlotBuilder :=
+/-- Overlay an existing PlotSpec using projection notation -/
+@[inline] def overlay (spec : PlotSpec) (pb : PlotBuilder) : PlotBuilder :=
   { pb with spec := pb.spec.overlay spec }
 
-/-- Set logarithmic scale on x-axis -/
-@[inline] def logX (pb : PlotBuilder) (base : Float := 10.0) : PlotBuilder :=
+/-- Set logarithmic scale on x-axis using projection notation -/
+@[inline] def logX (base : Float := 10.0) (pb : PlotBuilder) : PlotBuilder :=
   let newConfig := match pb.scaleConfig with
     | some cfg => { cfg with xScale := Scale.ScaleType.Logarithmic base }
     | none => { xScale := Scale.ScaleType.Logarithmic base, yScale := Scale.ScaleType.Linear }
   { pb with scaleConfig := some newConfig }
 
-/-- Set logarithmic scale on y-axis -/
-@[inline] def logY (pb : PlotBuilder) (base : Float := 10.0) : PlotBuilder :=
+/-- Set logarithmic scale on y-axis using projection notation -/
+@[inline] def logY (base : Float := 10.0) (pb : PlotBuilder) : PlotBuilder :=
   let newConfig := match pb.scaleConfig with
     | some cfg => { cfg with yScale := Scale.ScaleType.Logarithmic base }
     | none => { xScale := Scale.ScaleType.Linear, yScale := Scale.ScaleType.Logarithmic base }
   { pb with scaleConfig := some newConfig }
 
-/-- Build the final PlotSpec from the builder -/
+/-- Build the final PlotSpec -/
 @[inline] def build (pb : PlotBuilder) : PlotSpec :=
   -- Merge all layer data if needed
   let allData := pb.layers.foldl (init := pb.spec.chartData) fun acc layer =>
@@ -166,6 +169,8 @@ namespace PlotBuilder
     series := pb.spec.series ++ series }
 
 end PlotBuilder
+
+-- Standalone functions for direct PlotSpec manipulation
 
 /-- Create a plot from a function using the DSL -/
 @[inline] def plot {β} [ToFloat β] (f : Float → β) : PlotBuilder :=
@@ -208,36 +213,6 @@ end PlotBuilder
     (name : String := "y") (steps : Nat := 200)
     (domain : Option (Float × Float) := none) : PlotSpec :=
   LeanPlot.area f name steps domain
-
-/-- Add a line layer to an existing plot -/
-@[inline] def addLine {β} [ToFloat β] (spec : PlotSpec)
-    (f : Float → β) (name : String) (color : Option String := none) : PlotSpec :=
-  let newSpec := LeanPlot.line f name 200 none color
-  spec.overlay newSpec
-
-/-- Add a scatter layer to an existing plot -/
-@[inline] def addScatter (spec : PlotSpec)
-    (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
-  let newSpec := LeanPlot.scatter points name color
-  spec.overlay newSpec
-
-/-- Add a bar layer to an existing plot -/
-@[inline] def addBar (spec : PlotSpec)
-    (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
-  let newSpec := LeanPlot.bar points name color
-  spec.overlay newSpec
-
-/-- Set logarithmic scale on x-axis -/
-@[inline] def logX (spec : PlotSpec) (base : Float := 10.0) : PlotSpec :=
-  -- For now, we just return the spec unchanged since scale transformations
-  -- need to be implemented in the renderer
-  spec
-
-/-- Set logarithmic scale on y-axis -/
-@[inline] def logY (spec : PlotSpec) (base : Float := 10.0) : PlotSpec :=
-  -- For now, we just return the spec unchanged since scale transformations
-  -- need to be implemented in the renderer
-  spec
 
 /-- Compose multiple functions into a multi-line plot -/
 @[inline] def plotLines {β} [Inhabited β] [ToFloat β]

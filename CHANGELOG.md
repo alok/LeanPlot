@@ -235,4 +235,20 @@
 
 ## [v0.4.0] - 2025-05-23:01:20
 
-// ... existing code ...
+## [Unreleased]
+
+### Added
+- Grammar of Graphics DSL for functional plot composition (2025-05-22:23:51)
+- Log scale support for axes (2025-05-22:22:46)
+- Comprehensive plotting demos showcase various chart types
+- New `PlotSpec.addLine`, `PlotSpec.addScatter`, `PlotSpec.addBar` methods for layer composition (2025-05-23:02:08)
+
+### Changed
+- Refactored DSL to use pure functions instead of builder pattern (2025-05-23:00:42)
+- Consolidated duplicate plot functions into single definitions (2025-05-23:01:14)
+- Improved `PlotSpec.addLine` to properly merge data for mixed charts (2025-05-23:02:08)
+  - Now correctly handles data integration when overlaying line on bar charts
+  - Converts `Except` results to `Option` for Json number extraction
+
+### Fixed
+- Mixed chart data validation errors when combining different plot types (2025-05-23:02:08)
