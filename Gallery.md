@@ -6,12 +6,12 @@ A living checklist of demo / test cases LeanPlot supports. Tick items off as the
 - [x] 1-variable linear  `y = x`
 - [x] Quadratic  `y = x²`
 - [x] Cubic  `y = x³`
-- [ ] Trig periodic  `y = sin(2πx)`
-- [ ] Trig overlay  `y = sin(2πx)`, `y = cos(2πx)`
-- [ ] Damped sine  `y = e^(−3x) · sin(8πx)`
-- [ ] Exponential growth  `y = e^x`
-- [ ] Piecewise "step"  `y = ⌊5x⌋ / 5`
-- [ ] Rational with asymptote  `y = 1 / (x − 0.5)`
+- [x] Trig periodic  `y = sin(2πx)`
+- [x] Trig overlay  `y = sin(2πx)`, `y = cos(2πx)`
+- [x] Damped sine  `y = e^(−3x) · sin(8πx)`
+- [x] Exponential growth  `y = e^x`
+- [x] Piecewise "step"  `y = ⌊5x⌋ / 5`
+- [x] Rational with asymptote  `y = 1 / (x − 0.5)`
 - [ ] Parameter sweep (slider)  `y = sin(ωx)` for `ω ∈ {1 … 10}`
 
 ## Scatter / point clouds
@@ -36,3 +36,10 @@ A living checklist of demo / test cases LeanPlot supports. Tick items off as the
 - [ ] Negative-only domain  `y = −x²`
 - [ ] Custom color palette mapping
 - [ ] Axis units / formatting demo
+
+## Data transformations
+- [x] Log scale transforms
+- [x] Square root scale
+- [x] Symlog scale (handles negative values)
+- [x] Data normalization [0,1]
+- [x] Moving average smoothing

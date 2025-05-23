@@ -10,6 +10,7 @@ import LeanPlot.Demos.OverlayDemo
 import LeanPlot.Demos.LogScaleDemo
 import LeanPlot.Demos.MixedChartDemo
 import LeanPlot.Demos.TransformDemo
+import LeanPlot.Demos.TrigDemo
 import LeanPlot.Palette
 import LeanPlot.Specification
 import LeanPlot.Scale
