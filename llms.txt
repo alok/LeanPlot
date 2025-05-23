@@ -511,3 +511,14 @@ Next steps:
 - [ ] Animation support
 - [ ] Statistical layers (regression, confidence intervals)
 - [ ] Time series with date axes
+
+NEW_LOG_ENTRY_BELOW
+2025-05-23:10:05 UTC – SeriesKind groundwork committed
+-------------------------------------------------------
+• Added `LeanPlot.Series` module introducing:
+  – `SeriesKind` enum (`line | scatter | bar | area`).
+  – Kind‐specific detail records (`LineSeriesDetails`, etc.).
+  – Dependent `SeriesDetails` inductive and `SeriesDSpec` Σ-type pairing name/dataKey with details.
+• Imported new module in root `LeanPlot.lean` so it builds.
+• No integration with renderer yet; this commit establishes type foundation for future dependent series refactor.
+• Updated `CHANGELOG` will follow in later milestone once feature is wired through.
