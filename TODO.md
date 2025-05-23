@@ -36,6 +36,15 @@
   - [x] Bar
   - [x] Scatter
   - [x] Mixed charts (ComposedChart)
+- [x] Data transformations (Transform module)
+  - [x] Various scale types (log, sqrt, power, symlog)
+  - [x] Data normalization and standardization
+  - [x] Moving average smoothing
+- [x] Advanced plot composition (PlotComposition module)
+  - [x] Grid layouts for multiple plots
+  - [x] Vertical stacking with shared axes
+  - [x] Y-scale normalization across plots
+  - [x] Consistent color schemes
 - [ ] Interactive domain sliders / zooming
 
 ### Grammar-of-graphics core
@@ -59,3 +68,7 @@
 - [ ] 3D plotting capabilities
 - [ ] Animation support
 - [ ] Integrate with Lean's proof visualization needs
+- [ ] Heatmaps and contour plots
+- [ ] Box plots and violin plots
+- [ ] Network/graph visualizations
+- [ ] Improved data resampling for overlay with different domains
