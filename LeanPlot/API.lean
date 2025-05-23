@@ -29,17 +29,12 @@ Recharts. -/
 @[inline] def xyArrayToJson (pts : Array (Float × Float)) : Array Json :=
   pts.map fun (x, y) => json% {x: $(toJson x), y: $(toJson y)}
 
-/-- **Tier-0 helper:** Render a line chart from an array of points.
-This delegates to `LeanPlot.Components.mkLineChart` under the hood and
-uses the first color of `defaultPalette` for the point fill.
--/
-@[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
-  <LineChart width={w} height={h} data={data}>
-    <XAxis dataKey?="x" />
-    <YAxis />
-    {... seriesStrokes.map (fun (name, color) =>
-      <Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} />)}
-  </LineChart>
+/-- A thin alias forwarding to `LeanPlot.Components.mkLineChart`.  This keeps
+`LeanPlot.API` free of implementation details while preserving the public
+signature users rely on. -/
+@[inline] def mkLineChart (data : Array Json)
+    (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
+  LeanPlot.Components.mkLineChart data seriesStrokes w h
 
 /-- **Tier-0 helper:** Render a line chart for a single function
 `f : Float → β` with zero configuration.  The function is sampled uniformly
