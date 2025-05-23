@@ -238,6 +238,12 @@
 ## [Unreleased]
 
 ### Added
+- **Data Transformation Module (`LeanPlot.Transform`)**: New module providing utilities for transforming plot data (2025-01-07)
+  - Scale transformations: `linearScale`, `logScale`, `sqrtScale`, `powerScale`, `symlogScale`
+  - Data normalization and standardization functions
+  - Moving average smoothing
+  - Transform functions for applying scales to plot functions
+  - Demo: `TransformDemo.lean` showcasing various transformations
 - Grammar of Graphics DSL for functional plot composition (2025-05-22:23:51)
 - Log scale support for axes (2025-05-22:22:46)
 - Comprehensive plotting demos showcase various chart types

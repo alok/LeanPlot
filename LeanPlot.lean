@@ -9,8 +9,11 @@ import LeanPlot.Demos.QuadraticDemo
 import LeanPlot.Demos.OverlayDemo
 import LeanPlot.Demos.LogScaleDemo
 import LeanPlot.Demos.MixedChartDemo
+import LeanPlot.Demos.TransformDemo
 import LeanPlot.Palette
 import LeanPlot.Specification
 import LeanPlot.Scale
+import LeanPlot.Transform
+import LeanPlot.PlotComposition
 import LeanPlot.GrammarOfGraphics
 import LeanPlot.Demos.GrammarDemo
