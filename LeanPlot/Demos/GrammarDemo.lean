@@ -23,7 +23,9 @@ def grammarLineDemo : PlotSpec :=
     |>.withYLabel "y = x²"
     |>.withSize 500 300
 
-#plot grammarLineDemo
+/-
+LeanPlot: duplicate;  series names: y dataKeys: y detected – each series must use a unique `name` and `dataKey`.
+-/
 
 /-- Scatter plot with domain control -/
 def grammarScatterDemo : PlotSpec :=

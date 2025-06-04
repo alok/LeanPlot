@@ -4,6 +4,7 @@ import LeanPlot.Constants
 import LeanPlot.ToFloat
 import LeanPlot.AutoDomain
 import LeanPlot.Axis
+import Lean.Data.Json
 
 /-! # LeanPlot.API – Tier-0 zero-config helpers
 
