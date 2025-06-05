@@ -238,6 +238,14 @@
 ## [Unreleased]
 
 ### Added
+- **Dependent Series Types (`LeanPlot.Series`)**: New module providing type-safe series specifications (2025-05-23:11:10)
+  - `SeriesKind` enum for compile-time safe series types
+  - Kind-specific detail records (`LineSeriesDetails`, `ScatterSeriesDetails`, etc.)
+  - Dependent `SeriesDetails` inductive and `SeriesDSpec` Σ-type
+  - `SeriesDSpecPacked` existential wrapper for heterogeneous collections
+  - Bidirectional conversion between `LayerSpec` and `SeriesDSpec`
+  - Type-safe rendering functions with compile-time guarantees
+  - Demo: `SeriesKindDemo.lean` showcasing type safety benefits
 - **Data Transformation Module (`LeanPlot.Transform`)**: New module providing utilities for transforming plot data (2025-01-07)
   - Scale transformations: `linearScale`, `logScale`, `sqrtScale`, `powerScale`, `symlogScale`
   - Data normalization and standardization functions

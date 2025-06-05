@@ -21,3 +21,4 @@ import LeanPlot.Demos.GrammarDemo
 import LeanPlot.Demos.FacetDemo
 import LeanPlot.Faceting
 import LeanPlot.Series
+import LeanPlot.Demos.SeriesKindDemo

@@ -546,3 +546,24 @@ Updated nested checkbox view
   - [x] Conversion layer
   - [ ] `RenderFragment` refactor (postponed due to circular dep)
   - [ ] Demo/documentation update
+
+NEW_LOG_ENTRY_BELOW
+2025-05-23:11:10 UTC – SeriesKindDemo completed
+-------------------------------------------------
+• Created `LeanPlot/Demos/SeriesKindDemo.lean` showcasing:
+  – Type-safe series construction with dependent types
+  – Compile-time guarantee that details match kind
+  – Conversion to legacy LayerSpec for PlotSpec compatibility
+  – Mixed chart demo with all four series types
+• Demo successfully renders via `#plot renderingDemo`
+• Type safety example shows compile-time enforcement
+• Next: Consider refactoring PlotSpec to use SeriesDSpec directly
+
+Updated nested checkbox view
+- [x] Dependent `SeriesDSpec`
+  - [x] `SeriesKind` enum
+  - [x] Detail structs
+  - [x] `SeriesDSpec` Σ-type
+  - [x] Conversion layer
+  - [ ] `RenderFragment` refactor (postponed due to circular dep)
+  - [x] Demo/documentation update
