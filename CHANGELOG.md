@@ -248,16 +248,6 @@
 - Log scale support for axes (2025-05-22:22:46)
 - Comprehensive plotting demos showcase various chart types
 - New `PlotSpec.addLine`, `PlotSpec.addScatter`, `PlotSpec.addBar` methods for layer composition (2025-05-23:02:08)
-- **Brainfuck DSL with Peephole Optimization** (`LeanPlot.Brainfuck`) - 2025-01-14
-  - Complete Brainfuck interpreter implementation in Lean 4
-  - Clean AST representation with type-safe instruction set
-  - Peephole optimization pass that recognizes common patterns:
-    - `[-]` → `setZero` (clear cell)
-    - `[->+<]` → `moveRight` (move value to next cell)
-    - Consecutive operations merged (e.g., `+++` → `inc 3`)
-  - Examples include Hello World and arithmetic operations
-  - Safe memory handling with bounds checking
-- **Data Transformation Module (`LeanPlot.Transform`)**: New module providing utilities for transforming plot data (2025-01-07)
 
 ### Changed
 - Refactored DSL to use pure functions instead of builder pattern (2025-05-23:00:42)
@@ -286,12 +276,3 @@
 
 - Updated README feature list and demo gallery.
 - Marked Faceting as complete in `TODO.md`.
-
-## [v0.1.0-alpha] - 2025-12-16:12:00
-
-### Added
-- Initial release of LeanPlot
-- Basic plotting functionality for Lean 4
-- Integration with ProofWidgets4 Recharts
-- Support for line and scatter plots
-- `#plot` command for easy visualization in VS Code

@@ -1,5 +1,6 @@
 import Lean
 
+
 -- Coordinates in a two dimensional grid. ⟨0,0⟩ is the upper left.
 /-- Coordinates in a two dimensional grid. ⟨0,0⟩ is the upper left. -/
 structure Coords where
@@ -11,9 +12,12 @@ deriving BEq
 
 /-- Represents the state of a maze game, including the grid size, player position, and wall positions. -/
 structure GameState where
-  size     : Coords      -- coordinates of bottom-right cell
-  position : Coords      -- row and column of the player
-  walls    : List Coords -- maze cells that are not traversible
+  /-- coordinates of bottom-right cell -/
+  size     : Coords
+  /-- row and column of the player -/
+  position : Coords
+  /-- maze cells that are not traversible -/
+  walls    : List Coords
 
 /-- A game cell is a single character. -/
 declare_syntax_cat game_cell
@@ -247,12 +251,12 @@ theorem step_west
   {w: List Coords}
   (hclear' : ! w.elem ⟨x,y⟩)
   (W : Escapable ⟨s,⟨x,y⟩,w⟩) :
-  Escapable ⟨s,⟨x+1,y⟩, w⟩ :=
-    by have hmm : GameState.mk s ⟨x,y⟩ w = make_move ⟨s,⟨x+1, y⟩,w⟩ Move.west :=
-               by have h' : x + 1 - 1 = x := rfl
-                  simp [h', hclear']
-      rw [hmm] at W
-      exact .Step ⟨s,⟨x+1,y⟩,w⟩ Move.west W
+  Escapable ⟨s,⟨x+1,y⟩, w⟩ := by
+    have hmm : GameState.mk s ⟨x,y⟩ w = make_move ⟨s,⟨x+1, y⟩,w⟩ Move.west := by
+      have h' : x + 1 - 1 = x := rfl
+      simp [h', hclear']
+    rw [hmm] at W
+    exact .Step ⟨s,⟨x+1,y⟩,w⟩ Move.west W
 
 theorem step_east
   {s: Coords}
@@ -280,6 +284,7 @@ theorem step_north
        rw [hmm] at N
        exact .Step ⟨s,⟨x,y+1⟩,w⟩ Move.north N
 
+/-- If a game state is escapable, then moving south from it is also escapable. -/
 theorem step_south
   {s: Coords}
   {x y : Nat}
@@ -293,26 +298,30 @@ theorem step_south
        rw [hmm] at S
        exact .Step ⟨s,⟨x,y⟩,w⟩ Move.south S
 
+/-- If a game state is escapable, then moving west from it is also escapable. -/
 def escape_west {sx sy : Nat} {y : Nat} {w : List Coords} : Escapable ⟨⟨sx, sy⟩,⟨0, y⟩,w⟩ :=
     .Done _ (Or.inl rfl)
 
+/-- If a game state is escapable, then moving east from it is also escapable. -/
 def escape_east {sy x y : Nat} {w : List Coords} : Escapable ⟨⟨x+1, sy⟩,⟨x, y⟩,w⟩ :=
   .Done _ (Or.inr <| Or.inr <| Or.inl rfl)
 
+/-- If a game state is escapable, then moving north from it is also escapable. -/
 def escape_north {sx sy : Nat} {x : Nat} {w : List Coords} : Escapable ⟨⟨sx, sy⟩,⟨x, 0⟩,w⟩ :=
   .Done _ (Or.inr <| Or.inl rfl)
 
+/-- If a game state is escapable, then moving south from it is also escapable. -/
 def escape_south {sx x y : Nat} {w: List Coords} : Escapable ⟨⟨sx, y+1⟩,⟨x, y⟩,w⟩ :=
   .Done _ (Or.inr <| Or.inr <| Or.inr rfl)
 
+/-- Fail tactic. -/
 elab "fail" m:term : tactic => throwError m
 
--- `first | t | u` is the Lean 4 equivalent of `t <|> u` in Lean 3.
 
--- the `decides`s are to discharge the `hclear` and `hinbounds` side-goals
 /-- Tactic to move west. -/
 macro "west" : tactic =>
   `(tactic| first | apply step_west; (· decide; done) | fail "cannot step west")
+
 /-- Tactic to move east. -/
 macro "east" : tactic =>
   `(tactic| first | apply step_east; (· decide; done); (· decide; done) | fail "cannot step east")
@@ -333,37 +342,40 @@ macro "out" : tactic => `(tactic| first | apply escape_north | apply escape_sout
 /-- Peephole tactic to strip cancelling opposing directions -/
 macro "peephole" : tactic => `(tactic| repeat (first | (north; south) | (south; north) | (east; west) | (west; east)))
 
--- Can escape the trivial maze in any direction.
+/-- Can escape the trivial maze in any direction. -/
 example : Escapable ┌─┐
                     │@│
                     └─┘ := by out
 
-
--- some other mazes with immediate escapes
+/-- Some other mazes with immediate escapes. -/
 example : Escapable ┌──┐
                     │░░│
                     │@░│
                     │░░│
                     └──┘ := by out
+
+/-- Can escape the trivial maze in any direction. -/
 example : Escapable ┌──┐
                     │░░│
                     │░@│
                     │░░│
                     └──┘ := by out
+
+/-- Can escape the trivial maze in any direction. -/
 example : Escapable ┌───┐
                     │░@░│
                     │░░░│
                     │░░░│
                     └───┘ := by out
+
+/-- Can escape the trivial maze in any direction. -/
 example : Escapable ┌───┐
                     │░░░│
                     │░░░│
                     │░@░│
                     └───┘ := by out
 
-
--- Now for some more interesting mazes.
-
+/-- A maze with an immediate escape. -/
 def maze1 := ┌──────┐
              │▓▓▓▓▓▓│
              │▓░░@░▓│
@@ -372,6 +384,7 @@ def maze1 := ┌──────┐
              │▓▓▓▓░▓│
              └──────┘
 
+/-- Can escape the `maze1`. -/
 example : Escapable maze1 := by
   west
   west

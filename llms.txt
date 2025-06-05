@@ -522,3 +522,27 @@ NEW_LOG_ENTRY_BELOW
 • Imported new module in root `LeanPlot.lean` so it builds.
 • No integration with renderer yet; this commit establishes type foundation for future dependent series refactor.
 • Updated `CHANGELOG` will follow in later milestone once feature is wired through.
+
+NEW_LOG_ENTRY_BELOW
+2025-05-23:10:45 UTC – SeriesKind conversion and rendering helpers
+-------------------------------------------------------------------
+• Extended `LeanPlot.Series` with:
+  – `ToString` instance for `SeriesKind`
+  – `toDetailType` mapping kinds to their detail types
+  – `fromString?` parser for string → SeriesKind conversion
+  – `SeriesDSpecPacked` existential wrapper for heterogeneous collections
+  – Bidirectional conversion: `LayerSpec.toSeriesDSpec?` and `SeriesDSpecPacked.toLayerSpec`
+  – Type-safe rendering functions for each series kind
+  – `renderSeriesByKind` dependent function eliminator
+• Fixed toolchain from `nightly` to `leanprover/lean4:v4.21.0-rc3` for ProofWidgets compatibility
+• Removed stray `reverse` proof code from `Specification.lean`
+• Next: Create demo showing dependent series in action
+
+Updated nested checkbox view
+- [x] Dependent `SeriesDSpec`
+  - [x] `SeriesKind` enum
+  - [x] Detail structs
+  - [x] `SeriesDSpec` Σ-type
+  - [x] Conversion layer
+  - [ ] `RenderFragment` refactor (postponed due to circular dep)
+  - [ ] Demo/documentation update

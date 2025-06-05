@@ -1,6 +1,7 @@
 import LeanPlot.Specification
 import LeanPlot.Plot
-
+import Lean
+#eval Lean.Expr
 /-!
 # PlotSpec Validation Tests
 

@@ -596,20 +596,3 @@ instance : Render PlotSpec where
 end PlotSpec
 
 end LeanPlot
-
-def reverse {α} (xs : List α) : List α :=
-  match xs with
-  | [] => []
-  | x :: xs => reverse xs ++ [x]
-
-
-
-
-
-
-def reverse_spec (xs :List Int) : reverse (reverse xs) = xs :=
-  by
-    induction xs with
-    | nil => rfl
-    | cons x xs  =>
-    unfold reverse
