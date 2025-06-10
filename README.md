@@ -61,11 +61,21 @@ Create a new `.lean` file, open the infoview, and paste:
 
 ```lean
 import LeanPlot.API
+import LeanPlot.DSL  -- For the simple syntax!
 
-open LeanPlot.API
+-- Define your data
+def myData : Array (Float × Float) := 
+  #[(0, 1), (1, 4), (2, 9), (3, 16), (4, 25)]
 
--- 🎯 Smart plotting - just works!
-#plot plot (fun x => x^2)
+--- Create a scatter plot with automatic axis labels
+-- NEW! Simple syntax - just pass a function directly:
+#plot (fun x => x^2)
+
+-- With custom samples:
+#plot (fun t => Float.sin t) using 400
+
+-- Or use the explicit API:
+#html scatter (fun x => x^2) (steps := 20)
 
 -- 🎯 Multiple functions with automatic legend
 #plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]

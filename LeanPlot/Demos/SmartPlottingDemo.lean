@@ -22,7 +22,7 @@ open LeanPlot.API
 
 -- ✅ Example 1: Simple function - everything is automatic!
 #html (plot (fun x => x^2))
-
+#plot (fun x => x^2)
 -- ✅ Example 2: Time function - gets "time" labels automatically
 #check plot (fun t => Float.sin t)
 

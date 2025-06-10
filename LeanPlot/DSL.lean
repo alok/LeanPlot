@@ -13,9 +13,22 @@ Adds a macro so you can write:
 
 open Lean
 
--- Add macro to handle function arguments
-macro (priority := low) "#plot" f:term : command =>
-  `(#html LeanPlot.API.plot $f)
+-- Override #plot when the argument is a lambda
+macro_rules (kind := LeanPlot.PlotCommand.plotCmd)
+  | `(#plot fun $x => $body) =>
+      `(#html LeanPlot.API.plot (fun $x => $body))
+  | `(#plot fun $x : $ty => $body) =>
+      `(#html LeanPlot.API.plot (fun $x : $ty => $body))
+  | `(#plot (fun $x => $body)) =>
+      `(#html LeanPlot.API.plot (fun $x => $body))
+  | `(#plot (fun $x : $ty => $body)) =>
+      `(#html LeanPlot.API.plot (fun $x : $ty => $body))
 
-macro (priority := low) "#plot" f:term "using" n:num : command =>
-  `(#html LeanPlot.API.plot $f (steps := $n))
+-- Handle the "using" variant
+syntax "#plot" "(" "fun" ident (":" term)? "=>" term ")" "using" num : command
+
+macro_rules
+  | `(#plot (fun $x => $body) using $n) =>
+      `(#html LeanPlot.API.plot (fun $x => $body) (steps := $n))
+  | `(#plot (fun $x : $ty => $body) using $n) =>
+      `(#html LeanPlot.API.plot (fun $x : $ty => $body) (steps := $n))
