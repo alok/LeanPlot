@@ -288,11 +288,13 @@
 ## Simple Plot Syntax - 2024-12-30
 
 ### Added
-- **Zero-effort plotting**: New `#plot (fun x => x^2)` syntax works directly!
+- **Zero-effort plotting**: New `#plot (fun x => x^2)` syntax works directly! ✅ TESTED AND WORKING
   - Import `LeanPlot.DSL` to enable the simple syntax
   - Works with `using` keyword: `#plot (fun t => Float.sin t) using 400`
+  - Also works without parentheses: `#plot fun x => x^2`
   - No need to wrap functions in `plot(...)` anymore
   - Backwards compatible - existing code continues to work
+  - Uses `macro_rules` to extend existing `plotCmd` syntax seamlessly
 - Fixed `fixDuplicates` function to correctly handle repeated parameter names
 
 ## Development - 2024-12-23
