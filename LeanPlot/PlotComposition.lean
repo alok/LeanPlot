@@ -16,7 +16,7 @@ open Lean ProofWidgets
 /-- Merge two plot specs ensuring proper data alignment.
 When overlaying plots with different x-domains, this function resamples
 both datasets to a common domain. -/
-def mergeAligned (p q : PlotSpec) (steps : Nat := 200) : PlotSpec :=
+def mergeAligned (p q : PlotSpec) (_steps : Nat := 200) : PlotSpec :=
   -- Extract domain information from both plots
   let getDomain (spec : PlotSpec) : Float × Float :=
     match spec.xAxis with
@@ -47,8 +47,8 @@ def mergeAligned (p q : PlotSpec) (steps : Nat := 200) : PlotSpec :=
   let (q_min, q_max) := getDomain q
 
   -- Use the union of domains
-  let min_x := min p_min q_min
-  let max_x := max p_max q_max
+  let _min_x := min p_min q_min
+  let _max_x := max p_max q_max
 
   -- If domains are the same and data aligns, just overlay normally
   if p_min == q_min && p_max == q_max && p.chartData.size == q.chartData.size then

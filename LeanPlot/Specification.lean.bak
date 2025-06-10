@@ -46,11 +46,10 @@ structure AxisSpec where
   domain   : Option (Array Json) := none
   deriving ToJson, FromJson, Inhabited
 
-/-- For now, use the legacy type directly as LayerSpec -/
+/-- For now, use the legacy type directly as LayerSpec
 abbrev LayerSpec := LegacyLayerSpec
 
 -- Maintain compatibility alias for SeriesSpec
-/-- Compatibility alias for LayerSpec to maintain backward compatibility -/
 abbrev SeriesSpec := LayerSpec
 
 /-- The specification for a plot. -/

@@ -12,7 +12,9 @@ LeanPlot turns Lean 4 code into **interactive, React-powered charts that render 
 
 ## ✨ Key features
 
-* **One-liner helpers `lineChart` / `scatterChart`** – produce a plot from a Lean function or an array of points with zero configuration.
+* 🎯 **Smart plotting** – `plot (fun x => x^2)` just works! Automatic axis labels, colors, and styling. Zero configuration needed.
+* **One-liner helpers** – produce beautiful plots from Lean functions with `plot`, `plotMany`, `scatter`, `bar`.
+* **Intelligent metaprogramming** – automatically extracts meaningful axis labels from function parameter names (e.g., `t` becomes "time").
 * **Composable graphics algebra** – overlay or stack plots with the `+` operator or `PlotSpec.stack`.
 * **Grammar of Graphics DSL** – build complex visualizations using a fluent builder pattern inspired by ggplot2.
 * **Faceting support** – lay out multiple sub‐plots in a grid via `LeanPlot.Faceting.facetGrid`.
@@ -58,6 +60,22 @@ lake build
 Create a new `.lean` file, open the infoview, and paste:
 
 ```lean
+import LeanPlot.API
+
+open LeanPlot.API
+
+-- 🎯 Smart plotting - just works!
+#plot plot (fun x => x^2)
+
+-- 🎯 Multiple functions with automatic legend
+#plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
+```
+
+Hover over `#plot` and you'll see beautiful interactive charts with automatic axis labels, colors, and styling!
+
+### Advanced composition (for when you need more control)
+
+```lean
 import LeanPlot.Algebra
 
 open LeanPlot.Algebra
@@ -67,8 +85,6 @@ open LeanPlot.Algebra
   line "y²" (fun x ↦ x*x)
 )
 ```
-
-Hover over `#plot` and you'll see an interactive chart with two series.
 
 ### Grammar of Graphics DSL
 
@@ -94,6 +110,10 @@ open LeanPlot.GrammarOfGraphics
 
 ## 🏟 Demo gallery
 
+**🎯 Smart Plotting (Recommended)**
+* `LeanPlot.Demos.SmartPlottingDemo` – **NEW!** Zero-effort beautiful plots with automatic everything
+
+**Classic Demos**  
 * `LeanPlot.Demos.LinearDemo`     – `y = x`
 * `LeanPlot.Demos.QuadraticDemo`  – `y = x²`
 * `LeanPlot.Demos.CubicDemo`      – `y = x³`

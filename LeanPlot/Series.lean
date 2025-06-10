@@ -135,7 +135,7 @@ structure SeriesDSpecPacked where
 
 /-- Convert from the legacy string-based `LayerSpec` to the new dependent
 `SeriesDSpecPacked`.  Returns `none` if the `type` field is unrecognised. -/
-def LayerSpec.toSeriesDSpec? (layer : LayerSpec) : Option SeriesDSpecPacked :=
+def LegacyLayerSpec.toSeriesDSpec? (layer : LegacyLayerSpec) : Option SeriesDSpecPacked :=
   SeriesKind.fromString? layer.type |>.map fun kind =>
     let details : SeriesDetails kind :=
       match kind with
@@ -161,6 +161,32 @@ def SeriesDSpecPacked.toLayerSpec (packed : SeriesDSpecPacked) : LayerSpec :=
     color   := color
     type    := toString kind
     dot     := dot }
+
+namespace SeriesDSpecPacked
+
+-- convenience accessors
+/-- Extract the name of a packed series specification -/
+@[inline] def name (p : SeriesDSpecPacked) : String := p.spec.name
+/-- Extract the data key of a packed series specification -/
+@[inline] def dataKey (p : SeriesDSpecPacked) : String := p.spec.dataKey
+/-- Extract the series kind of a packed series specification -/
+@[inline] def kind' (p : SeriesDSpecPacked) : SeriesKind := p.kind
+/-- Extract the color from a packed series specification -/
+@[inline] def color (p : SeriesDSpecPacked) : String :=
+  match p.kind, p.spec.details with
+  | .line,    SeriesDetails.line d    => d.color
+  | .scatter, SeriesDetails.scatter d => d.color
+  | .bar,     SeriesDetails.bar d     => d.color
+  | .area,    SeriesDetails.area d    => d.fill
+/-- Extract the dot visibility setting for line series (if applicable) -/
+@[inline] def dot? (p : SeriesDSpecPacked) : Option Bool :=
+  match p.kind, p.spec.details with
+  | .line, SeriesDetails.line d => some d.dot
+  | _, _ => none
+/-- Convert the series kind to a string representation -/
+@[inline] def typeString (p : SeriesDSpecPacked) : String := toString p.kind
+
+end SeriesDSpecPacked
 
 end LeanPlot
 

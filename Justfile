@@ -94,11 +94,11 @@ release VERSION:
 	@echo "5. Push: git push && git push --tags"
 
 # Release build (optimised)
-release:
+release-build:
 	lake build -R
 
-# Watch build continuously
-watch:
+# Watch build continuously (alternative)
+watch-build:
 	lake build -w
 
 # Lean REPL (uses Lake to set env)
@@ -122,7 +122,7 @@ test-json-keys:
 
 # Update changelog timestamp
 changelog-update:
-	python - <<'PY'
+	python3 - <<'PY'
 	from datetime import datetime, timezone
 	stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d:%H:%M')
 	import pathlib, re
@@ -134,6 +134,35 @@ changelog-update:
 	print('Timestamp updated ->', stamp)
 	PY
 
-# Docs placeholder
-docs:
+# Generate documentation with DocGen4
+docs-gen:
 	@echo "TODO: docs generation (e.g., with DocGen4)"
+
+# Run all tests (core tests + JSON key tests)
+test-all: test test-json-keys
+	@echo "All tests completed"
+
+# Clean and rebuild completely
+rebuild: clean build
+	@echo "Clean rebuild completed"
+
+# Check for any build issues without warnings
+build-strict:
+	LEAN_OPTS="-DwarningAsError=true" lake build
+
+# Run diagnostics on the entire project
+diagnostics:
+	@echo "Running project diagnostics..."
+	lake env lean --run Lake.build --no-build
+
+# Show project statistics
+stats:
+	@echo "=== Project Statistics ==="
+	@echo "Lean files:"
+	@find . -name "*.lean" | wc -l
+	@echo "Total lines of Lean code:"
+	@find . -name "*.lean" -exec cat {} \; | wc -l
+	@echo "Demo files:"
+	@find LeanPlot/Demos -name "*.lean" | wc -l
+	@echo "Test files:"
+	@find . -name "*test*.lean" -o -name "*Test*.lean" | wc -l

@@ -1,30 +1,21 @@
+import LeanPlot.Plot
 import LeanPlot.API
-import ProofWidgets.Component.HtmlDisplay
 
-/-! # LeanPlot.DSL – tiny surface syntax
+/-!
+# LeanPlot.DSL – Simple plot syntax
 
-This module introduces a convenience `#plot` command that expands to a call to
-`LeanPlot.API.lineChart` and renders the result immediately via `#html`.
-
-Usage examples:
+Adds a macro so you can write:
+```lean
+#plot (fun x => x^2)
+#plot (fun t => Float.sin t) using 300
 ```
-#plot (fun x => x)            -- default 200 samples on [0,1]
-#plot (fun x => x*x) using 50 -- 50 samples
-```
-
-This is intentionally *very* small – just enough to demonstrate how
-metaprogramming can raise the ergonomics bar.  Future iterations will evolve
-into a richer grammar of graphics.
 -/
 
 open Lean
-open scoped ProofWidgets.Jsx
 
-/-- Syntax: `#plot f` or `#plot f using 123` -/
-syntax "#plot" term ("using" num)? : command
+-- Add macro to handle function arguments
+macro (priority := low) "#plot" f:term : command =>
+  `(#html LeanPlot.API.plot $f)
 
-macro_rules
-  | `(#plot $f:term) =>
-      `(#html LeanPlot.API.lineChart $f)
-  | `(#plot $f:term using $n:num) =>
-      `(#html LeanPlot.API.lineChart $f (steps := $n))
+macro (priority := low) "#plot" f:term "using" n:num : command =>
+  `(#html LeanPlot.API.plot $f (steps := $n))

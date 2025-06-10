@@ -22,3 +22,8 @@ import LeanPlot.Demos.FacetDemo
 import LeanPlot.Faceting
 import LeanPlot.Series
 import LeanPlot.Demos.SeriesKindDemo
+import LeanPlot.Metaprogramming
+import LeanPlot.Debug
+import LeanPlot.Demos.AutoAxisLabelsDemo
+import LeanPlot.Demos.SmartPlottingDemo
+import LeanPlot.Test.DuplicateNamesTest
