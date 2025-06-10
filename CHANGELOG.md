@@ -284,3 +284,15 @@
 
 - Updated README feature list and demo gallery.
 - Marked Faceting as complete in `TODO.md`.
+
+## Simple Plot Syntax - 2024-12-30
+
+### Added
+- **Zero-effort plotting**: New `#plot (fun x => x^2)` syntax works directly!
+  - Import `LeanPlot.DSL` to enable the simple syntax
+  - Works with `using` keyword: `#plot (fun t => Float.sin t) using 400`
+  - No need to wrap functions in `plot(...)` anymore
+  - Backwards compatible - existing code continues to work
+- Fixed `fixDuplicates` function to correctly handle repeated parameter names
+
+## Development - 2024-12-23

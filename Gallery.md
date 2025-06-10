@@ -67,3 +67,11 @@ A living checklist of demo / test cases LeanPlot supports. Tick items off as the
 
 - [ ] Custom color palette mapping
 - [ ] Axis units / formatting demo
+
+## Development Helpers
+
+- [Debug Module](LeanPlot/Debug.lean) - PNG export and debugging tools
+- [Smart Plotting Demo](LeanPlot/Demos/SmartPlottingDemo.lean) - Zero-configuration plotting with automatic axis labels
+- [Simple Syntax Demo](COMPLETE_PNG_TEST.lean) - New `#plot (fun x => x^2)` syntax - no wrapping needed!
+
+## Gallery Rules
