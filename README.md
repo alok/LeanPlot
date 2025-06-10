@@ -55,7 +55,7 @@ lake build
 
 ---
 
-## 🚀 Quick start
+## 🚀 Quick Start
 
 Create a new `.lean` file, open the infoview, and paste:
 
@@ -73,6 +73,9 @@ def myData : Array (Float × Float) :=
 
 -- With custom samples:
 #plot (fun t => Float.sin t) using 400
+
+-- Works without parentheses too:
+#plot fun x => Float.tanh x
 
 -- Or use the explicit API:
 #html scatter (fun x => x^2) (steps := 20)
