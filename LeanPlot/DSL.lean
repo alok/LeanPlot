@@ -2,33 +2,17 @@ import LeanPlot.Plot
 import LeanPlot.API
 
 /-!
-# LeanPlot.DSL – Simple plot syntax
+# LeanPlot.DSL – Ultra-simple `#plot` syntax
 
-Adds a macro so you can write:
+For now, we just re-export the API functions so that users can write:
+
 ```lean
-#plot (fun x => x^2)
-#plot (fun t => Float.sin t) using 300
+#plot plot (fun x => x^2)
 ```
+
+The ergonomic direct syntax `#plot (fun x => x^2)` is not yet implemented
+due to conflicts with the existing command elaborator.
 -/
 
-open Lean
-
--- Override #plot when the argument is a lambda
-macro_rules (kind := LeanPlot.PlotCommand.plotCmd)
-  | `(#plot fun $x => $body) =>
-      `(#html LeanPlot.API.plot (fun $x => $body))
-  | `(#plot fun $x : $ty => $body) =>
-      `(#html LeanPlot.API.plot (fun $x : $ty => $body))
-  | `(#plot (fun $x => $body)) =>
-      `(#html LeanPlot.API.plot (fun $x => $body))
-  | `(#plot (fun $x : $ty => $body)) =>
-      `(#html LeanPlot.API.plot (fun $x : $ty => $body))
-
--- Handle the "using" variant
-syntax "#plot" "(" "fun" ident (":" term)? "=>" term ")" "using" num : command
-
-macro_rules
-  | `(#plot (fun $x => $body) using $n) =>
-      `(#html LeanPlot.API.plot (fun $x => $body) (steps := $n))
-  | `(#plot (fun $x : $ty => $body) using $n) =>
-      `(#html LeanPlot.API.plot (fun $x : $ty => $body) (steps := $n))
+-- Re-export for convenience
+export LeanPlot.API (plot plotMany scatter bar)

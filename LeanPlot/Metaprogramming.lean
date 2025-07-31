@@ -1,6 +1,6 @@
 import Lean
 
-/-! # Simple, Smart Plotting for LeanPlot
+/-! # Simple Plotting for LeanPlot
 
 Makes your plots automatically look good with zero effort.
 Just pass your function and get beautiful, labeled plots.
@@ -166,7 +166,7 @@ def smartLabels (expr : Expr) : String × String :=
   let metadata := analyzeFunction expr
   (metadata.axisLabels.xLabel, metadata.axisLabels.yLabel)
 
-/-- 🎯 Get all parameter names, cleaned up and smart.
+/-- Get all parameter names, cleaned up.
 
 Examples:
 - `smartNames (fun t => t^2)` gives you `["time"]`

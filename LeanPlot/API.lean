@@ -76,9 +76,9 @@ uses the first color of `defaultPalette` for the point fill.
   let data := xyArrayToJson pts
   LeanPlot.Components.mkScatterChart data (LeanPlot.Palette.colorFromNat 0) w h
 
-/-! ## 🎯 Smart Plotting (Zero-Effort, Beautiful Plots)
+/-! ## Simple Plotting (Zero-Configuration Plots)
 
-The `Smart` functions automatically handle everything for you:
+These functions automatically handle everything for you:
 - Axis labels from parameter names
 - Colors and styling
 - Domain detection
@@ -87,7 +87,7 @@ The `Smart` functions automatically handle everything for you:
 These are now the **recommended** way to create plots in LeanPlot.
 -/
 
-/-- 🎯 **Smart line chart** - Just pass your function, get beautiful plot!
+/-- **Simple line chart** - Just pass your function, get beautiful plot!
 
 Examples:
 ```lean
@@ -101,9 +101,9 @@ This is the new recommended way to plot functions. Zero configuration needed!
 @[inline] def plot {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none)
     (w : Nat := defaultW) (h : Nat := defaultH) : Html :=
-  LeanPlot.Components.plotSmart f steps domain w h
+  LeanPlot.Components.plotSimple f steps domain w h
 
-/-- 🎯 **Smart multi-function plot** - Multiple functions, automatic everything!
+/-- **Simple multi-function plot** - Multiple functions, automatic everything!
 
 Examples:
 ```lean
@@ -116,9 +116,9 @@ Automatic colors, legend, and labels. Perfect for comparing functions!
 @[inline] def plotMany {β} [ToFloat β] (fns : Array (String × (Float → β)))
     (steps : Nat := 200) (domain : Float × Float := (0.0, 1.0))
     (w : Nat := defaultW) (h : Nat := defaultH) : Html :=
-  LeanPlot.Components.plotManySmart fns steps domain w h
+  LeanPlot.Components.plotManySimple fns steps domain w h
 
-/-- 🎯 **Smart scatter plot** - Points with automatic styling!
+/-- **Simple scatter plot** - Points with automatic styling!
 
 Examples:
 ```lean
@@ -129,9 +129,9 @@ Examples:
 @[inline] def scatter {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none)
     (w : Nat := defaultW) (h : Nat := defaultH) : Html :=
-  LeanPlot.Components.scatterSmart f steps domain w h
+  LeanPlot.Components.scatterSimple f steps domain w h
 
-/-- 🎯 **Smart bar chart** - Bars with automatic styling!
+/-- **Simple bar chart** - Bars with automatic styling!
 
 Examples:
 ```lean
@@ -142,6 +142,6 @@ Examples:
 @[inline] def bar {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none)
     (w : Nat := defaultW) (h : Nat := defaultH) : Html :=
-  LeanPlot.Components.barSmart f steps domain w h
+  LeanPlot.Components.barSimple f steps domain w h
 
 end LeanPlot.API

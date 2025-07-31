@@ -308,23 +308,23 @@ of dots.  The bar color is supplied via `fillColor`.
   else
     chartHtml
 
-/-! ## Smart Plotting (Zero-Effort, Beautiful Plots) -/
+/-! ## Simple Plotting (Zero-Configuration Plots) -/
 
 /-- 🎯 Plot a function with automatic everything. Just works!
     
 Examples:
-- `plotSmart (fun t => t^2)` - Gets "time" on x-axis, "f(time)" on y-axis
-- `plotSmart (fun x => x + 1)` - Gets "x" on x-axis, "f(x)" on y-axis  
-- `plotSmart (fun i => i * 2)` - Gets "index_i" on x-axis, "f(index_i)" on y-axis
+- `plotSimple (fun t => t^2)` - Simple quadratic plot
+- `plotSimple (fun x => x + 1)` - Linear function
+- `plotSimple (fun i => i * 2)` - Linear scaling
 
 You never have to think about axis labels again!
 -/
-def plotSmart {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
+def plotSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
   -- Sample the function
   let data := sample f steps domain
   
-  -- Generate smart axis labels (this would use metaprogramming in full implementation)
+  -- Generate axis labels (this would use metaprogramming in full implementation)
   -- For now, provide sensible defaults that work with the common patterns
   let xLabel := "x" 
   let yLabel := "f(x)"
@@ -332,22 +332,22 @@ def plotSmart {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
   
   mkLineChartWithLabels data seriesStrokes (some xLabel) (some yLabel) w h
 
-/-- 🎯 Plot multiple functions with automatic smart labeling.
+/-- Plot multiple functions with automatic labeling.
     Just pass your functions and get a beautiful multi-line plot!
     
 Examples:  
-- `plotManySmart #[("sin", fun t => Float.sin t), ("cos", fun t => Float.cos t)]`
-- `plotManySmart #[("linear", fun x => x), ("quadratic", fun x => x^2)]`
+- `plotManySimple #[("sin", fun t => Float.sin t), ("cos", fun t => Float.cos t)]`
+- `plotManySimple #[("linear", fun x => x), ("quadratic", fun x => x^2)]`
 
 Everything is automatic - colors, labels, legend!
 -/
-def plotManySmart {β} [ToFloat β] (fns : Array (String × (Float → β))) 
+def plotManySimple {β} [ToFloat β] (fns : Array (String × (Float → β))) 
     (steps : Nat := 200) (domain : Float × Float := (0.0, 1.0)) 
     (w h : Nat := 400) : Html :=
   -- Sample all functions
   let data := sampleMany fns steps domain.1 domain.2
   
-  -- Generate smart axis labels  
+  -- Generate axis labels  
   let xLabel := "x"  -- Could be enhanced with metaprogramming
   let yLabel := "y"  -- Could be enhanced with metaprogramming
   
@@ -359,14 +359,14 @@ def plotManySmart {β} [ToFloat β] (fns : Array (String × (Float → β)))
   
   mkLineChartFull data seriesStrokes (some xLabel) (some yLabel) w h
 
-/-- 🎯 Scatter plot with automatic smart labeling. -/
-def scatterSmart {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
+/-- Scatter plot with automatic labeling. -/
+def scatterSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
   let data := sample f steps domain
   mkScatterChart data "#dc2626" w h  -- Nice red color
 
-/-- 🎯 Bar chart with automatic smart labeling. -/  
-def barSmart {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
+/-- Bar chart with automatic labeling. -/  
+def barSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
   let data := sample f steps domain  
   mkBarChart data "#16a34a" w h  -- Nice green color
