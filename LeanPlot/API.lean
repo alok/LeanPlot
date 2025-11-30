@@ -68,8 +68,8 @@ Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
   </LineChart>)
 
 /-- **Tier-0 helper:** Render a scatter chart from an array of points.
-This delegates to `LeanPlot.Components.mkScatterChart` under the hood and
-uses the first color of `defaultPalette` for the point fill.
+This delegates to {name}`LeanPlot.Components.mkScatterChart` under the hood and
+uses the first color of {name}`defaultPalette` for the point fill.
 -/
 @[inline] def scatterChart (pts : Array (Float × Float))
   (w : Nat := defaultW) (h : Nat := defaultH) : ProofWidgets.Html :=
@@ -121,6 +121,7 @@ Automatic colors, legend, and labels. Perfect for comparing functions!
 /-- **Simple scatter plot** - Points with automatic styling!
 
 Examples:
+
 ```lean
 #plot scatter (fun x => x + Random.rand)  -- Show function with noise
 #plot scatter (fun t => Float.sin t) (steps := 50)  -- Fewer points

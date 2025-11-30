@@ -57,6 +57,10 @@ import LeanPlot.DSL
 -- With custom sample count
 #plot (fun t => Float.sin t) using 400
 
+-- Doc comments become chart captions (a poor man's legend!)
+/-- The classic parabola y = x² -/
+#plot (fun x => x^2)
+
 -- Multiple functions with automatic legend
 #html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
 

@@ -79,6 +79,18 @@ for plotting functions:
 #plot (fun x => Float.sin x) using 400
 ```
 
+## Doc Comments as Captions
+
+You can add a doc comment before `#plot` to display a caption above the chart:
+
+```lean
+/-- The classic parabola y = x² -/
+#plot (fun x => x^2)
+```
+
+This acts as a "poor man's legend" – the doc string appears as a title above
+the rendered chart when you hover.
+
 Behind the scenes, `#plot f` expands to `#html LeanPlot.API.plot f`.
 
 For expressions that already return `Html` (like {name}`plotMany`), use `#html` directly:
