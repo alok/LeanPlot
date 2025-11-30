@@ -4,9 +4,12 @@ Released under Apache 2.0 license.
 -/
 import VersoManual
 import Manual.Meta
+import LeanPlot.API
+import LeanPlot.DSL
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
+open LeanPlot.API
 
 set_option pp.rawOnError true
 
@@ -28,8 +31,8 @@ while advanced customization is still possible when needed.
 
 The three tiers are:
 
-1. *Tier 0 (Zero-Config)*: One-liner helpers like `plot`, `scatter`, `bar`
-2. *Tier 1 (Components)*: Building blocks like `sample`, `mkLineChart`
+1. *Tier 0 (Zero-Config)*: One-liner helpers like {name}`plot`, {name}`scatter`, {name}`bar`
+2. *Tier 1 (Components)*: Building blocks like {name}`LeanPlot.Components.sample`, `mkLineChart`
 3. *Tier 2 (Recharts)*: Direct JSX access for full control
 
 Most users only need Tier 0. The other tiers exist for when you need
@@ -66,18 +69,20 @@ tag := "plot-command"
 The `#plot` command is defined in `LeanPlot.DSL` and provides convenient syntax
 for plotting functions:
 
-```
+```lean
 -- Basic usage
 #plot (fun x => x^2)
+```
 
+```lean
 -- With custom sample count
 #plot (fun x => Float.sin x) using 400
 ```
 
 Behind the scenes, `#plot f` expands to `#html LeanPlot.API.plot f`.
 
-For expressions that already return `Html` (like `plotMany`), use `#html` directly:
+For expressions that already return `Html` (like {name}`plotMany`), use `#html` directly:
 
-```
+```lean
 #html plotMany #[("sin", Float.sin), ("cos", Float.cos)]
 ```

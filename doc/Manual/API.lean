@@ -20,7 +20,7 @@ tag := "api-reference"
 LeanPlot provides a layered API following {deftech}_progressive disclosure_:
 
 1. *Tier 0 (Zero-Config)*: Functions like {name}`plot`, {name}`plotMany`, {name}`scatter`, and {name}`bar` that just work
-2. *Tier 1 (Components)*: Mid-level functions like {name}`sample` and `mkLineChart` for more control
+2. *Tier 1 (Components)*: Mid-level functions like {name}`LeanPlot.Components.sample` and `mkLineChart` for more control
 3. *Tier 2 (Recharts)*: Direct access to Recharts JSX components for full customization
 
 # Zero-Config Functions
@@ -70,7 +70,7 @@ Create scatter plots for visualizing discrete data points.
 ![scatter example](img/scatter_demo.svg)
 
 ```lean
-#html scatter (fun x => x^2 + noise) (steps := 50)
+#html scatter (fun x => x^2 + 0.1 * Float.sin (10 * x)) (steps := 50)
 ```
 
 {docstring LeanPlot.API.scatter}
