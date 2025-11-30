@@ -21,9 +21,9 @@ globs = ["LeanPlot.*"]
 
 # Documentation library using Verso
 [[lean_lib]]
-name = "LeanPlotDoc"
+name = "Manual"
 srcDir = "doc"
-globs = ["LeanPlotDoc"]
+globs = ["Manual", "Manual.*"]
 
 [[lean_exe]]
 name = "leanplot"
