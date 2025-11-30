@@ -33,12 +33,28 @@ These {tech}[progressive disclosure] Tier-0 functions require no configuration.
 tag := "api-plot"
 %%%
 
+Plot a single function with automatic styling and axis labels.
+
+![plot example](img/plot_quadratic.svg)
+
+```
+#plot (fun x => x^2)
+```
+
 {docstring LeanPlot.API.plot}
 
 ## plotMany
 %%%
 tag := "api-plotmany"
 %%%
+
+Compare multiple functions on a single chart with automatic colors and legend.
+
+![plotMany example](img/plot_sincos.svg)
+
+```
+#html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
+```
 
 {docstring LeanPlot.API.plotMany}
 
@@ -47,12 +63,26 @@ tag := "api-plotmany"
 tag := "api-scatter"
 %%%
 
+Create scatter plots for visualizing discrete data points.
+
+![scatter example](img/scatter_demo.svg)
+
+```
+#html scatter (fun x => x^2 + noise) (steps := 50)
+```
+
 {docstring LeanPlot.API.scatter}
 
 ## bar
 %%%
 tag := "api-bar"
 %%%
+
+Create bar charts for discrete or categorical data.
+
+```
+#html bar (fun i => i^2) (steps := 10)
+```
 
 {docstring LeanPlot.API.bar}
 

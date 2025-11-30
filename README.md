@@ -6,138 +6,102 @@
   <img src="docs/img/overlay_yx_and_x2.png" width="220" alt="Overlay of y = x and y = x²">
 </p>
 
-LeanPlot turns Lean 4 code into **interactive, React-powered charts that render right inside VS Code's infoview**.  Built on top of [ProofWidgets4](https://github.com/leanprover-community/ProofWidgets4) and [Recharts](https://recharts.org), it lets you inspect functions and data visually while you prove.
+LeanPlot turns Lean 4 code into **interactive, React-powered charts that render right inside VS Code's infoview**. Built on top of [ProofWidgets4](https://github.com/leanprover-community/ProofWidgets4) and [Recharts](https://recharts.org), it lets you inspect functions and data visually while you prove.
+
+**[Documentation](https://alok.github.io/LeanPlot/)**
 
 ---
 
-## ✨ Key features
+## Features
 
-* 🎯 **Smart plotting** – `plot (fun x => x^2)` just works! Automatic axis labels, colors, and styling. Zero configuration needed.
-* **One-liner helpers** – produce beautiful plots from Lean functions with `plot`, `plotMany`, `scatter`, `bar`.
-* **Intelligent metaprogramming** – automatically extracts meaningful axis labels from function parameter names (e.g., `t` becomes "time").
-* **Composable graphics algebra** – overlay or stack plots with the `+` operator or `PlotSpec.stack`.
-* **Grammar of Graphics DSL** – build complex visualizations using a fluent builder pattern inspired by ggplot2.
-* **Faceting support** – lay out multiple sub‐plots in a grid via `LeanPlot.Faceting.facetGrid`.
-* **Log/linear scale support** – visualize exponential growth and power laws with logarithmic axes.
-* **Data transformations** – apply scales (log, sqrt, power, symlog), normalize data, and smooth with moving averages via `LeanPlot.Transform`.
-* **Advanced plot composition** – create subplot grids, vertically stacked plots with shared axes, and apply consistent styling across multiple plots with `LeanPlot.PlotComposition`.
-* **Layered API** – start at the high level and drop down to `PlotSpec` or the raw Recharts props whenever you need fine-grained control.
-* **Sampling utilities** – `sample` / `sampleMany` uniformly sample any codomain that implements `[ToFloat]`.
-* **Demo gallery** – ready-to-run examples under `LeanPlot/Demos` (linear, quadratic, cubic, overlay, stack, bar, area, log scales, grammar of graphics, data transformations…).
+* **Simple plotting** – `#plot (fun x => x^2)` just works with automatic axis labels and styling
+* **One-liner helpers** – `plot`, `plotMany`, `scatter`, `bar` for beautiful plots with zero config
+* **Composable graphics** – overlay or stack plots with the `+` operator
+* **Grammar of Graphics** – fluent builder pattern inspired by ggplot2
+* **Faceting** – multiple sub-plots in a grid layout
+* **Log/linear scales** – visualize exponential growth with logarithmic axes
+* **Data transformations** – apply scales, normalize, and smooth data
 
 ---
 
-## 🏗 Installation
+## Installation
 
 Add LeanPlot to your project's `lakefile.toml`:
 
 ```toml
 [[require]]
 name = "LeanPlot"
-url = "https://github.com/alok/LeanPlot"
+git = "https://github.com/alok/LeanPlot"
 ```
 
-or to `lakefile.lean`:
-
-```lean
-require LeanPlot from git
-  "https://github.com/alok/LeanPlot" @ "main"
-```
-
-Then fetch and build the deps:
+Then fetch and build:
 
 ```bash
 lake update
 lake build
 ```
 
-(You'll need `node`/`npm` on your PATH – ProofWidgets handles the bundling automatically.)
+You'll need `node`/`npm` on your PATH – ProofWidgets handles the bundling automatically.
 
 ---
 
-## 🚀 Quick Start
-
-Create a new `.lean` file, open the infoview, and paste:
+## Quick Start
 
 ```lean
 import LeanPlot.API
-import LeanPlot.DSL  -- For the simple syntax!
+import LeanPlot.DSL
 
--- Define your data
-def myData : Array (Float × Float) := 
-  #[(0, 1), (1, 4), (2, 9), (3, 16), (4, 25)]
-
---- Create a scatter plot with automatic axis labels
--- NEW! Simple syntax - just pass a function directly:
+-- Simple function plot
 #plot (fun x => x^2)
 
--- With custom samples:
+-- With custom sample count
 #plot (fun t => Float.sin t) using 400
 
--- Works without parentheses too:
-#plot fun x => Float.tanh x
+-- Multiple functions with automatic legend
+#html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
 
--- Or use the explicit API:
-#html scatter (fun x => x^2) (steps := 20)
+-- Scatter plot
+#html scatter (fun x => x^2) (steps := 50)
 
--- 🎯 Multiple functions with automatic legend
-#plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
+-- Bar chart
+#html bar (fun i => i^2) (steps := 10)
 ```
 
-Hover over `#plot` and you'll see beautiful interactive charts with automatic axis labels, colors, and styling!
+Hover over `#plot` or `#html` in VS Code to see the interactive charts!
 
-### 📸 PNG export
-
-Add a Save PNG button around any plot:
+### PNG Export
 
 ```lean
 import LeanPlot.API
 import LeanPlot.Debug
-open LeanPlot.API
-open LeanPlot.Debug
+open LeanPlot.API LeanPlot.Debug
 
 #html withSavePNG (plot (fun x => x^2)) "my-plot" "quadratic.png"
 ```
 
-See `COMPLETE_PNG_TEST.lean` for a set of ready‑to‑try examples.
-
-There is also a tiny workspace element under `examples/png-export` that keeps
-PNG demos separate from the core library. Build it with:
-
-```
-just png-demo
-```
-Then open `examples/png-export/PngExportDemo.lean` in your editor and click the
-Save PNG buttons in the infoview.
-
-### Advanced composition (for when you need more control)
+### Advanced Composition
 
 ```lean
 import LeanPlot.Algebra
-
 open LeanPlot.Algebra
 
 #plot (
-  line "y"  (fun x : Float ↦ x) +
-  line "y²" (fun x ↦ x*x)
+  line "y"  (fun x : Float => x) +
+  line "y²" (fun x => x*x)
 )
 ```
 
-### Grammar of Graphics DSL
-
-For more complex visualizations, use the Grammar of Graphics DSL:
+### Grammar of Graphics
 
 ```lean
 import LeanPlot.GrammarOfGraphics
 import LeanPlot.Core
-
 open LeanPlot.GrammarOfGraphics
 
 #html (
   plot (fun x => x * x)
     |> fun p => PlotBuilder.withTitle p "Quadratic Function"
     |> fun p => PlotBuilder.withSize p 500 400
-    |> fun p => PlotBuilder.logY p 10.0  -- Log scale on Y axis
     |> PlotBuilder.build
     |> Render.render
 )
@@ -145,55 +109,35 @@ open LeanPlot.GrammarOfGraphics
 
 ---
 
-## 🏟 Demo gallery
+## Demo Gallery
 
-**🎯 Smart Plotting (Recommended)**
-* `LeanPlot.Demos.SmartPlottingDemo` – **NEW!** Zero-effort beautiful plots with automatic everything
+* `LeanPlot.Demos.SmartPlottingDemo` – Zero-config beautiful plots (start here!)
+* `LeanPlot.Demos.LinearDemo`, `QuadraticDemo`, `CubicDemo` – Basic function plots
+* `LeanPlot.Demos.OverlayDemo` – Overlaying multiple functions
+* `LeanPlot.Demos.TrigDemo` – Trigonometric functions
+* `LeanPlot.Demos.LogScaleDemo` – Logarithmic scales
+* `LeanPlot.Demos.GrammarDemo` – Grammar of Graphics DSL
+* `LeanPlot.Demos.TransformDemo` – Data transformations
+* `LeanPlot.Demos.FacetDemo` – Grid layouts
 
-**Classic Demos**  
-* `LeanPlot.Demos.LinearDemo`     – `y = x`
-* `LeanPlot.Demos.QuadraticDemo`  – `y = x²`
-* `LeanPlot.Demos.CubicDemo`      – `y = x³`
-* `LeanPlot.Demos.OverlayDemo`    – overlay of `y = x` and `y = x²`
-* `LeanPlot.Demos.StackDemo`      – stacking via `+` and `PlotSpec.stack`
-* `LeanPlot.Demos.LogScaleDemo`   – exponential growth with linear and log scales
-* `LeanPlot.Demos.GrammarDemo`    – showcase of the Grammar of Graphics DSL
-* `LeanPlot.Demos.TransformDemo`  – data transformations: scales, normalization, smoothing
-* `LeanPlot.Demos.FacetDemo`      – faceting layout with a grid of small multiples
-
-Open any demo and hover the `#html` command to run it.
+Open any demo and hover over `#plot` or `#html` to see the charts.
 
 ---
 
-## 📚 Documentation
+## Documentation
 
-LeanPlot includes comprehensive Verso documentation:
+Full documentation is available at **https://alok.github.io/LeanPlot/**
 
-```bash
-just docs        # Generate HTML documentation
-```
-
-This creates documentation in `_out/docs/`. To view it locally:
+To build docs locally:
 
 ```bash
+lake build leanplot-docs
+.lake/build/bin/leanplot-docs
 python3 -m http.server 8000 --directory _out/docs/html-multi
 ```
 
-Then open http://localhost:8000 in your browser.
+---
 
-## 🛠 Development
+## License
 
-```bash
-just build       # lake build
-just lint        # run linter
-just docs        # regenerate Verso docs
-just check-docs  # check for missing documentation
-just demos       # list all demos
-just watch       # watch for changes and rebuild
-```
-
-Contributions welcome – check `TODO.md` and open an issue or PR.
-
-## 📄 License
-
-LeanPlot is released under the Apache License 2.0; see `LICENSE` for details.
+Apache License 2.0 – see `LICENSE` for details.

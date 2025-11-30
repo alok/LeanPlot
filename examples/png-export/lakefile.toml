@@ -1,0 +1,18 @@
+name = "LeanPlotPngDemo"
+version = "0.1.0"
+
+# Keep it light: no default target to avoid slow builds
+defaultTargets = []
+
+[[require]]
+name = "LeanPlot"
+path = "../.."
+
+[[lean_lib]]
+name = "PngExportDemo"
+globs = ["PngExportDemo.*"]
+
+[[lean_exe]]
+name = "pngexport-demo"
+root = "PngExportMain"
+

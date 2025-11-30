@@ -37,11 +37,17 @@ jobs:
       - name: Build LeanPlot
         run: lake build
 
+      - name: Generate documentation images
+        run: lake exe gendocimages
+
       - name: Build documentation
         run: lake build leanplot-docs
 
       - name: Generate documentation
         run: .lake/build/bin/leanplot-docs
+
+      - name: Copy images to output
+        run: cp -r doc/img _out/docs/html-multi/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

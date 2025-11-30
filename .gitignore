@@ -1,3 +1,10 @@
 /.lake
 .DS_Store
 _out/
+*.olean
+*.ilean
+*.trace
+*.bak
+*.un~
+.venv/
+node_modules/

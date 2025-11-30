@@ -1,13 +1,9 @@
 import Lean
-import LeanPlot
-
-
+import LeanPlot.API
 
 /--
-Entry point for the `leanplot` executable.  Currently prints a friendly
-*hello world* style greeting to verify the project builds and that the
-binary wiring works correctly.
+Entry point for the `leanplot` executable.
+Verifies the project builds correctly.
 -/
-
 def main : IO Unit :=
-  IO.println s!"Hello, {hello}!"
+  IO.println "LeanPlot: Interactive plotting for Lean 4"

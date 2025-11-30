@@ -55,6 +55,8 @@ import LeanPlot.DSL
 #plot (fun x => x^2)
 ```
 
+![Simple quadratic plot](img/plot_quadratic.svg)
+
 This renders a parabola with automatic axis labels and styling in the VS Code infoview!
 
 ## Customizing Samples
@@ -74,4 +76,20 @@ For multiple functions on the same chart, use `plotMany`:
                  ("cos", fun x => Float.cos x)]
 ```
 
+![Sin and cos comparison](img/plot_sincos.svg)
+
 This automatically assigns colors and creates a legend.
+
+## More Examples
+
+*Damped oscillation:*
+
+![Damped oscillation](img/plot_damped.svg)
+
+*Tanh activation function:*
+
+![Tanh function](img/plot_tanh.svg)
+
+*Scatter plot:*
+
+![Scatter plot](img/scatter_demo.svg)

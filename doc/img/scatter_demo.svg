@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="100%" height="100%" fill="white"/>
+  <text x="200" y="20" text-anchor="middle" font-size="14" font-weight="600" fill="#374151" font-family="monospace">scatter plot</text>
+  <line x1="40" y1="40" x2="360" y2="40" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="40" y1="40" x2="40" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="40" y1="95" x2="360" y2="95" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="120" y1="40" x2="120" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="40" y1="150" x2="360" y2="150" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="200" y1="40" x2="200" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="40" y1="205" x2="360" y2="205" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="280" y1="40" x2="280" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="40" y1="260" x2="360" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+<line x1="360" y1="40" x2="360" y2="260" stroke="#e5e7eb" stroke-dasharray="3,3"/>
+
+  <rect x="40" y="40" width="320" height="220" fill="none" stroke="#d1d5db"/>
+  <circle cx="40.000000" cy="249.353700" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="46.530612" cy="260.000000" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="53.061224" cy="243.088260" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="59.591837" cy="241.065452" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="66.122449" cy="257.951248" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="72.653061" cy="249.086544" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="79.183673" cy="235.028763" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="85.714286" cy="249.123712" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="92.244898" cy="252.462879" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="98.775510" cy="233.112850" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="105.306122" cy="236.549414" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="111.836735" cy="249.679444" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="118.367347" cy="234.232649" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="124.897959" cy="224.363317" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="131.428571" cy="239.545724" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="137.959184" cy="234.908368" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="144.489796" cy="215.670958" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="151.020408" cy="223.832450" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="157.551020" cy="231.059991" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="164.081633" cy="210.946948" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="170.612245" cy="206.358450" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="177.142857" cy="220.111304" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="183.673469" cy="207.790218" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="190.204082" cy="191.021305" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="196.734694" cy="202.318431" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="203.265306" cy="202.162234" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="209.795918" cy="179.787409" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="216.326531" cy="180.637749" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="222.857143" cy="190.469631" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="229.387755" cy="171.677905" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="235.918367" cy="159.201314" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="242.448980" cy="171.417283" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="248.979592" cy="163.273484" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="255.510204" cy="141.185988" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="262.040816" cy="146.676190" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="268.571429" cy="150.477686" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="275.102041" cy="127.175164" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="281.632653" cy="120.021753" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="288.163265" cy="130.629413" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="294.693878" cy="114.857912" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="301.224490" cy="95.386836" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="307.755102" cy="103.875236" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="314.285714" cy="100.220707" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="320.816327" cy="74.833619" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="327.346939" cy="73.093809" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="333.877551" cy="79.617169" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="340.408163" cy="57.490150" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="346.938776" cy="42.411368" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="353.469388" cy="51.648473" r="4" fill="#059669" opacity="0.7"/>
+<circle cx="360.000000" cy="40.000000" r="4" fill="#059669" opacity="0.7"/>
+
+  <text x="200.000000" y="295.000000" text-anchor="middle" font-size="12" fill="#666">x</text>
+<text x="15" y="150.000000" text-anchor="middle" font-size="12" fill="#666" transform="rotate(-90,15,150.000000)">y</text>
+</svg>

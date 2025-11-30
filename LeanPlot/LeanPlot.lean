@@ -1,1 +1,0 @@
-import LeanPlot.Demos.TrigDemo

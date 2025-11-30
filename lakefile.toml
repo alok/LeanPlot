@@ -43,6 +43,11 @@ root = "LeanPlot.CLI.ExportMain"
 name = "leanplot-docs"
 root = "doc.LeanPlotDocMain"
 
+# Generate documentation images (SVG)
+[[lean_exe]]
+name = "gendocimages"
+root = "GenDocImages"
+
 [[require]]
 name = "proofwidgets"
 scope = "leanprover-community"
