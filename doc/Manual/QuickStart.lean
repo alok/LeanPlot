@@ -4,11 +4,12 @@ Released under Apache 2.0 license.
 -/
 import VersoManual
 import Manual.Meta
+import LeanPlot.API
+import LeanPlot.DSL
 
 open Verso.Genre Manual
 open Verso.Genre.Manual.InlineLean
 open LeanPlot.API
-
 set_option pp.rawOnError true
 
 #doc (Manual) "Quick Start" =>
@@ -50,7 +51,9 @@ Create a new `.lean` file, import LeanPlot, and use the `#plot` command:
 ```
 import LeanPlot.API
 import LeanPlot.DSL
+```
 
+```lean
 -- Plot a simple function
 #plot (fun x => x^2)
 ```
@@ -63,15 +66,15 @@ This renders a parabola with automatic axis labels and styling in the VS Code in
 
 You can customize the number of sample points:
 
-```
+```lean
 #plot (fun t => Float.sin t) using 400
 ```
 
 ## Multiple Functions
 
-For multiple functions on the same chart, use `plotMany`:
+For multiple functions on the same chart, use {name}`plotMany`:
 
-```
+```lean
 #html plotMany #[("sin", fun x => Float.sin x),
                  ("cos", fun x => Float.cos x)]
 ```
@@ -87,9 +90,13 @@ This automatically assigns colors and creates a legend.
 ![Damped oscillation](img/plot_damped.svg)
 
 *Tanh activation function:*
-
+```lean
+#plot Float.tanh
+```
 ![Tanh function](img/plot_tanh.svg)
 
 *Scatter plot:*
-
+```lean
+#html scatter (fun x => x^2 + 0.1 * Float.sin (10 * x)) (steps := 50)
+```
 ![Scatter plot](img/scatter_demo.svg)
