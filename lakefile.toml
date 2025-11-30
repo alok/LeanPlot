@@ -22,6 +22,12 @@ warningAsError = false
 name = "LeanPlot"
 globs = ["LeanPlot.*"]
 
+# Documentation library using Verso
+[[lean_lib]]
+name = "LeanPlotDoc"
+srcDir = "doc"
+globs = ["LeanPlotDoc"]
+
 [[lean_exe]]
 name = "leanplot"
 root = "Main"
@@ -29,6 +35,16 @@ root = "Main"
 [[lean_exe]]
 name = "jsonKeyCheckTest"
 root = "LeanPlot.Test.JsonKeyCheck"
+
+# Minimal CLI to export sampled data as JSON for the headless PNG tool.
+[[lean_exe]]
+name = "leanplot-export"
+root = "LeanPlot.CLI.ExportMain"
+
+# Documentation generator executable
+[[lean_exe]]
+name = "leanplot-docs"
+root = "doc.LeanPlotDocMain"
 
 [[require]]
 name = "proofwidgets"

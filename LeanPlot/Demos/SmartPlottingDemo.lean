@@ -1,5 +1,6 @@
 import LeanPlot.API
 import LeanPlot.DSL
+import ProofWidgets.Component.HtmlDisplay
 /-! # Simple Plotting Demo - Zero-Configuration Plots
 
 This demo shows the simple plotting functions that automatically handle
@@ -21,29 +22,28 @@ namespace LeanPlot.Demos.SimplePlottingDemo
 open LeanPlot.API
 
 -- Example 1: Simple function - everything is automatic!
-#html (plot (fun x => x^2+5))
-#html plot (fun x => x^2)
+#plot (fun x => x^2+5)
+
 -- Example 2: Time function - gets "time" labels automatically
-#check plot (fun t => Float.sin t)
+#plot (fun t => Float.sin t)
 
 -- Example 3: Multiple functions with automatic legend and colors
-#check plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
+#html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
 
 -- Example 4: Scatter plot - automatic styling
-#check scatter (fun x => x^2 + 0.1 * Float.sin (10 * x)) (steps := 50)
+#html scatter (fun x => x^2 + 0.1 * Float.sin (10 * x)) (steps := 50)
 
 -- Example 5: Bar chart - perfect for discrete data
-#check bar (fun i => Float.floor (i * 5)) (steps := 10)
+#html bar (fun i => Float.floor (i * 5)) (steps := 10)
 
 -- Example 6: Custom domain - just specify the range you want
-#check plot (fun t => Float.exp (-t) * Float.sin (5 * t)) (domain := some (0.0, 3.0))
+#plot (fun t => Float.exp (-t) * Float.sin (5 * t)) using 200
 
 -- Example 7: More samples for smoother curves
-#check plot (fun x => Float.tanh (x - 1)) (steps := 500) (domain := some (-2.0, 4.0))
-
+#plot (fun x => Float.tanh (x - 1)) using 500
 
 -- Example 8: Compare different functions easily
-#check plotMany #[
+#html plotMany #[
   ("linear", fun x => x),
   ("quadratic", fun x => x^2),
   ("cubic", fun x => x^3)

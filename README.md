@@ -86,6 +86,30 @@ def myData : Array (Float × Float) :=
 
 Hover over `#plot` and you'll see beautiful interactive charts with automatic axis labels, colors, and styling!
 
+### 📸 PNG export
+
+Add a Save PNG button around any plot:
+
+```lean
+import LeanPlot.API
+import LeanPlot.Debug
+open LeanPlot.API
+open LeanPlot.Debug
+
+#html withSavePNG (plot (fun x => x^2)) "my-plot" "quadratic.png"
+```
+
+See `COMPLETE_PNG_TEST.lean` for a set of ready‑to‑try examples.
+
+There is also a tiny workspace element under `examples/png-export` that keeps
+PNG demos separate from the core library. Build it with:
+
+```
+just png-demo
+```
+Then open `examples/png-export/PngExportDemo.lean` in your editor and click the
+Save PNG buttons in the infoview.
+
 ### Advanced composition (for when you need more control)
 
 ```lean
@@ -141,12 +165,28 @@ Open any demo and hover the `#html` command to run it.
 
 ---
 
+## 📚 Documentation
+
+LeanPlot includes comprehensive Verso documentation:
+
+```bash
+just docs        # Generate HTML documentation
+```
+
+This creates documentation in `_out/docs/`. To view it locally:
+
+```bash
+python3 -m http.server 8000 --directory _out/docs/html-multi
+```
+
+Then open http://localhost:8000 in your browser.
+
 ## 🛠 Development
 
 ```bash
 just build       # lake build
 just lint        # run linter
-just docs        # regenerate docs
+just docs        # regenerate Verso docs
 just check-docs  # check for missing documentation
 just demos       # list all demos
 just watch       # watch for changes and rebuild

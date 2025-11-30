@@ -20,9 +20,12 @@ lint:
 test: build
 	lake env lean Test.lean
 
-# Build documentation
+# Build Verso documentation
 docs:
-	lake build DocsMain
+	lake build leanplot-docs
+	.lake/build/bin/leanplot-docs
+	@echo "Documentation generated in _out/docs/"
+	@echo "Serve with: python3 -m http.server 8000 --directory _out/docs/html-multi"
 
 # Format code (placeholder - Lean doesn't have a standard formatter yet)
 format:
@@ -37,6 +40,10 @@ check-docs:
 demos: build
 	@echo "Building all demos..."
 	@find LeanPlot/Demos -name "*.lean" -exec echo "Demo: {}" \;
+
+# Build the PNG export subpackage example
+png-demo:
+	lake -d examples/png-export build
 
 # Create a new demo file
 new-demo NAME:
@@ -166,3 +173,13 @@ stats:
 	@find LeanPlot/Demos -name "*.lean" | wc -l
 	@echo "Test files:"
 	@find . -name "*test*.lean" -o -name "*Test*.lean" | wc -l
+
+# Headless PNG export pipeline (requires Node + playwright)
+export-png fn out='out.png' steps='200' min='0.0' max='1.0':
+	@echo "Sampling {{fn}} -> out.json"
+	lake build leanplot-export
+	.lake/build/bin/leanplot-export --fn {{fn}} --out out.json --steps {{steps}} --min {{min}} --max {{max}}
+	@echo "Rendering out.json to {{out}} via Playwright"
+	cd tools/png-exporter && \
+	  (test -d node_modules || echo "Tip: run 'npm i && npx playwright install chromium' here once.") && \
+	  node screenshot.mjs --in ../..//out.json --out ../..//{{out}}
