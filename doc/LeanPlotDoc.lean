@@ -2,7 +2,9 @@
 Copyright (c) 2024-2025 LeanPlot Authors. All rights reserved.
 Released under Apache 2.0 license.
 -/
-
+import LeanPlot.API
+import LeanPlot.DSL
+import LeanPlot.PlotComposition
 import VersoManual
 
 -- Access the manual genre
@@ -47,10 +49,7 @@ lake build
 
 Create a new `.lean` file, open the VS Code infoview, and paste:
 
-```
-import LeanPlot.API
-import LeanPlot.DSL
-
+```lean
 -- Simple syntax - just pass a function directly:
 #plot (fun x => x^2)
 
@@ -77,7 +76,7 @@ LeanPlot follows a _progressive disclosure_ philosophy with three API tiers:
 
 The `#plot` command is the primary way to visualize functions:
 
-```
+```lean
 #plot (fun x => x^2)              -- Basic function
 #plot (fun x => x^2) using 400    -- Custom sample count
 #plot fun t => Float.sin t        -- No parens needed
@@ -85,8 +84,9 @@ The `#plot` command is the primary way to visualize functions:
 
 For expressions that already return `Html`, use `#html` instead:
 
-```
-#html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
+```lean
+#html plotMany #[("sin", fun x => Float.sin x),
+                 ("cos", fun x => Float.cos x)]
 ```
 
 # API Reference
@@ -191,8 +191,7 @@ import LeanPlot.Faceting
 
 Overlay or stack multiple plots:
 
-```
-import LeanPlot.PlotComposition
+```lean
 
 -- Use + operator to overlay plots
 #plot (line (fun x => x) "y" + line (fun x => x^2) "y²")
@@ -202,7 +201,7 @@ import LeanPlot.PlotComposition
 
 LeanPlot includes many demos under `LeanPlot/Demos/`:
 
-- _SmartPlottingDemo_ - Zero-effort beautiful plots (recommended starting point)
+- `SmartPlottingDemo` - Zero-effort beautiful plots (recommended starting point)
 - _LinearDemo_, _QuadraticDemo_, _CubicDemo_ - Basic function plots
 - _OverlayDemo_ - Overlaying multiple functions
 - _TrigDemo_ - Trigonometric functions
@@ -218,6 +217,7 @@ Add a Save PNG button around any plot:
 
 ```
 import LeanPlot.Debug
+open LeanPlot.API LeanPlot.Debug
 
 #html withSavePNG (plot (fun x => x^2)) "my-plot" "quadratic.png"
 ```
