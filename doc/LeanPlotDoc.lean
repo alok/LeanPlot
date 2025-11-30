@@ -4,7 +4,10 @@ Released under Apache 2.0 license.
 -/
 import LeanPlot.API
 import LeanPlot.DSL
+import LeanPlot.Components
+import LeanPlot.ToFloat
 import LeanPlot.PlotComposition
+import LeanPlot.Palette
 import VersoManual
 
 -- Access the manual genre
@@ -12,6 +15,10 @@ open Verso.Genre Manual
 
 -- Access Lean code in code blocks
 open Verso.Genre.Manual.InlineLean
+
+-- Open LeanPlot namespaces for examples
+open LeanPlot.API
+open LeanPlot.PlotComposition
 
 set_option pp.rawOnError true
 set_option linter.verso.markup.emph false
@@ -23,12 +30,17 @@ shortTitle := "LeanPlot"
 %%%
 
 LeanPlot turns Lean 4 code into _interactive, React-powered charts_ that render right inside VS Code's infoview.
-Built on top of ProofWidgets4 and Recharts,
-it lets you inspect functions and data visually while you prove.
+Built on top of ProofWidgets4 and Recharts, it lets you inspect functions and data visually while you prove.
 
 # Quick Start
+%%%
+tag := "quickstart"
+%%%
 
 ## Installation
+%%%
+tag := "installation"
+%%%
 
 Add LeanPlot to your project's `lakefile.toml`:
 
@@ -46,196 +58,184 @@ lake build
 ```
 
 ## Your First Plot
+%%%
+tag := "first-plot"
+%%%
 
-Create a new `.lean` file, open the VS Code infoview, and paste:
+:::paragraph
+Create a new `.lean` file, open the VS Code infoview, and try:
 
 ```lean
--- Simple syntax - just pass a function directly:
 #plot (fun x => x^2)
-
--- With custom samples:
-#plot (fun t => Float.sin t) using 400
-
--- Works without parentheses too:
-#plot fun x => Float.tanh x
 ```
 
-Hover over `#plot` and you'll see beautiful interactive charts with automatic axis labels, colors, and styling!
+This renders a parabola with automatic axis labels and styling!
+:::
 
-# Core Concepts
-
-## Progressive Disclosure
-
-LeanPlot follows a _progressive disclosure_ philosophy with three API tiers:
-
-1. *Tier 0 (Zero-Config)*: Functions like `plot`, `plotMany`, `scatter`, and `bar` that just work with sensible defaults
-2. *Tier 1 (Components)*: Mid-level functions like `sample`, `mkLineChart` for more control
-3. *Tier 2 (Recharts)*: Direct access to Recharts JSX components for full customization
-
-## The #plot Command
-
-The `#plot` command is the primary way to visualize functions:
+:::paragraph
+You can customize the number of samples:
 
 ```lean
-#plot (fun x => x^2)              -- Basic function
-#plot (fun x => x^2) using 400    -- Custom sample count
-#plot fun t => Float.sin t        -- No parens needed
+#plot (fun t => Float.sin t) using 400
 ```
+:::
 
-For expressions that already return `Html`, use `#html` instead:
+:::paragraph
+For multiple functions, use {name}`plotMany`:
 
 ```lean
 #html plotMany #[("sin", fun x => Float.sin x),
                  ("cos", fun x => Float.cos x)]
 ```
+:::
+
+# Core Concepts
+%%%
+tag := "concepts"
+%%%
+
+## Progressive Disclosure
+%%%
+tag := "progressive-disclosure"
+%%%
+
+LeanPlot follows a {deftech}_progressive disclosure_ philosophy with three API tiers:
+
+1. *Tier 0 (Zero-Config)*: Functions like {name}`LeanPlot.API.plot`, {name}`LeanPlot.API.plotMany`, {name}`LeanPlot.API.scatter`, and {name}`LeanPlot.API.bar` that just work with sensible defaults
+
+2. *Tier 1 (Components)*: Mid-level functions like {name}`LeanPlot.Components.sample` and {name}`LeanPlot.Components.mkLineChart` for more control
+
+3. *Tier 2 (Recharts)*: Direct access to Recharts JSX components for full customization
+
+## The ToFloat Typeclass
+%%%
+tag := "tofloat"
+%%%
+
+{docstring LeanPlot.ToFloat}
+
+This typeclass allows plotting functions that return any numeric type, not just `Float`.
 
 # API Reference
+%%%
+tag := "api"
+%%%
 
 ## Zero-Config Functions
+%%%
+tag := "zero-config"
+%%%
+
+These are the {tech}[progressive disclosure] Tier-0 functions - they just work!
 
 ### plot
+%%%
+tag := "api-plot"
+%%%
 
-Renders a line chart for a single function with automatic everything:
-
-```
-def plot {β} [ToFloat β] (f : Float → β)
-    (steps : Nat := 200)
-    (domain : Option (Float × Float) := none) : Html
-```
+{docstring LeanPlot.API.plot}
 
 ### plotMany
+%%%
+tag := "api-plotMany"
+%%%
 
-Compares multiple functions with automatic legend and colors:
-
-```
-def plotMany {β} [ToFloat β]
-    (fns : Array (String × (Float → β)))
-    (steps : Nat := 200)
-    (domain : Float × Float := (0.0, 1.0)) : Html
-```
+{docstring LeanPlot.API.plotMany}
 
 ### scatter
+%%%
+tag := "api-scatter"
+%%%
 
-Creates a scatter plot from a function:
-
-```
-def scatter {β} [ToFloat β] (f : Float → β)
-    (steps : Nat := 200)
-    (domain : Option (Float × Float) := none) : Html
-```
+{docstring LeanPlot.API.scatter}
 
 ### bar
+%%%
+tag := "api-bar"
+%%%
 
-Creates a bar chart from discrete values:
+{docstring LeanPlot.API.bar}
 
-```
-def bar {β} [ToFloat β] (f : Float → β)
-    (steps : Nat := 200)
-    (domain : Option (Float × Float) := none) : Html
-```
+## Components Layer
+%%%
+tag := "components"
+%%%
 
-# Advanced Features
+The components layer provides more control over chart construction.
 
-## Grammar of Graphics DSL
+### sample
+%%%
+tag := "api-sample"
+%%%
 
-For complex visualizations, use the Grammar of Graphics DSL inspired by ggplot2:
+{docstring LeanPlot.Components.sample}
 
-```
-import LeanPlot.GrammarOfGraphics
+### sampleMany
+%%%
+tag := "api-sampleMany"
+%%%
 
-#html (
-  plot (fun x => x * x)
-    |> fun p => PlotBuilder.withTitle p "Quadratic Function"
-    |> fun p => PlotBuilder.withSize p 500 400
-    |> PlotBuilder.build
-    |> Render.render
-)
-```
+{docstring LeanPlot.Components.sampleMany}
 
-## Log Scales
+# Plot Composition
+%%%
+tag := "composition"
+%%%
 
-Visualize exponential growth with logarithmic axes:
+LeanPlot supports composing multiple plots using the `+` operator via the Algebra module.
+Import `LeanPlot.Algebra` and use the `line` function to create composable line plots.
 
-```
-import LeanPlot.Scale
+# Color Palette
+%%%
+tag := "palette"
+%%%
 
--- Use log scale on Y axis
-#html (
-  PlotBuilder.plot (fun x => Float.exp x)
-    |> fun p => PlotBuilder.logY p 10.0
-    |> PlotBuilder.build
-    |> Render.render
-)
-```
+LeanPlot automatically assigns colors from a carefully chosen palette.
 
-## Data Transformations
+{docstring LeanPlot.Palette.colorFromNat}
 
-Apply transforms to your data using `LeanPlot.Transform`:
-
-- Log transform
-- Sqrt scale
-- Normalization
-- Moving average
-
-## Faceting
-
-Create grid layouts of multiple subplots:
-
-```
-import LeanPlot.Faceting
-
-#html facetGrid specs 2 2  -- 2x2 grid of plots
-```
-
-## Plot Composition
-
-Overlay or stack multiple plots:
-
-```lean
-
--- Use + operator to overlay plots
-#plot (line (fun x => x) "y" + line (fun x => x^2) "y²")
-```
+{docstring LeanPlot.Palette.autoColors}
 
 # Demo Gallery
+%%%
+tag := "demos"
+%%%
 
 LeanPlot includes many demos under `LeanPlot/Demos/`:
 
-- `SmartPlottingDemo` - Zero-effort beautiful plots (recommended starting point)
-- _LinearDemo_, _QuadraticDemo_, _CubicDemo_ - Basic function plots
-- _OverlayDemo_ - Overlaying multiple functions
-- _TrigDemo_ - Trigonometric functions
-- _LogScaleDemo_ - Logarithmic scales
-- _GrammarDemo_ - Grammar of Graphics DSL
-- _TransformDemo_ - Data transformations
-- _FacetDemo_ - Grid layouts
-- _SeriesKindDemo_ - Type-safe series
-
-# PNG Export
-
-Add a Save PNG button around any plot:
-
-```
-import LeanPlot.Debug
-open LeanPlot.API LeanPlot.Debug
-
-#html withSavePNG (plot (fun x => x^2)) "my-plot" "quadratic.png"
-```
+- `SmartPlottingDemo` - Zero-effort beautiful plots (start here!)
+- `LinearDemo`, `QuadraticDemo`, `CubicDemo` - Basic function plots
+- `OverlayDemo` - Overlaying multiple functions
+- `TrigDemo` - Trigonometric functions
+- `LogScaleDemo` - Logarithmic scales
+- `GrammarDemo` - Grammar of Graphics DSL
+- `TransformDemo` - Data transformations
+- `FacetDemo` - Grid layouts
+- `SeriesKindDemo` - Type-safe series
 
 # Architecture
+%%%
+tag := "architecture"
+%%%
 
-LeanPlot has a layered architecture:
+LeanPlot has a layered architecture following {tech}[progressive disclosure]:
 
-- _User Code_: `#plot (fun x => x^2)`
-- _Tier 0 (LeanPlot.API)_: `plot`, `plotMany`, `scatter`, `bar` - Zero-config, automatic everything
-- _Tier 1 (LeanPlot.Components)_: `sample`, `sampleMany`, `mkLineChart`, `mkScatterChart` - More control, explicit parameters
-- _Tier 2 (ProofWidgets + Recharts)_: `LineChart`, `ScatterChart`, `BarChart` - Full JSX access, complete customization
-- _VS Code Infoview_: Interactive React widgets
+:::paragraph
+*User Code* → *Tier 0 API* → *Components* → *Recharts* → *VS Code Infoview*
+
+Each layer adds more control at the cost of more verbosity. Most users only need Tier 0.
+:::
 
 # Contributing
+%%%
+tag := "contributing"
+%%%
 
 Contributions welcome! Check the GitHub repository for issues and PRs.
 
 # License
+%%%
+tag := "license"
+%%%
 
 LeanPlot is released under the Apache License 2.0.

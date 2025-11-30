@@ -1,5 +1,3 @@
-import Std.Internal.Rat
-
 /-! # `ToFloat` typeclass
 --  A light-weight abstraction for types that can be coerced (lossily) to `Float`.
 --  This powers the generic sampling helpers in `LeanPlot.Components` so that users
@@ -51,14 +49,12 @@ instance [Coe α Float] : ToFloat α where
 
 /-! ### `Rat` instance
 
-Lean 4 already ships with a *minimal* rational number type at
-`Std.Internal.Rat`.  Batteries/Mathlib re-export it, so we can safely provide a
-`ToFloat` instance here unconditionally.
+Lean 4 ships with a rational number type `Rat` in `Init.Data.Rat`.
 The conversion takes the numerator/denominator and performs a floating-point
 division.
 -/
 
-instance instToFloatRat : ToFloat Std.Internal.Rat where
+instance instToFloatRat : ToFloat Rat where
   toFloat r := (Float.ofInt r.num) / (Float.ofNat r.den)
 
 end LeanPlot

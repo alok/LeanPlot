@@ -14,9 +14,6 @@ pp.unicode.fun = true
 autoImplicit = true
 relaxedAutoImplicit = false
 linter.missingDocs = true
-# AGENT: make this true for essentially a compiler-generated TODO list.
-warningAsError = false
-
 
 [[lean_lib]]
 name = "LeanPlot"
