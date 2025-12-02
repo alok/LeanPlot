@@ -13,9 +13,9 @@ import Lean.Data.Json
 This module exposes high-level chart helpers with sensible defaults so that
 users can go from a Lean function to a rendered plot with essentially zero
 boiler-plate.  The philosophy is *progressive disclosure*: we begin with a
-tiny "Tier-0" surface area (`lineChart`, `scatterChart`) and allow more
+tiny "Tier-0" surface area ({lit}`lineChart`, {lit}`scatterChart`) and allow more
 customisation via lower-level constructors such as
-`LeanPlot.Components.mkLineChart` when needed.
+{name}`LeanPlot.Components.mkLineChart` when needed.
 
 Future iterations will expand the API hierarchy but the Tier-0 helpers are
 expected to remain stable. -/
@@ -27,25 +27,25 @@ open scoped ProofWidgets.Jsx
 
 namespace LeanPlot.API
 
-/-- Convert an array of `(x,y)` pairs into the JSON row structure expected by
+/-- Convert an array of {lit}`(x,y)` pairs into the JSON row structure expected by
 Recharts. -/
 @[inline] def xyArrayToJson (pts : Array (Float × Float)) : Array Json :=
   pts.map fun (x, y) => json% {x: $(toJson x), y: $(toJson y)}
 
-/-- A thin alias forwarding to `LeanPlot.Components.mkLineChart`.  This keeps
-`LeanPlot.API` free of implementation details while preserving the public
+/-- A thin alias forwarding to {name}`LeanPlot.Components.mkLineChart`.  This keeps
+{lit}`LeanPlot.API` free of implementation details while preserving the public
 signature users rely on. -/
 @[inline] def mkLineChart (data : Array Json)
     (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
   LeanPlot.Components.mkLineChart data seriesStrokes w h
 
 /-- **Tier-0 helper:** Render a line chart for a single function
-`f : Float → β` with zero configuration.  The function is sampled uniformly
-on `[0,1]` using `steps` samples (default 200).  The chart is sized
-`defaultW × defaultH` and colored using the first entry of
-`Palette.defaultPalette`.
+{lit}`f : Float → β` with zero configuration.  The function is sampled uniformly
+on {lit}`[0,1]` using {lit}`steps` samples (default 200).  The chart is sized
+{lit}`defaultW × defaultH` and colored using the first entry of
+{name}`Palette.defaultPalette`.
 
-Returns a `ProofWidgets.Html` value that can be rendered with `#plot`.  Example:
+Returns a {lean}`ProofWidgets.Html` value that can be rendered with {lit}`#plot`.  Example:
 
 ```lean
 #plot LeanPlot.API.lineChart (fun x => x*x) -- y = x²
@@ -90,11 +90,10 @@ These are now the **recommended** way to create plots in LeanPlot.
 /-- **Simple line chart** - Just pass your function, get beautiful plot!
 
 Examples:
-```
-#plot plot (fun t => t^2)                    -- Automatic "time" labels
-#plot plot (fun x => Float.sin x)           -- Automatic "x" labels
-#plot plot (fun i => i * 3) (steps := 100)  -- Custom sample count
-```
+
+  * {lit}`#plot plot (fun t => t^2)` - Automatic "time" labels
+  * {lit}`#plot plot (fun x => Float.sin x)` - Automatic "x" labels
+  * {lit}`#plot plot (fun i => i * 3) (steps := 100)` - Custom sample count
 
 This is the new recommended way to plot functions. Zero configuration needed!
 -/
@@ -106,10 +105,9 @@ This is the new recommended way to plot functions. Zero configuration needed!
 /-- **Simple multi-function plot** - Multiple functions, automatic everything!
 
 Examples:
-```
-#plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
-#plot plotMany #[("linear", fun t => t), ("quadratic", fun t => t^2)] (domain := (0.0, 2.0))
-```
+
+  * {lit}`#plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]`
+  * {lit}`#plot plotMany #[("linear", fun t => t), ("quadratic", fun t => t^2)] (domain := (0.0, 2.0))`
 
 Automatic colors, legend, and labels. Perfect for comparing functions!
 -/
@@ -122,10 +120,8 @@ Automatic colors, legend, and labels. Perfect for comparing functions!
 
 Examples:
 
-```
-#plot scatter (fun x => x + Random.rand)  -- Show function with noise
-#plot scatter (fun t => Float.sin t) (steps := 50)  -- Fewer points
-```
+  * {lit}`#plot scatter (fun x => x + Random.rand)` - Show function with noise
+  * {lit}`#plot scatter (fun t => Float.sin t) (steps := 50)` - Fewer points
 -/
 @[inline] def scatter {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none)
@@ -135,10 +131,9 @@ Examples:
 /-- **Simple bar chart** - Bars with automatic styling!
 
 Examples:
-```
-#plot bar (fun i => i^2) (steps := 10)     -- Discrete function as bars
-#plot bar (fun x => Float.floor x) (steps := 20)  -- Step function
-```
+
+  * {lit}`#plot bar (fun i => i^2) (steps := 10)` - Discrete function as bars
+  * {lit}`#plot bar (fun x => Float.floor x) (steps := 20)` - Step function
 -/
 @[inline] def bar {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none)

@@ -7,15 +7,15 @@ Just pass your function and get beautiful, labeled plots.
 
 # For Beginners
 
-- `smartLabels yourFunction` - Get nice axis labels automatically
-- `plotSmart yourFunction data` - Plot with automatic everything
+- {lit}`smartLabels yourFunction` - Get nice axis labels automatically
+- {lit}`plotSmart yourFunction data` - Plot with automatic everything
 - Don't worry about the details, it just works!
 
 # What It Does
 
-- Turns `t` into "time"
-- Turns `x` into proper spatial coordinates
-- Handles duplicates like `x, y, x` → `x, y, x_2`
+- Turns {lit}`t` into "time"
+- Turns {lit}`x` into proper spatial coordinates
+- Handles duplicates like {lit}`x, y, x` → {lit}`x, y, x_2`
 - Makes your plots look professional with zero effort
 
 -/
@@ -27,13 +27,21 @@ open Lean Elab Term Meta
 
 /-- Semantic roles for function parameters. -/
 inductive ParameterRole
+  /-- Independent variable (x-axis). -/
   | independent
+  /-- Dependent variable (y-axis). -/
   | dependent
+  /-- Time-like parameter. -/
   | time
+  /-- Spatial coordinate. -/
   | spatial
+  /-- Physical quantity. -/
   | physical
+  /-- Index variable. -/
   | index
+  /-- Generic parameter. -/
   | parameter
+  /-- Unknown role. -/
   | unknown
   deriving BEq, Repr
 
@@ -50,8 +58,11 @@ instance : ToString ParameterRole where
 
 /-- Rich parameter information. -/
 structure ParameterInfo where
+  /-- The parameter's Lean name. -/
   name : Name
+  /-- Inferred semantic role. -/
   role : ParameterRole
+  /-- Human-readable display name. -/
   displayName : String
   deriving Repr
 
@@ -64,13 +75,17 @@ instance : Inhabited ParameterInfo where
 
 /-- Intelligent axis labeling. -/
 structure AxisLabels where
+  /-- Label for the x-axis. -/
   xLabel : String
+  /-- Label for the y-axis. -/
   yLabel : String
   deriving Repr
 
 /-- Function metadata for intelligent plotting. -/
 structure FunctionMetadata where
+  /-- Extracted parameter information. -/
   parameters : Array ParameterInfo
+  /-- Auto-generated axis labels. -/
   axisLabels : AxisLabels
   deriving Repr
 
@@ -158,9 +173,9 @@ def analyzeFunction (expr : Expr) : FunctionMetadata :=
 /-- 🎯 Get nice axis labels automatically. Works on any function!
 
 Examples:
-- `smartLabels (fun t => t^2)` gives you `("time", "f(time)")`
-- `smartLabels (fun x y => x + y)` gives you `("x", "y")`
-- Handles duplicates: `smartLabels (fun x y x => x*y*x)` gives you `("x", "y")`
+- {lit}`smartLabels (fun t => t^2)` gives you {lit}`("time", "f(time)")`
+- {lit}`smartLabels (fun x y => x + y)` gives you {lit}`("x", "y")`
+- Handles duplicates: {lit}`smartLabels (fun x y x => x*y*x)` gives you {lit}`("x", "y")`
 -/
 def smartLabels (expr : Expr) : String × String :=
   let metadata := analyzeFunction expr
@@ -169,9 +184,9 @@ def smartLabels (expr : Expr) : String × String :=
 /-- Get all parameter names, cleaned up.
 
 Examples:
-- `smartNames (fun t => t^2)` gives you `["time"]`
-- `smartNames (fun x y x => x*y*x)` gives you `["x", "y", "x_2"]`
-- `smartNames (fun i j => i + j)` gives you `["index_i", "index_j"]`
+- {lit}`smartNames (fun t => t^2)` gives you {lit}`["time"]`
+- {lit}`smartNames (fun x y x => x*y*x)` gives you {lit}`["x", "y", "x_2"]`
+- {lit}`smartNames (fun i j => i + j)` gives you {lit}`["index_i", "index_j"]`
 -/
 def smartNames (expr : Expr) : Array String :=
   let metadata := analyzeFunction expr
@@ -180,9 +195,9 @@ def smartNames (expr : Expr) : Array String :=
 /-- 🎯 Just fix duplicate names in any string list. That's it.
 
 Examples:
-- `fixDuplicates ["x", "y", "x"]` gives you `["x", "y", "x_2"]`
-- `fixDuplicates ["a", "a", "a"]` gives you `["a", "a_2", "a_3"]`
-- `fixDuplicates ["unique"]` gives you `["unique"]` (unchanged)
+- {lit}`fixDuplicates ["x", "y", "x"]` gives you {lit}`["x", "y", "x_2"]`
+- {lit}`fixDuplicates ["a", "a", "a"]` gives you {lit}`["a", "a_2", "a_3"]`
+- {lit}`fixDuplicates ["unique"]` gives you {lit}`["unique"]` (unchanged)
 -/
 def fixDuplicates (names : Array String) : Array String :=
   names.foldl (fun acc name =>
@@ -220,9 +235,11 @@ def disambiguateNames (names : Array String) : Array String := fixDuplicates nam
 section EasyExamples
 
 -- 🎯 Simple test expressions (you can copy these)
+/-- Test expression representing a time-based function. -/
 def myTimeFunction : Expr :=
   Expr.lam `t (Expr.const ``Float []) (Expr.bvar 0) BinderInfo.default
 
+/-- Test expression with duplicate parameter names. -/
 def myDuplicateFunction : Expr :=
   Expr.lam `x (Expr.const ``Float [])
     (Expr.lam `y (Expr.const ``Float [])

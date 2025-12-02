@@ -18,16 +18,16 @@ open Lean
 /-- An alias for hex strings -/
 private abbrev Color := String
 
-/-- Dark purple (`#440154`). -/
+/-- Dark purple ({lit}`#440154`). -/
 def darkPurple : Color := "#440154"
 
-/-- Indigo (`#482878`). -/
+/-- Indigo ({lit}`#482878`). -/
 def indigo : Color := "#482878"
 
-/-- Blue-purple (`#3e4a89`). -/
+/-- Blue-purple ({lit}`#3e4a89`). -/
 def bluePurple : Color := "#3e4a89"
 
-/-- Medium blue (`#31688e`). -/
+/-- Medium blue ({lit}`#31688e`). -/
 def blue : Color := "#31688e"
 
 /-- Turquoise (#26828e). -/
@@ -36,16 +36,16 @@ def turquoise : Color := "#26828e"
 /-- Green-turquoise (#1f9e89). -/
 def greenTurquoise : Color := "#1f9e89"
 
-/-- Green (`#35b779`). -/
+/-- Green ({lit}`#35b779`). -/
 def green : Color := "#35b779"
 
-/-- Lime (`#6ece58`). -/
+/-- Lime ({lit}`#6ece58`). -/
 def lime : Color := "#6ece58"
 
-/-- Yellow-green (`#b5de2b`). -/
+/-- Yellow-green ({lit}`#b5de2b`). -/
 def yellowGreen : Color := "#b5de2b"
 
-/-- Yellow (`#fde725`). -/
+/-- Yellow ({lit}`#fde725`). -/
 def yellow : Color := "#fde725"
 
 /-- The default color palette. -/
@@ -63,20 +63,20 @@ def yellow : Color := "#fde725"
 ]
 
 /-- A function that maps a natural number to a color from the default palette.
-The colors repeat if `n` is larger than the number of colors in the palette. -/
+The colors repeat if {lean}`n` is larger than the number of colors in the palette. -/
 @[inline] def colorFromNat (n : Nat) : Color :=
   defaultPalette[n % defaultPalette.size]!
 
-/-- Given an `Array` of series names, assign each a color from
-`defaultPalette`, cycling if necessary.  The result is suitable for the
-`seriesStrokes` argument expected by `LeanPlot.Components.mkLineChart` and
+/-- Given an {lean}`Array` of series names, assign each a color from
+{name}`defaultPalette`, cycling if necessary.  The result is suitable for the
+{lit}`seriesStrokes` argument expected by {lit}`LeanPlot.Components.mkLineChart` and
 friends. -/
 -- TODO this should be any collection, not just an array
 @[inline] def autoColors (names : Array String) : Array (String × String) :=
   names.zipIdx.map (fun (n, i) => (n, colorFromNat i))
 
-/-- Generate a list of `n` distinct colors.
-If `n` is larger than the number of colors in the palette, the colors will repeat. -/
+/-- Generate a list of {lean}`n` distinct colors.
+If {lean}`n` is larger than the number of colors in the palette, the colors will repeat. -/
 def f (n : Nat) : List Color :=
   let palette := defaultPalette
   List.range n |>.map fun i => palette[i % palette.size]!
@@ -100,7 +100,7 @@ macro_rules
       `(List.map (fun $x => $e) $xs)
 
 /-!
-  A test suite for the `defaultPalette`.
+  A test suite for the {lit}`defaultPalette`.
 -/
 
 /-- A list of squares from 0 to 5. -/

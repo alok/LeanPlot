@@ -70,13 +70,13 @@ end LeanPlot
 If the assertion fails, a compile-time error is raised.
 
 Example:
-```lean
-def myJson : Json := Json.mkObj [(\"foo\", 1), (\"bar\", \"baz\")]
+```
+def myJson : Json := Json.mkObj [("foo", 1), ("bar", "baz")]
 -- This assertion passes:
-#assert_keys myJson #[\"foo\", \"bar\"]
+#assert_keys myJson #["foo", "bar"]
 
 -- This assertion would fail at compile time:
--- #assert_keys myJson #[\"foo\", \"qux\"]
+-- #assert_keys myJson #["foo", "qux"]
 ```
 -/
 syntax (name := assertKeys) "#assert_keys " term:max ppSpace term:max : command

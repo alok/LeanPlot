@@ -27,9 +27,9 @@ open LeanPlot.AutoDomain
 
 namespace LeanPlot.Components
 
-/-- Uniformly sample a function `f : Float → β` on the interval `[min,max]` or an auto-detected domain.
-`β` is required to have a `[ToFloat β]` instance so that values can be
-converted to a JavaScript-friendly `Float` for serialisation. -/
+/-- Uniformly sample a function {lit}`f : Float → β` on the interval {lit}`[min,max]` or an auto-detected domain.
+{lit}`β` is required to have a {lit}`[ToFloat β]` instance so that values can be
+converted to a JavaScript-friendly {lean}`Float` for serialisation. -/
 @[inline] def sample {β} [ToFloat β]
   (f : Float → β) (steps : Nat := 200) (domainOpt : Option (Float × Float) := none) : Array Json :=
   -- Decide on the **x‐domain** to sample.
@@ -52,7 +52,7 @@ converted to a JavaScript-friendly `Float` for serialisation. -/
 
 /--
 Sample several functions whose outputs will be stored under the given series names.
-Each function must return a type with a `[ToFloat]` instance so that the
+Each function must return a type with a {lit}`[ToFloat]` instance so that the
 value can be serialised.
 -/
 @[inline] def sampleMany {β} [ToFloat β]
@@ -69,7 +69,7 @@ value can be serialised.
 /--
 Turn an array of JSON rows into a Recharts line chart.
 
-`seriesStrokes` supplies a color for each series; its order must match the order in `fns` used to create the data.
+{lit}`seriesStrokes` supplies a color for each series; its order must match the order in {lit}`fns` used to create the data.
 -/
 @[inline] def mkLineChart (data : Array Json) (seriesStrokes : Array (String × String)) (w h : Nat := 400) : Html :=
   let chartHtml :=
@@ -88,7 +88,7 @@ Turn an array of JSON rows into a Recharts line chart.
   else
     chartHtml
 
-/-- Like `mkLineChart` but allows setting axis labels. -/
+/-- Like {name}`mkLineChart` but allows setting axis labels. -/
 @[inline] def mkLineChartWithLabels (data : Array Json)
     (seriesStrokes : Array (String × String))
     (xLabel? : Option String := none) (yLabel? : Option String := none)
@@ -114,9 +114,9 @@ Turn an array of JSON rows into a Recharts line chart.
     chartHtml
 
 /--
-`mkLineChartFull` extends `mkLineChartWithLabels` by also including a
-Recharts `<Legend>` block so that each series is labelled with the name
-provided to `sampleMany`.  This is optional but useful for multi-series
+{name}`mkLineChartFull` extends {name}`mkLineChartWithLabels` by also including a
+Recharts {lit}`<Legend>` block so that each series is labelled with the name
+provided to {name}`sampleMany`.  This is optional but useful for multi-series
 plots.
 -/
 @[inline] def mkLineChartFull (data : Array Json)
@@ -149,42 +149,42 @@ plots.
   else
     chartHtml
 
-/-- Props for a Recharts `<ScatterChart>` wrapped in Lean.  We intentionally
+/-- Props for a Recharts {lit}`<ScatterChart>` wrapped in Lean.  We intentionally
 keep this minimal, exposing only what the Tier-0 helpers require. -/
 structure ScatterChartProps where
   /-- Width of the SVG container in pixels. -/
   width  : Nat
   /-- Height of the SVG container in pixels. -/
   height : Nat
-  /-- Array of JSON rows each containing at least `x` and `y` fields. -/
+  /-- Array of JSON rows each containing at least {lit}`x` and {lit}`y` fields. -/
   data   : Array Json
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<ScatterChart>`.
+/-- Lean wrapper for Recharts {lit}`<ScatterChart>`.
 We delegate to the same JavaScript bundle used by the other Recharts
 components that ship with ProofWidgets. -/
 @[inline] def ScatterChart : ProofWidgets.Component ScatterChartProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "ScatterChart"
 
-/-- Props for a Recharts `<Scatter>` series. -/
+/-- Props for a Recharts {lit}`<Scatter>` series. -/
 structure ScatterProps where
   /-- Which field of the JSON row encodes the y-value to plot. Defaults to
-  `"y"`. -/
+  {lit}`"y"`. -/
   dataKey : Json := Json.str "y"
   /-- CSS color for the scatter points. -/
   fill    : String
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<Scatter>`. -/
+/-- Lean wrapper for Recharts {lit}`<Scatter>`. -/
 @[inline] def Scatter : ProofWidgets.Component ScatterProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "Scatter"
 
 /--
 Turn an array of JSON rows into a Recharts scatter chart containing a
-single series named `y`.  The helper mirrors `mkLineChart` but renders
-dots instead of a line.  The point color is supplied via `fillColor`.
+single series named {lit}`y`.  The helper mirrors {name}`mkLineChart` but renders
+dots instead of a line.  The point color is supplied via {lit}`fillColor`.
 -/
 @[inline] def mkScatterChart (data : Array Json) (fillColor : String)
     (w h : Nat := 400) : Html :=
@@ -210,7 +210,7 @@ We extend the Thin Lean wrappers to cover Recharts `<AreaChart>`/`<Area>` and
 types without depending on upstream ProofWidgets releases.  Only a **minimal**
 set of props is exposed for now. -/
 
-/-- Props for a Recharts `<AreaChart>`. -/
+/-- Props for a Recharts {lit}`<AreaChart>`. -/
 structure AreaChartProps where
   /-- Width of the SVG container in pixels. -/
   width  : Nat
@@ -220,29 +220,29 @@ structure AreaChartProps where
   data   : Array Json
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<AreaChart>`. -/
+/-- Lean wrapper for Recharts {lit}`<AreaChart>`. -/
 @[inline] def AreaChart : ProofWidgets.Component AreaChartProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "AreaChart"
 
-/-- Props for a Recharts `<Area>` series.  We expose the usual `dataKey`,
-`fill` and `stroke` colors.  Additional Recharts props can be added later. -/
+/-- Props for a Recharts {lit}`<Area>` series.  We expose the usual {lit}`dataKey`,
+{lit}`fill` and {lit}`stroke` colors.  Additional Recharts props can be added later. -/
 structure AreaProps where
   /-- Which field of the JSON row encodes the y-value to plot. Defaults to
-  `"y"`. -/
+  {lit}`"y"`. -/
   dataKey : Json := Json.str "y"
   /-- Fill color of the area. -/
   fill    : String
-  /-- Stroke color of the area border.  Defaults to the same as `fill`. -/
+  /-- Stroke color of the area border.  Defaults to the same as {lit}`fill`. -/
   stroke  : String := ""
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<Area>`. -/
+/-- Lean wrapper for Recharts {lit}`<Area>`. -/
 @[inline] def Area : ProofWidgets.Component AreaProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "Area"
 
-/-- Props for a Recharts `<BarChart>`. -/
+/-- Props for a Recharts {lit}`<BarChart>`. -/
 structure BarChartProps where
   /-- Width of the SVG container in pixels. -/
   width  : Nat
@@ -252,26 +252,26 @@ structure BarChartProps where
   data   : Array Json
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<BarChart>`. -/
+/-- Lean wrapper for Recharts {lit}`<BarChart>`. -/
 @[inline] def BarChart : ProofWidgets.Component BarChartProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "BarChart"
 
-/-- Props for a Recharts `<Bar>` series. -/
+/-- Props for a Recharts {lit}`<Bar>` series. -/
 structure BarProps where
   /-- Which field of the JSON row encodes the y-value to plot. Defaults to
-  `"y"`. -/
+  {lit}`"y"`. -/
   dataKey : Json := Json.str "y"
   /-- CSS color for the bars. -/
   fill    : String
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<Bar>`. -/
+/-- Lean wrapper for Recharts {lit}`<Bar>`. -/
 @[inline] def Bar : ProofWidgets.Component BarProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "Bar"
 
-/-- Props for a Recharts `<ComposedChart>` for mixed chart types. -/
+/-- Props for a Recharts {lit}`<ComposedChart>` for mixed chart types. -/
 structure ComposedChartProps where
   /-- Width of the SVG container in pixels. -/
   width  : Nat
@@ -281,15 +281,15 @@ structure ComposedChartProps where
   data   : Array Json
   deriving FromJson, ToJson
 
-/-- Lean wrapper for Recharts `<ComposedChart>` which supports mixing different chart types. -/
+/-- Lean wrapper for Recharts {lit}`<ComposedChart>` which supports mixing different chart types. -/
 @[inline] def ComposedChart : ProofWidgets.Component ComposedChartProps where
   javascript := ProofWidgets.Recharts.Recharts.javascript
   «export»   := "ComposedChart"
 
 /--
 Turn an array of JSON rows into a Recharts **bar chart** containing a single
-series named `y`.  The helper mirrors `mkScatterChart` but renders bars instead
-of dots.  The bar color is supplied via `fillColor`.
+series named {lit}`y`.  The helper mirrors {name}`mkScatterChart` but renders bars instead
+of dots.  The bar color is supplied via {lit}`fillColor`.
 -/
 @[inline] def mkBarChart (data : Array Json) (fillColor : String)
     (w h : Nat := 400) : Html :=
@@ -313,9 +313,9 @@ of dots.  The bar color is supplied via `fillColor`.
 /-- 🎯 Plot a function with automatic everything. Just works!
     
 Examples:
-- `plotSimple (fun t => t^2)` - Simple quadratic plot
-- `plotSimple (fun x => x + 1)` - Linear function
-- `plotSimple (fun i => i * 2)` - Linear scaling
+- {lit}`plotSimple (fun t => t^2)` - Simple quadratic plot
+- {lit}`plotSimple (fun x => x + 1)` - Linear function
+- {lit}`plotSimple (fun i => i * 2)` - Linear scaling
 
 You never have to think about axis labels again!
 -/
@@ -336,8 +336,8 @@ def plotSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     Just pass your functions and get a beautiful multi-line plot!
     
 Examples:  
-- `plotManySimple #[("sin", fun t => Float.sin t), ("cos", fun t => Float.cos t)]`
-- `plotManySimple #[("linear", fun x => x), ("quadratic", fun x => x^2)]`
+- {lit}`plotManySimple #[("sin", fun t => Float.sin t), ("cos", fun t => Float.cos t)]`
+- {lit}`plotManySimple #[("linear", fun x => x), ("quadratic", fun x => x^2)]`
 
 Everything is automatic - colors, labels, legend!
 -/
