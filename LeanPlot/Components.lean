@@ -311,7 +311,7 @@ of dots.  The bar color is supplied via {lit}`fillColor`.
 /-! ## Simple Plotting (Zero-Configuration Plots) -/
 
 /-- 🎯 Plot a function with automatic everything. Just works!
-    
+
 Examples:
 - {lit}`plotSimple (fun t => t^2)` - Simple quadratic plot
 - {lit}`plotSimple (fun x => x + 1)` - Linear function
@@ -319,56 +319,56 @@ Examples:
 
 You never have to think about axis labels again!
 -/
-def plotSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
+def plotSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
   -- Sample the function
   let data := sample f steps domain
-  
+
   -- Generate axis labels (this would use metaprogramming in full implementation)
   -- For now, provide sensible defaults that work with the common patterns
-  let xLabel := "x" 
+  let xLabel := "x"
   let yLabel := "f(x)"
   let seriesStrokes := #[("y", "#2563eb")]  -- Nice blue color
-  
+
   mkLineChartWithLabels data seriesStrokes (some xLabel) (some yLabel) w h
 
 /-- Plot multiple functions with automatic labeling.
     Just pass your functions and get a beautiful multi-line plot!
-    
-Examples:  
+
+Examples:
 - {lit}`plotManySimple #[("sin", fun t => Float.sin t), ("cos", fun t => Float.cos t)]`
 - {lit}`plotManySimple #[("linear", fun x => x), ("quadratic", fun x => x^2)]`
 
 Everything is automatic - colors, labels, legend!
 -/
-def plotManySimple {β} [ToFloat β] (fns : Array (String × (Float → β))) 
-    (steps : Nat := 200) (domain : Float × Float := (0.0, 1.0)) 
+def plotManySimple {β} [ToFloat β] (fns : Array (String × (Float → β)))
+    (steps : Nat := 200) (domain : Float × Float := (0.0, 1.0))
     (w h : Nat := 400) : Html :=
   -- Sample all functions
   let data := sampleMany fns steps domain.1 domain.2
-  
-  -- Generate axis labels  
+
+  -- Generate axis labels
   let xLabel := "x"  -- Could be enhanced with metaprogramming
   let yLabel := "y"  -- Could be enhanced with metaprogramming
-  
+
   -- Auto-generate colors for each series
   let colors := #["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#7c3aed", "#db2777"]
-  let seriesStrokes := fns.mapIdx fun i (name, _) => 
+  let seriesStrokes := fns.mapIdx fun i (name, _) =>
     let color := colors.getD (i % colors.size) "#64748b"
     (name, color)
-  
+
   mkLineChartFull data seriesStrokes (some xLabel) (some yLabel) w h
 
 /-- Scatter plot with automatic labeling. -/
-def scatterSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200) 
+def scatterSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
   let data := sample f steps domain
   mkScatterChart data "#dc2626" w h  -- Nice red color
 
-/-- Bar chart with automatic labeling. -/  
+/-- Bar chart with automatic labeling. -/
 def barSimple {β} [ToFloat β] (f : Float → β) (steps : Nat := 200)
     (domain : Option (Float × Float) := none) (w h : Nat := 400) : Html :=
-  let data := sample f steps domain  
+  let data := sample f steps domain
   mkBarChart data "#16a34a" w h  -- Nice green color
 
 /-- Enhanced line chart builder with automatic axis label generation.

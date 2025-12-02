@@ -30,10 +30,10 @@ def bluePurple : Color := "#3e4a89"
 /-- Medium blue ({lit}`#31688e`). -/
 def blue : Color := "#31688e"
 
-/-- Turquoise (#26828e). -/
+/-- Turquoise ({lit}`#26828e`). -/
 def turquoise : Color := "#26828e"
 
-/-- Green-turquoise (#1f9e89). -/
+/-- Green-turquoise ({lit}`#1f9e89`). -/
 def greenTurquoise : Color := "#1f9e89"
 
 /-- Green ({lit}`#35b779`). -/

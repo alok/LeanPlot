@@ -5,9 +5,6 @@ version = "0.1.0"
 # Build default
 defaultTargets = ["leanplot"]
 
-# Tell `lake lint` which executable to invoke. Batteries ships a `runLinter` executable
-# that understands its extended linting framework, so we delegate to it here.
-lintDriver = "batteries/runLinter"
 
 [leanOptions]
 pp.unicode.fun = true

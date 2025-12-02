@@ -12,9 +12,9 @@ build:
 clean:
 	lake clean
 
-# Run linter
-lint:
-	lake lint
+# Setup/install dependencies
+setup:
+	./scripts/install.sh
 
 # Generate documentation images (SVG)
 doc-images:
