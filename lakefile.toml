@@ -14,6 +14,7 @@ pp.unicode.fun = true
 autoImplicit = true
 relaxedAutoImplicit = false
 linter.missingDocs = true
+doc.verso = true
 
 [[lean_lib]]
 name = "LeanPlot"
@@ -47,6 +48,11 @@ root = "doc.LeanPlotDocMain"
 [[lean_exe]]
 name = "gendocimages"
 root = "GenDocImages"
+
+# Test PNG/SVG export
+[[lean_exe]]
+name = "testexport"
+root = "TestExport"
 
 [[require]]
 name = "proofwidgets"

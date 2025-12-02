@@ -86,8 +86,9 @@ end LeanPlot.Palette
 syntax "[" term "|" term " in " term (", " term)? "]" : term
 
 /--
+List comprehension syntax diagram:
 
-```mermaid
+```
    ┌───── yield ───────────┐ ┌ x ┐       ┌ xs ┐         optional filter
       [  e     |   x   in   xs   ,  p  ]
 ```

@@ -5,20 +5,30 @@ Interactive plotting for Lean 4.
 
 ## Main API
 
-Import `LeanPlot.API` and `LeanPlot.DSL` for the primary plotting functions:
-- `plot` - Single function plots
+Import `LeanPlot.Graphic` for first-class algebraic graphics:
+- `plot f` - Create a function plot
+- `scatter pts` - Scatter plot from points
+- `bar pts` - Bar chart from points
+- Algebraic operators: `+` (overlay), `|||` (horizontal facet), `/` (vertical facet)
+- Fluent combinators: `.domain`, `.samples`, `.color`, `.title`, etc.
+
+Import `LeanPlot.API` and `LeanPlot.DSL` for legacy plotting functions:
 - `plotMany` - Multiple function comparison
-- `scatter` - Scatter plots
-- `bar` - Bar charts
 - `#plot` - Convenient syntax for quick visualization
+
+## PNG/SVG Export
+
+Import `LeanPlot.Render.Export` for file export:
+- `g.savePNG "path.png"` - Save graphic to PNG
+- `g.saveSVG "path.svg"` - Save graphic to SVG
 
 ## Advanced Features
 
 - `LeanPlot.GrammarOfGraphics` - Grammar of Graphics DSL
+- `LeanPlot.Interactive` - Two-way slider widgets
 - `LeanPlot.PlotComposition` - Subplot grids and composition
 - `LeanPlot.Transform` - Data transformations (log, sqrt, etc.)
 - `LeanPlot.Faceting` - Small multiples layouts
-- `LeanPlot.Debug` - PNG export utilities
 
 ## Demos
 
@@ -26,6 +36,8 @@ See `LeanPlot.Demos.*` for example usage.
 -/
 
 -- Core API (what users should import)
+import LeanPlot.Graphic  -- First-class algebraic graphics
+import LeanPlot.Interactive  -- Two-way slider widgets
 import LeanPlot.API
 import LeanPlot.DSL
 import LeanPlot.ToFloat
@@ -50,6 +62,14 @@ import LeanPlot.Faceting
 -- Utilities
 import LeanPlot.Debug
 import LeanPlot.Metaprogramming
+
+-- Rendering / Export
+import LeanPlot.Render.Bitmap
+import LeanPlot.Render.Rasterize
+import LeanPlot.Render.PNG.CRC32
+import LeanPlot.Render.PNG.Adler32
+import LeanPlot.Render.PNG.Encode
+import LeanPlot.Render.Export
 
 -- Internal (re-exported for compatibility)
 import LeanPlot.Series

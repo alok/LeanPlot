@@ -8,3 +8,8 @@ _out/
 *.un~
 .venv/
 node_modules/
+
+# Generated test files
+*.png
+*.svg
+!doc/img/*.svg

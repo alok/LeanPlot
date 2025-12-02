@@ -90,7 +90,7 @@ These are now the **recommended** way to create plots in LeanPlot.
 /-- **Simple line chart** - Just pass your function, get beautiful plot!
 
 Examples:
-```lean
+```
 #plot plot (fun t => t^2)                    -- Automatic "time" labels
 #plot plot (fun x => Float.sin x)           -- Automatic "x" labels
 #plot plot (fun i => i * 3) (steps := 100)  -- Custom sample count
@@ -106,7 +106,7 @@ This is the new recommended way to plot functions. Zero configuration needed!
 /-- **Simple multi-function plot** - Multiple functions, automatic everything!
 
 Examples:
-```lean
+```
 #plot plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
 #plot plotMany #[("linear", fun t => t), ("quadratic", fun t => t^2)] (domain := (0.0, 2.0))
 ```
@@ -122,7 +122,7 @@ Automatic colors, legend, and labels. Perfect for comparing functions!
 
 Examples:
 
-```lean
+```
 #plot scatter (fun x => x + Random.rand)  -- Show function with noise
 #plot scatter (fun t => Float.sin t) (steps := 50)  -- Fewer points
 ```
@@ -135,7 +135,7 @@ Examples:
 /-- **Simple bar chart** - Bars with automatic styling!
 
 Examples:
-```lean
+```
 #plot bar (fun i => i^2) (steps := 10)     -- Discrete function as bars
 #plot bar (fun x => Float.floor x) (steps := 20)  -- Step function
 ```

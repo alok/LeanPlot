@@ -5,13 +5,13 @@ import Lean
 Makes your plots automatically look good with zero effort.
 Just pass your function and get beautiful, labeled plots.
 
-## For Beginners
+# For Beginners
 
 - `smartLabels yourFunction` - Get nice axis labels automatically
 - `plotSmart yourFunction data` - Plot with automatic everything
 - Don't worry about the details, it just works!
 
-## What It Does
+# What It Does
 
 - Turns `t` into "time"
 - Turns `x` into proper spatial coordinates

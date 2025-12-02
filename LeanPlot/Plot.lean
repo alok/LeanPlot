@@ -12,15 +12,9 @@ versions are free to add additional preprocessing (e.g. auto-sampling of
 `Float → β` functions) without breaking user code that has already adopted
 `#plot`.
 
-## Doc strings as captions
+# Doc strings as captions
 
-You can add a doc comment before `#plot` to display a caption/legend:
-
-```lean
-/-- The parabola y = x² -/
-#plot (fun x => x^2)
-```
-
+You can add a doc comment before `#plot` to display a caption/legend.
 The doc string appears as a title above the chart on hover.
 -/
 
