@@ -18,7 +18,7 @@ directly in the source code via the VS Code API.
 
 ## Example Usage
 
-```lean
+```
 -- The #iplot command shows the plot with interactive sliders
 #iplot (fun x => x^2) domain=(-2, 2) samples=100
 ```

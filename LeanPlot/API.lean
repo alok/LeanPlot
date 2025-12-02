@@ -47,7 +47,7 @@ on {lit}`[0,1]` using {lit}`steps` samples (default 200).  The chart is sized
 
 Returns a {lean}`ProofWidgets.Html` value that can be rendered with {lit}`#plot`.  Example:
 
-```lean
+```
 #plot LeanPlot.API.lineChart (fun x => x*x) -- y = x²
 ``` -/
 @[inline] def lineChart {β} [ToFloat β]

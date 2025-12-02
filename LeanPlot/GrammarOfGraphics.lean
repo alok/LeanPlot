@@ -264,7 +264,7 @@ end Facet
 We define a *right‐associative* operator that chains `PlotBuilder`s into a
 faceted grid.  Example:
 
-```lean
+```
 open LeanPlot.GrammarOfGraphics
 
 def p1 := plot (fun x : Float => x)          -- y = x

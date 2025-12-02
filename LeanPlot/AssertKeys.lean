@@ -8,7 +8,7 @@ This module defines a tiny `#assert_keys` command which fails at compile time
 if a given `Json` expression does **not** contain all of the required keys at
 its top level.  The syntax is
 
-```lean
+```
 #assert_keys myJsonExpr ["x", "y", "z"]
 ```
 

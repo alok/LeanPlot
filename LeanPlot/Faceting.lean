@@ -35,7 +35,7 @@ Each `PlotSpec` is rendered with `PlotSpec.render`.  The function returns a
 single `Html` node that you can embed in the infoview via `#html` or `#plot`.
 
 Example:
-```lean
+```
 open LeanPlot
 open LeanPlot.GrammarOfGraphics
 open LeanPlot.Faceting

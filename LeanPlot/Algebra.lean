@@ -15,7 +15,7 @@ future iterations.
 The immediate ergonomic win is the ability to *overlay* several functions with
 just `+`, mirroring the experience in libraries like ggplot2 or Vega-Lite:
 
-```lean
+```
 open LeanPlot.Algebra
 
 #plot (line "y"   (fun x ↦ x) +

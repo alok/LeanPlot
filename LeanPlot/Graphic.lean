@@ -17,7 +17,7 @@ A `Graphic` is a first-class value representing a plot that can be:
 
 ## Example Usage
 
-```lean
+```
 def p := plot (fun x => x^2)       -- Graphic value
 def q := plot Float.sin            -- Graphic value
 def r := p + q                     -- Overlay composition
@@ -27,8 +27,8 @@ def r := p + q                     -- Overlay composition
 #eval (plot sin).domain(-π, π).samples(500).title("Sine Wave")
 
 -- Faceting
-#eval plot sin | plot cos | plot tan   -- Side by side
-#eval plot sin / plot cos              -- Stacked vertically
+#eval plot sin ||| plot cos ||| plot tan   -- Side by side
+#eval plot sin / plot cos                  -- Stacked vertically
 ```
 -/
 
@@ -163,7 +163,7 @@ instance : HDiv Graphic Graphic Graphic where
 
 /-- Create a line plot from a function.
 
-```lean
+```
 def p := plot (fun x => x^2)
 def q := plot Float.sin
 #eval p + q
@@ -174,7 +174,7 @@ def plot {β : Type} [ToFloat β] (f : Float → β) (opts : PlotOpts := {}) : G
 
 /-- Create a scatter plot from an array of points.
 
-```lean
+```
 def data := #[(0, 0), (1, 1), (2, 4), (3, 9)]
 #eval scatter data
 ```
@@ -184,7 +184,7 @@ def scatter (pts : Array (Float × Float)) (opts : PlotOpts := {}) : Graphic :=
 
 /-- Create a bar chart from an array of (x, height) pairs.
 
-```lean
+```
 def sales := #[(1, 100), (2, 150), (3, 120)]
 #eval bar sales
 ```
@@ -194,7 +194,7 @@ def bar (pts : Array (Float × Float)) (opts : PlotOpts := {}) : Graphic :=
 
 /-- Create an area chart (filled region under curve).
 
-```lean
+```
 #eval area (fun x => Float.exp (-x^2))
 ```
 -/
@@ -229,7 +229,7 @@ partial def updateOpts (f : PlotOpts → PlotOpts) (g : Graphic) : Graphic :=
 
 /-- Set the domain for function sampling.
 
-```lean
+```
 #eval plot sin |> domain (-Float.pi) Float.pi
 ```
 -/
@@ -238,7 +238,7 @@ def domain (lo hi : Float) : Graphic → Graphic :=
 
 /-- Set the number of sample points for function plots.
 
-```lean
+```
 #eval plot sin |> samples 1000
 ```
 -/
@@ -247,7 +247,7 @@ def samples (n : Nat) : Graphic → Graphic :=
 
 /-- Set the color for a graphic.
 
-```lean
+```
 #eval plot sin |> color "#ff0000"
 ```
 -/
@@ -256,7 +256,7 @@ def color (c : String) : Graphic → Graphic :=
 
 /-- Set the name for legend/tooltip.
 
-```lean
+```
 #eval plot sin |> named "Sine Wave"
 ```
 -/
@@ -277,7 +277,7 @@ def updateStyle (f : Style → Style) (g : Graphic) : Graphic :=
 
 /-- Set the title for the entire graphic.
 
-```lean
+```
 #eval plot sin |> title "My Sine Plot"
 ```
 -/
@@ -286,7 +286,7 @@ def title (t : String) : Graphic → Graphic :=
 
 /-- Set the chart dimensions.
 
-```lean
+```
 #eval plot sin |> size 600 400
 ```
 -/
@@ -295,7 +295,7 @@ def size (w h : Nat) : Graphic → Graphic :=
 
 /-- Set the x-axis label.
 
-```lean
+```
 #eval plot sin |> xLabel "Time (s)"
 ```
 -/
@@ -304,7 +304,7 @@ def xLabel (label : String) : Graphic → Graphic :=
 
 /-- Set the y-axis label.
 
-```lean
+```
 #eval plot sin |> yLabel "Amplitude"
 ```
 -/
@@ -313,7 +313,7 @@ def yLabel (label : String) : Graphic → Graphic :=
 
 /-- Show or hide the legend.
 
-```lean
+```
 #eval (plot sin + plot cos) |> legend false
 ```
 -/

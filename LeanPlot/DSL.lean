@@ -8,20 +8,20 @@ import ProofWidgets.Component.HtmlDisplay
 
 This module implements the ergonomic plotting syntax:
 
-```lean
+```
 #plot (fun x => x^2)            -- default 200 samples
 #plot (fun t => Float.sin t) using 400
 ```
 
 With doc comments as captions:
 
-```lean
+```
 /-- A damped oscillator -/
 #plot (fun t => Float.exp (-t) * Float.sin (5 * t)) using 200
 ```
 
 We intercept the #plot command and check if the argument looks like
-a function. If so, we wrap it with LeanPlot.API.plot automatically.
+a function. If so, we wrap it with {name}`LeanPlot.API.plot` automatically.
 -/
 
 namespace LeanPlot.DSL
