@@ -8,8 +8,8 @@ open LeanPlot.CLI
 `leanplot-export` — tiny CLI to dump sampled function data as JSON.
 
 Usage:
-  leanplot-export --fn sin --out out.json [--steps 200] [--min 0.0] [--max 1.0]
--/ 
+  leanplot-export --fn sin --out out.json (--steps 200) (--min 0.0) (--max 1.0)
+-/
 def main (args : List String) : IO Unit := do
   -- Minimal float parser supporting `-? [0-9]+ (.[0-9]+)?`.
   let parseFloat? (s : String) : Option Float :=

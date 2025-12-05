@@ -123,7 +123,17 @@ partial def getGraphicBounds (g : Graphic) : Option (Float × Float × Float × 
     let yMin := ys.foldl fmin (ys.head?.getD 0)
     let yMax := ys.foldl fmax (ys.head?.getD 0)
     some (lo, hi, yMin, yMax)
-  | GraphicTag.points | GraphicTag.bars =>
+  | GraphicTag.points =>
+    if g.pts.isEmpty then none
+    else
+      let xs := g.pts.map Prod.fst
+      let ys := g.pts.map Prod.snd
+      let xMin := xs.foldl fmin (xs[0]!)
+      let xMax := xs.foldl fmax (xs[0]!)
+      let yMin := ys.foldl fmin (ys[0]!)
+      let yMax := ys.foldl fmax (ys[0]!)
+      some (xMin, xMax, yMin, yMax)
+  | GraphicTag.bars =>
     if g.pts.isEmpty then none
     else
       let xs := g.pts.map Prod.fst
@@ -149,7 +159,8 @@ partial def getGraphicBounds (g : Graphic) : Option (Float × Float × Float × 
     match g.child1 with
     | some inner => getGraphicBounds inner
     | none => none
-  | GraphicTag.facetH | GraphicTag.facetV => none
+  | GraphicTag.facetH => none
+  | GraphicTag.facetV => none
 
 /-! ## Export Functions -/
 
@@ -184,6 +195,68 @@ def savePNG (path : System.FilePath) (g : Graphic) (config : PngConfig := {}) : 
   let bmp := renderToBitmap g config
   PNG.writePNG path bmp
 
+/-- Recursive helper to generate SVG content for a graphic layer -/
+partial def renderGraphicToSvg (g : Graphic) (toSvgX toSvgY : Float → Float)
+    (xMin xMax : Float) (width : Nat) (margin : Float) : String := Id.run do
+  let mut content := ""
+  match g.tag with
+  | GraphicTag.fn =>
+    let (lo, hi) := g.opts.domain.getD (xMin, xMax)
+    let samples := g.opts.samples
+    let step := (hi - lo) / samples.toFloat
+    let mut pathData := ""
+    for i in [:samples + 1] do
+      let x := lo + i.toFloat * step
+      let y := g.func x
+      let cmd := if i == 0 then "M" else "L"
+      pathData := pathData ++ s!" {cmd} {toSvgX x} {toSvgY y}"
+    content := s!"  <path d=\"{pathData}\" fill=\"none\" stroke=\"#3e4a89\" stroke-width=\"2\"/>\n"
+  | GraphicTag.points =>
+    let color := g.opts.color.getD "#3e4a89"
+    for (x, y) in g.pts do
+      let cx := toSvgX x
+      let cy := toSvgY y
+      content := content ++ s!"  <circle cx=\"{cx}\" cy=\"{cy}\" r=\"3\" fill=\"{color}\"/>\n"
+  | GraphicTag.bars =>
+    let color := g.opts.color.getD "#3e4a89"
+    let barWidth := if g.pts.size > 0 then
+      (width.toFloat - 2 * margin) / (g.pts.size.toFloat * 1.5)
+    else 20.0
+    for (x, y) in g.pts do
+      let cx := toSvgX x
+      let cy := toSvgY y
+      let y0 := toSvgY 0
+      let top := min cy y0
+      let h := Float.abs (cy - y0)
+      content := content ++ s!"  <rect x=\"{cx - barWidth/2}\" y=\"{top}\" width=\"{barWidth}\" height=\"{h}\" fill=\"{color}\"/>\n"
+  | GraphicTag.styled =>
+    match g.child1 with
+    | some inner => content := renderGraphicToSvg inner toSvgX toSvgY xMin xMax width margin
+    | none => pure ()
+  | GraphicTag.overlay =>
+    match g.child1, g.child2 with
+    | some g1, some g2 =>
+      content := renderGraphicToSvg g1 toSvgX toSvgY xMin xMax width margin
+      content := content ++ renderGraphicToSvg g2 toSvgX toSvgY xMin xMax width margin
+    | some g1, none => content := renderGraphicToSvg g1 toSvgX toSvgY xMin xMax width margin
+    | none, some g2 => content := renderGraphicToSvg g2 toSvgX toSvgY xMin xMax width margin
+    | none, none => pure ()
+  | GraphicTag.area =>
+    -- Render area as filled path
+    let (lo, hi) := g.opts.domain.getD (xMin, xMax)
+    let samples := g.opts.samples
+    let step := (hi - lo) / samples.toFloat
+    let mut pathData := s!" M {toSvgX lo} {toSvgY 0}"
+    for i in [:samples + 1] do
+      let x := lo + i.toFloat * step
+      let y := g.func x
+      pathData := pathData ++ s!" L {toSvgX x} {toSvgY y}"
+    pathData := pathData ++ s!" L {toSvgX hi} {toSvgY 0} Z"
+    content := s!"  <path d=\"{pathData}\" fill=\"#3e4a89\" fill-opacity=\"0.3\" stroke=\"#3e4a89\" stroke-width=\"1\"/>\n"
+  | GraphicTag.facetH => pure ()  -- Not supported in single SVG
+  | GraphicTag.facetV => pure ()  -- Not supported in single SVG
+  content
+
 /-- Save a Graphic as an SVG file (basic implementation) -/
 def saveSVG (path : System.FilePath) (g : Graphic) (width : Nat := 800) (height : Nat := 600) : IO Unit := do
   -- Get data bounds
@@ -196,7 +269,7 @@ def saveSVG (path : System.FilePath) (g : Graphic) (width : Nat := 800) (height 
   let toSvgY (y : Float) : Float :=
     height.toFloat - margin - (y - yMin) / (yMax - yMin) * (height.toFloat - 2 * margin)
 
-  -- Generate SVG content
+  -- Generate SVG header
   let mut svg := s!"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
   svg := svg ++ s!"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{width}\" height=\"{height}\">\n"
   svg := svg ++ s!"  <rect width=\"100%\" height=\"100%\" fill=\"white\"/>\n"
@@ -205,18 +278,8 @@ def saveSVG (path : System.FilePath) (g : Graphic) (width : Nat := 800) (height 
   svg := svg ++ s!"  <line x1=\"{toSvgX xMin}\" y1=\"{toSvgY 0}\" x2=\"{toSvgX xMax}\" y2=\"{toSvgY 0}\" stroke=\"gray\" stroke-width=\"1\"/>\n"
   svg := svg ++ s!"  <line x1=\"{toSvgX 0}\" y1=\"{toSvgY yMin}\" x2=\"{toSvgX 0}\" y2=\"{toSvgY yMax}\" stroke=\"gray\" stroke-width=\"1\"/>\n"
 
-  -- Generate path for function
-  if g.tag == GraphicTag.fn then
-    let (lo, hi) := g.opts.domain.getD (xMin, xMax)
-    let samples := g.opts.samples
-    let step := (hi - lo) / samples.toFloat
-    let mut pathData := ""
-    for i in [:samples + 1] do
-      let x := lo + i.toFloat * step
-      let y := g.func x
-      let cmd := if i == 0 then "M" else "L"
-      pathData := pathData ++ s!" {cmd} {toSvgX x} {toSvgY y}"
-    svg := svg ++ s!"  <path d=\"{pathData}\" fill=\"none\" stroke=\"#3e4a89\" stroke-width=\"2\"/>\n"
+  -- Generate content recursively
+  svg := svg ++ renderGraphicToSvg g toSvgX toSvgY xMin xMax width margin
 
   svg := svg ++ "</svg>\n"
 
@@ -237,3 +300,4 @@ def Graphic.saveSVG (g : Graphic) (path : String) (width : Nat := 800) (height :
   Render.saveSVG path g width height
 
 end LeanPlot
+-- Force rebuild

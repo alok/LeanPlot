@@ -5,8 +5,9 @@ import LeanPlot.Constants
 namespace LeanPlot.Demos
 
 open LeanPlot
+open LeanPlot.PlotSpec (line lines scatter bar area)
 
-/-- Plot y = sin(2πx) on the interval [0, 2] -/
+/-- Plot y = sin(2πx) on the interval (0, 2) -/
 def sineDemo : PlotSpec :=
   line (fun x => Float.sin (2 * Float.pi * x))
     (name := "sin(2πx)")
@@ -29,7 +30,7 @@ def trigOverlayDemo : PlotSpec :=
 
 #plot trigOverlayDemo
 
-/-- Damped sine wave: y = e^(-3x) * sin(8πx) -/
+/-- Damped sine wave: y = exp(-3x) · sin(8πx) -/
 def dampedSineDemo : PlotSpec :=
   PlotSpec.withYLabel
     (PlotSpec.withXLabel

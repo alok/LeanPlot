@@ -1,7 +1,7 @@
 import LeanPlot.Specification
 import LeanPlot.Plot
 import Lean
-#eval Lean.Expr
+
 /-!
 # PlotSpec Validation Tests
 
@@ -21,8 +21,7 @@ open LeanPlot.PlotSpec
 
 namespace LeanPlot.Test.PlotSpecValidation
 
-
-/-! ## Positive cases -/
+/-! Positive cases -/
 
 /- Single-series line plot passes validation. -/
 #plot (line (fun x : Float => x) (name := "id"))
@@ -36,9 +35,10 @@ namespace LeanPlot.Test.PlotSpecValidation
   ]
 )
 
-/-! ## Negative cases (kept **commented** so the test suite still builds)
+/-! Negative cases (kept **commented** so the test suite still builds)
 
-### Duplicate series names / keys
+Duplicate series names / keys
+
 ```
 #plot (
   line (fun x : Float => x)   (name := "dup") +
@@ -47,9 +47,11 @@ namespace LeanPlot.Test.PlotSpecValidation
 ```
 Expect: `LeanPlot: duplicate series name or dataKey detected`.
 
-### Missing key in `chartData`
+Missing key in `chartData`
+
 The following manually-crafted spec omits the `"y"` field – validation should
 fail.
+
 ```
 def badSpec : PlotSpec := {
   chartData := #[json% {x: 1}],
@@ -60,22 +62,6 @@ def badSpec : PlotSpec := {
 #plot badSpec
 ```
 Expect: `LeanPlot: chartData is missing required keys`.
-
-### Duplicate series names are rejected at compile time.
-
-### Missing key in chart data is rejected.
-#check_failure (
-  let badSpec : PlotSpec := {
-    chartData := #[json% {x: 1}],
-    series    := #[{ name := "y", dataKey := "y", color := "#ff0000" }],
-    xAxis     := some { dataKey := "x" },
-    legend    := false
-  };
-  ProofWidgets.HtmlEval.eval badSpec
-)
 -/
-
-
-
 
 end LeanPlot.Test.PlotSpecValidation

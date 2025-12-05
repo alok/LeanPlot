@@ -8,8 +8,8 @@ import Lean
 Super simple examples showing how to get beautiful plots with zero effort.
 Just call `smartLabels` and `smartNames` - that's it!
 
-## TL;DR
-- `smartLabels yourFunction` → get nice axis labels  
+**TL;DR**
+- `smartLabels yourFunction` → get nice axis labels
 - `smartNames yourFunction` → get enhanced parameter names
 - `fixDuplicates yourArray` → fix duplicate names
 - Done! 🎉
@@ -41,10 +41,10 @@ def physicsData : Array Json := #[
 ]
 
 /-- Traditional way - manual axis labels -/
-def manualPlot := mkLineChartWithLabels 
-  physicsData 
-  #[("position", "#2563eb")] 
-  (some "Time (s)") 
+def manualPlot := mkLineChartWithLabels
+  physicsData
+  #[("position", "#2563eb")]
+  (some "Time (s)")
   (some "Position (m)")
 
 /-- Demo function for auto axis labels -/
@@ -67,11 +67,11 @@ section SuperEasyExamples
 
 -- Just watch the magic happen:
 def myFunction : Expr := Expr.lam `t (Expr.const ``Float []) (Expr.bvar 0) BinderInfo.default
-#eval smartNames myFunction      -- 👀 Watch: `t` becomes "time"! 
+#eval smartNames myFunction      -- 👀 Watch: `t` becomes "time"!
 #eval smartLabels myFunction     -- 👀 Watch: Get perfect axis labels!
 
 -- Handle duplicates like a boss:
-def messyFunction : Expr := 
+def messyFunction : Expr :=
   Expr.lam `x (Expr.const ``Float [])
     (Expr.lam `y (Expr.const ``Float [])
       (Expr.lam `x (Expr.const ``Float []) (Expr.bvar 0) BinderInfo.default)
@@ -113,7 +113,7 @@ def economicsData : Array Json := #[
 ]
 
 /-- Economics plot with meaningful labels -/
-def economicsPlot := 
+def economicsPlot :=
   mkLineChartWithLabels economicsData #[("demand", "#059669")] (some "Price ($)") (some "Demand")
 
 #html economicsPlot

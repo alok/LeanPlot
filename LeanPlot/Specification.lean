@@ -74,6 +74,9 @@ structure PlotSpec where
   deriving Inhabited
 
 -- Basic constructor functions
+-- These are in the `PlotSpec` namespace to avoid conflicts with LeanPlot.Graphic
+
+namespace PlotSpec
 
 /-- Construct a line plot from a function. -/
 @[inline]
@@ -131,8 +134,8 @@ def scatter (points : Array (Float × Float)) (name : String := "y")
   }
 
 /-- Construct a bar chart from an array of points.
-Each tuple encodes an `(x,y)` pair which will be converted to the
-`{x := _, y := _}` JSON objects expected by Recharts. -/
+{given}`x : Float` {given}`y : Float`
+Each tuple encodes an {lean}`(x,y)` pair. -/
 @[inline]
 def bar (points : Array (Float × Float)) (name : String := "y")
   (color : Option String := none) : PlotSpec :=
@@ -187,8 +190,11 @@ def area {β} [ToFloat β]
   }
 
 /-- Construct a multi-line chart from several functions sampled on a common domain.
-Each `(name, fn)` pair becomes its own series. The colors are automatically
-assigned from the default palette unless `colors?` is provided. -/
+{given}`β : Type`
+{given}`name : String`
+{given}`fn : Float → β`
+Each {lean}`(name, fn)` pair becomes its own series. The colors are automatically
+assigned from the default palette unless {name}`colors?` is provided. -/
 @[inline]
 def lines {β} [Inhabited β] [ToFloat β]
   (fns : Array (String × (Float → β)))
@@ -226,9 +232,7 @@ def lines {β} [Inhabited β] [ToFloat β]
     legend    := true
   }
 
--- Combinators
-
-namespace PlotSpec
+-- Combinators (continued in PlotSpec namespace)
 
 /-- Set the title of the plot. -/
 @[inline]
@@ -372,13 +376,13 @@ instance : HAdd PlotSpec PlotSpec PlotSpec where
 /-- Add a scatter layer to an existing plot. (Needs similar data merging logic as addLine for robust composition) -/
 @[inline] def addScatter
     (spec : PlotSpec) (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
-  let newSpec := LeanPlot.scatter points name color -- LeanPlot.scatter is in the LeanPlot namespace
+  let newSpec := PlotSpec.scatter points name color
   spec.overlay newSpec
 
 /-- Add a bar layer to an existing plot. -/
 @[inline] def addBar
     (spec : PlotSpec) (points : Array (Float × Float)) (name : String) (color : Option String := none) : PlotSpec :=
-  let newSpec := LeanPlot.bar points name color -- LeanPlot.bar is in the LeanPlot namespace
+  let newSpec := PlotSpec.bar points name color
   spec.overlay newSpec
 
 -- Renderer Typeclass

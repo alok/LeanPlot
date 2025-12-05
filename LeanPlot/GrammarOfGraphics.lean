@@ -189,52 +189,52 @@ end PlotBuilder
 
 /-- Create a plot from a function using the DSL -/
 @[inline] def plot {β} [ToFloat β] (f : Float → β) : PlotBuilder :=
-  let spec := LeanPlot.line f
+  let spec := PlotSpec.line f
   { spec := spec }
 
 /-- Create a scatter plot using the DSL -/
 @[inline] def scatterPlot (points : Array (Float × Float)) : PlotBuilder :=
-  let spec := LeanPlot.scatter points
+  let spec := PlotSpec.scatter points
   { spec := spec }
 
 /-- Create a bar plot using the DSL -/
 @[inline] def barPlot (points : Array (Float × Float)) : PlotBuilder :=
-  let spec := LeanPlot.bar points
+  let spec := PlotSpec.bar points
   { spec := spec }
 
 /-- Create an area plot using the DSL -/
 @[inline] def areaPlot {β} [ToFloat β] (f : Float → β) : PlotBuilder :=
-  let spec := LeanPlot.area f
+  let spec := PlotSpec.area f
   { spec := spec }
 
 /-- Transform a function into a line plot -/
 @[inline] def plotLine {β} [ToFloat β] (f : Float → β)
     (name : String := "y") (steps : Nat := 200)
     (domain : Option (Float × Float) := none) : PlotSpec :=
-  LeanPlot.line f name steps domain
+  PlotSpec.line f name steps domain
 
 /-- Transform points into a scatter plot -/
 @[inline] def plotScatter (points : Array (Float × Float))
     (name : String := "y") : PlotSpec :=
-  LeanPlot.scatter points name
+  PlotSpec.scatter points name
 
 /-- Transform points into a bar plot -/
 @[inline] def plotBar (points : Array (Float × Float))
     (name : String := "y") : PlotSpec :=
-  LeanPlot.bar points name
+  PlotSpec.bar points name
 
 /-- Transform a function into an area plot -/
 @[inline] def plotArea {β} [ToFloat β] (f : Float → β)
     (name : String := "y") (steps : Nat := 200)
     (domain : Option (Float × Float) := none) : PlotSpec :=
-  LeanPlot.area f name steps domain
+  PlotSpec.area f name steps domain
 
 /-- Compose multiple functions into a multi-line plot -/
 @[inline] def plotLines {β} [Inhabited β] [ToFloat β]
     (fns : Array (String × (Float → β)))
     (steps : Nat := 200)
     (domain : Option (Float × Float) := none) : PlotSpec :=
-  LeanPlot.lines fns steps domain
+  PlotSpec.lines fns steps domain
 
 /-- Alternative syntax using sections for cleaner composition -/
 notation:50 x:50 " >> " f:51 => f x
@@ -258,8 +258,7 @@ subplot.  Supply an `Array` of `(title, PlotBuilder)` tuples. -/
 
 end Facet
 
-/-!
-### Infix operator `⫽` (U+2AFD) for quick faceting
+/-! ## Infix operator `⫽` (U+2AFD) for quick faceting
 
 We define a *right‐associative* operator that chains `PlotBuilder`s into a
 faceted grid.  Example:

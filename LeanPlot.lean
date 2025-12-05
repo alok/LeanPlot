@@ -1,3 +1,53 @@
+-- Plot specification system (import first to allow overrides)
+import LeanPlot.Specification
+import LeanPlot.Plot
+
+-- Core API (what users should import)
+import LeanPlot.Graphic  -- First-class algebraic graphics (overrides some Specification names)
+import LeanPlot.Interactive  -- Two-way slider widgets
+import LeanPlot.API
+import LeanPlot.DSL
+import LeanPlot.ToFloat
+import LeanPlot.Algebra
+
+-- Components layer (Tier-1)
+import LeanPlot.Components
+import LeanPlot.Palette
+import LeanPlot.Scale
+import LeanPlot.Constants
+
+-- Advanced features
+import LeanPlot.GrammarOfGraphics
+import LeanPlot.PlotComposition
+import LeanPlot.Transform
+import LeanPlot.Faceting
+
+-- Utilities
+import LeanPlot.Debug
+import LeanPlot.Metaprogramming
+
+-- Rendering / Export
+import LeanPlot.Render.Bitmap
+import LeanPlot.Render.Rasterize
+import LeanPlot.Render.PNG.CRC32
+import LeanPlot.Render.PNG.Adler32
+import LeanPlot.Render.PNG.Encode
+import LeanPlot.Render.Export
+
+-- Internal (re-exported for compatibility)
+import LeanPlot.Series
+import LeanPlot.Core
+import LeanPlot.Axis
+-- import LeanPlot.Axes  -- Duplicate of LeanPlot.Axis, causes conflict
+import LeanPlot.Legend
+import LeanPlot.AutoDomain
+import LeanPlot.Recharts
+import LeanPlot.JsonExt
+import LeanPlot.Utils
+import LeanPlot.AssertKeys
+import LeanPlot.WarningBanner
+import LeanPlot.LegacyLayer
+
 /-!
 # LeanPlot
 
@@ -34,53 +84,3 @@ Import `LeanPlot.Render.Export` for file export:
 
 See `LeanPlot.Demos.*` for example usage.
 -/
-
--- Core API (what users should import)
-import LeanPlot.Graphic  -- First-class algebraic graphics
-import LeanPlot.Interactive  -- Two-way slider widgets
-import LeanPlot.API
-import LeanPlot.DSL
-import LeanPlot.ToFloat
-
--- Plot specification system
-import LeanPlot.Specification
-import LeanPlot.Plot
-import LeanPlot.Algebra
-
--- Components layer (Tier-1)
-import LeanPlot.Components
-import LeanPlot.Palette
-import LeanPlot.Scale
-import LeanPlot.Constants
-
--- Advanced features
-import LeanPlot.GrammarOfGraphics
-import LeanPlot.PlotComposition
-import LeanPlot.Transform
-import LeanPlot.Faceting
-
--- Utilities
-import LeanPlot.Debug
-import LeanPlot.Metaprogramming
-
--- Rendering / Export
-import LeanPlot.Render.Bitmap
-import LeanPlot.Render.Rasterize
-import LeanPlot.Render.PNG.CRC32
-import LeanPlot.Render.PNG.Adler32
-import LeanPlot.Render.PNG.Encode
-import LeanPlot.Render.Export
-
--- Internal (re-exported for compatibility)
-import LeanPlot.Series
-import LeanPlot.Core
-import LeanPlot.Axis
-import LeanPlot.Axes
-import LeanPlot.Legend
-import LeanPlot.AutoDomain
-import LeanPlot.Recharts
-import LeanPlot.JsonExt
-import LeanPlot.Utils
-import LeanPlot.AssertKeys
-import LeanPlot.WarningBanner
-import LeanPlot.LegacyLayer

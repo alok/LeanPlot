@@ -68,7 +68,7 @@ def transformFunction {β} [ToFloat β]
     (yScale : Scale := linearScale) : Float → Float :=
   fun x => yScale.forward (toFloat (f (xScale.inverse x)))
 
-/-- Normalize values to [0, 1] range -/
+/-- Normalize values to (0, 1) range -/
 def normalize (values : Array Float) : Array Float :=
   if values.isEmpty then #[]
   else

@@ -1,33 +1,37 @@
 import LeanPlot.Metaprogramming
+import Lean
 
 /-! # Test for Metaprogramming utilities -/
 
 namespace LeanPlot.Test.Metaprogramming
 open LeanPlot.Metaprogramming
+open Lean
 
--- Test simple lambda
-def testFunction1 : ℝ → ℝ := fun x => x + 1
+-- Test simple lambda with Float
+def testFunction1 : Float → Float := fun x => x + 1
 
 -- Test lambda with two parameters
-def testFunction2 : ℝ → ℝ → ℝ := fun x y => x + y
+def testFunction2 : Float → Float → Float := fun x y => x + y
 
 -- Test lambda with meaningful parameter names
-def testFunction3 : ℝ → ℝ := fun time => time * 2
+def testFunction3 : Float → Float := fun time => time * 2
 
--- Test the parameter extraction
-#eval extractParameterNames (Expr.lam `x (Expr.const ``Nat []) (Expr.bvar 0) BinderInfo.default)
-
--- Test with actual function expressions  
+-- Test with actual function expressions
 #check testFunction1
 #check testFunction2
 #check testFunction3
 
--- Test the syntax macros
-example : String := #extract_param_names (fun x => x + 1)
-example : String := #extract_param_names (fun time velocity => time * velocity)
+-- Test name to string
+#eval nameToString `time
+#eval nameToString `x
+#eval nameToString `velocity
 
--- Test auto axis labels
-example : String × String := #auto_axis_labels (fun x => x + 1)
-example : String × String := #auto_axis_labels (fun time velocity => time * velocity)
+-- Test duplicate handling
+#eval disambiguateNames #["x", "y", "x"]
+#eval disambiguateNames #["time", "time", "velocity"]
+
+-- Test axis labels generation
+#eval smartLabels myTimeFunction
+#eval smartNames myDuplicateFunction
 
 end LeanPlot.Test.Metaprogramming

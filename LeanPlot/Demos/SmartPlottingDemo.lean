@@ -1,12 +1,13 @@
 import LeanPlot.API
 import LeanPlot.DSL
 import ProofWidgets.Component.HtmlDisplay
+
 /-! # Simple Plotting Demo - Zero-Configuration Plots
 
 This demo shows the simple plotting functions that automatically handle
 everything for you. No more thinking about axis labels, colors, or configuration!
 
-## For Beginners: Just Copy These Examples!
+**For Beginners: Just Copy These Examples!**
 
 The new `LeanPlot.API.plot` function is now the recommended way to create plots.
 It automatically:
@@ -14,7 +15,7 @@ It automatically:
 - Uses beautiful colors
 - Handles everything for you
 
-## Quick Start Examples
+**Quick Start Examples**
 -/
 
 namespace LeanPlot.Demos.SimplePlottingDemo
@@ -49,17 +50,19 @@ open LeanPlot.API
   ("cubic", fun x => x^3)
 ] (domain := (-1.0, 1.0))
 
-/-! ## The Old Way vs The New Way
+/-! **The Old Way vs The New Way**
 
-### Old way (still works but more verbose):
-```lean
+Old way (still works but more verbose):
+
+```
 let data := LeanPlot.Components.sample (fun x => x^2) 200 (some (0.0, 1.0))
 let seriesStrokes := #[("y", "#2563eb")]
 LeanPlot.Components.mkLineChartWithLabels data seriesStrokes (some "x") (some "y") 400 400
 ```
 
-### New way (recommended - just works!):
-```lean
+New way (recommended - just works!):
+
+```
 plot (fun x => x^2)
 ```
 
@@ -70,14 +73,14 @@ The new way is:
 - Perfect for beginners
 - Still customizable when needed
 
-## Automatic Features
+**Automatic Features**
 
 1. **Automatic Colors**: Each series gets a different beautiful color automatically
 2. **Automatic Labels**: Parameter names become nice axis labels
 3. **Automatic Domains**: Sensible defaults with easy customization
 4. **Automatic Styling**: Professional look with zero effort
 
-## Functions:
+**Functions:**
 
 - `plot` - For single functions (most common)
 - `plotMany` - For comparing multiple functions

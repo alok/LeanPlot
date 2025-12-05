@@ -42,7 +42,7 @@ open scoped ProofWidgets.Jsx
 
 /-- Configuration options for a single plot layer. -/
 structure PlotOpts where
-  /-- Domain for x-axis sampling. `none` means auto-detect or use [0, 1]. -/
+  /-- Domain for x-axis sampling. `none` means auto-detect or use (0, 1). -/
   domain : Option (Float × Float) := none
   /-- Number of sample points for function plots. -/
   samples : Nat := 200
@@ -472,8 +472,8 @@ private def renderSingle (g : Graphic) : Html :=
 
 mutual
 /-- Render faceted graphics. -/
-partial def renderFaceted (g : Graphic) (direction : String) : Html :=
-  let style := getStyle g
+partial def renderFaceted (g : Graphic) (_direction : String) : Html :=
+  let _style := getStyle g
   match g.tag with
   | GraphicTag.facetH =>
     match g.child1, g.child2 with

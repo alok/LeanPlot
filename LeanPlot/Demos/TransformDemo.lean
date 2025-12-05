@@ -6,6 +6,7 @@ namespace LeanPlot.Demos
 
 open LeanPlot
 open LeanPlot.Transform
+open LeanPlot.PlotSpec (line lines scatter bar area)
 
 /-- Demonstrate log-transformed exponential function -/
 def logTransformDemo : PlotSpec :=

@@ -8,7 +8,7 @@ open LeanPlot.API
 This demo shows the new ultra-simple `#plot` syntax.
 Just pass a function directly - no wrapping needed!
 
-## 🎉 The Dream is Real
+🎉 **The Dream is Real**
 
 You wanted `#plot (fun x => x^2)` to just work? Now it does!
 -/
@@ -44,7 +44,7 @@ You can add a doc comment before `#plot` to display a caption:
 /-- Sinusoidal wave with 400 samples for smooth curves -/
 #plot (fun t => Float.sin t) using 400
 
-/-! ## How It Works
+/-! **How It Works**
 
 When you `import LeanPlot.DSL`, it adds the ergonomic syntax:
 1. Detect when you write `#plot f` where `f` is a lambda function
@@ -52,7 +52,7 @@ When you `import LeanPlot.DSL`, it adds the ergonomic syntax:
 3. Handle the `using n` syntax for custom sample counts
 4. Doc comments become chart captions (a poor man's legend!)
 
-## Backwards Compatibility
+**Backwards Compatibility**
 
 All existing code continues to work:
 - `#plot (plot (fun x => x^2))` ✓

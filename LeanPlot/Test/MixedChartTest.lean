@@ -2,6 +2,7 @@ import LeanPlot.Plot
 import LeanPlot.Specification
 
 open LeanPlot
+open LeanPlot.PlotSpec (line lines scatter bar area)
 
 namespace LeanPlot.Test
 
