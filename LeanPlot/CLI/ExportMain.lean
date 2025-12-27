@@ -13,7 +13,7 @@ Usage:
 def main (args : List String) : IO Unit := do
   -- Minimal float parser supporting `-? [0-9]+ (.[0-9]+)?`.
   let parseFloat? (s : String) : Option Float :=
-    let (neg, body) := if s.startsWith "-" then (true, s.drop 1) else (false, s)
+    let (neg, body) := if s.startsWith "-" then (true, (s.drop 1).toString) else (false, s)
     let parts := body.splitOn "."
     match parts with
     | [a] =>
@@ -28,7 +28,7 @@ def main (args : List String) : IO Unit := do
           | 0 => 1.0
           | Nat.succ k' => 10.0 * pow10 k'
         let denom := pow10 b.length
-        let v := i.toFloat + f.toFloat / denom
+        let v := Nat.toFloat i + Nat.toFloat f / denom
         some (if neg then -v else v)
       | _, _ => none
     | _ => none

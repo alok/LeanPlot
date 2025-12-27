@@ -80,7 +80,7 @@ private def strLitSyntaxToString (stx : Syntax) : CommandElabM String := do
   let txt := rawAtom.getAtomVal
   if txt.length < 2 then
     throwError "malformed string literal"
-  pure <| (txt.drop 1).dropRight 1
+  pure <| ((txt.drop 1).dropEnd 1).toString
 
 /-- Dummy definition so the file is not empty from Lean's perspective. -/
 private def _dummy : Unit := ()
