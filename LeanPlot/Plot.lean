@@ -1,5 +1,8 @@
 import ProofWidgets.Component.HtmlDisplay
 import Lean.Elab.Command
+import LeanPlot.Specification
+import LeanPlot.Series
+import LeanPlot.TunablePlot
 
 /-! # {lit}`#plot` command
 
@@ -42,8 +45,24 @@ def withCaption (caption : String) (inner : Html) : Html :=
 
 /-- Any term {lit}`t` that can be evaluated to {lean}`Html` (via {name}`ProofWidgets.HtmlEval`)
 can be displayed with {lit}`#plot t`.  Optionally prefix with a doc comment to
-add a caption.  This mirrors the behavior of {lit}`#html`. -/
-syntax (name := plotCmd) (docComment)? "#plot " term : command
+add a caption.  This mirrors the behavior of {lit}`#html`. Use `{lit}`+tunable``
+to expose interactive controls that write parameters back to source. -/
+syntax (name := plotCmd) (docComment)? "#plot" ("+tunable")? term : command
+
+private def jsonNumToFloat? (j : Json) : Option Float :=
+  match j.getNum? with
+  | Except.ok n => some n.toFloat
+  | Except.error _ => none
+
+private def axisDomainToFloats? (axis? : Option AxisSpec) : Option (Array Float) :=
+  match axis?.bind (·.domain) with
+  | some arr =>
+    if arr.size == 2 then
+      match jsonNumToFloat? arr[0]!, jsonNumToFloat? arr[1]! with
+      | some lo, some hi => some #[lo, hi]
+      | _, _ => none
+    else none
+  | none => none
 
 open Elab Command ProofWidgets.HtmlCommand in
 /-- The {lit}`#plot` command is an alias for {lit}`#html`.  It is namespaced under
@@ -51,22 +70,70 @@ open Elab Command ProofWidgets.HtmlCommand in
 the doc string is displayed as a caption above the chart.  -/
 @[command_elab plotCmd]
 def elabPlotCmd : CommandElab := fun stx => do
-  -- Pattern match the syntax to extract optional doc comment
-  let (doc?, term) ← match stx with
-    | `($doc:docComment #plot $t:term) => pure (some doc, t)
-    | `(#plot $t:term) => pure (none, t)
+  -- Pattern match the syntax to extract optional doc comment + tunable flag
+  let (doc?, tunable, term) ← match stx with
+    | `($doc:docComment #plot +tunable $t:term) => pure (some doc, true, t)
+    | `(#plot +tunable $t:term) => pure (none, true, t)
+    | `($doc:docComment #plot $t:term) => pure (some doc, false, t)
+    | `(#plot $t:term) => pure (none, false, t)
     | _ => throwError "Unexpected syntax {stx}."
-  -- Evaluate the term into `Html`
-  let htX ← liftTermElabM <| evalCommandMHtml <| ← ``(ProofWidgets.HtmlEval.eval $term)
-  let ht ← htX
-  -- Wrap with caption if doc comment is present
-  let finalHtml := match doc? with
-    | some doc => withCaption doc.getDocString ht
-    | none => ht
-  -- Reuse the HtmlDisplayPanel widget from ProofWidgets.
-  liftCoreM <| Widget.savePanelWidgetInfo
-    (hash ProofWidgets.HtmlDisplayPanel.javascript)
-    (return json% { html: $(← rpcEncode finalHtml) })
-    stx
+
+  if tunable then
+    -- Evaluate the term into PlotSpec via typeclass conversion
+    let spec ← liftTermElabM <| do
+      let wrapped ← `(LeanPlot.toPlotSpec $term)
+      let expr ← Lean.Elab.Term.elabTerm wrapped (some (mkConst ``PlotSpec))
+      Lean.Elab.Term.synthesizeSyntheticMVarsNoPostponing
+      Lean.Meta.evalExpr PlotSpec (mkConst ``PlotSpec) expr
+
+    let series := spec.series.map fun s =>
+      { name := SeriesDSpecPacked.name s
+        dataKey := SeriesDSpecPacked.dataKey s
+        kind := SeriesDSpecPacked.typeString s
+        color := SeriesDSpecPacked.color s
+        dot := SeriesDSpecPacked.dot? s |>.getD false
+      : LeanPlot.TunablePlot.TunableSeries }
+
+    -- Get document info for edits
+    let fileMap ← getFileMap
+    let some range := fileMap.lspRangeOfStx? stx
+      | throwError "Could not determine source range"
+    let lineNum := range.start.line
+    let fileName ← getFileName
+    let uri := s!"file://{fileName}"
+
+    let props : LeanPlot.TunablePlot.TunablePlotProps := {
+      data := Json.arr spec.chartData
+      series := series
+      width := spec.width
+      height := spec.height
+      title := spec.title.getD ""
+      xLabel := spec.xAxis.bind (·.label) |>.getD ""
+      yLabel := spec.yAxis.bind (·.label) |>.getD ""
+      xDomain := axisDomainToFloats? spec.xAxis
+      yDomain := axisDomainToFloats? spec.yAxis
+      legend := spec.legend
+      lineNum := lineNum
+      uri := uri
+      termStr := term.raw.reprint.getD (toString term)
+      caption := doc?.map (·.getDocString) |>.getD ""
+    }
+
+    let msg ← liftCoreM <| MessageData.ofComponent LeanPlot.TunablePlot.TunablePlotPanel props
+      s!"[Tunable Plot]"
+    logInfo msg
+  else
+    -- Evaluate the term into `Html`
+    let htX ← liftTermElabM <| evalCommandMHtml <| ← ``(ProofWidgets.HtmlEval.eval $term)
+    let ht ← htX
+    -- Wrap with caption if doc comment is present
+    let finalHtml := match doc? with
+      | some doc => withCaption doc.getDocString ht
+      | none => ht
+    -- Reuse the HtmlDisplayPanel widget from ProofWidgets.
+    liftCoreM <| Widget.savePanelWidgetInfo
+      (hash ProofWidgets.HtmlDisplayPanel.javascript)
+      (return json% { html: $(← rpcEncode finalHtml) })
+      stx
 
 end LeanPlot.PlotCommand
