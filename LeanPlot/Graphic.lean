@@ -1,8 +1,8 @@
 import LeanPlot.Constants
 import LeanPlot.Palette
 import LeanPlot.ToFloat
+import LeanPlot.Specification
 import ProofWidgets.Component.HtmlDisplay
-import ProofWidgets.Component.Recharts
 import Lean.Data.Json
 
 /-!
@@ -34,7 +34,7 @@ def r := p + q                     -- Overlay composition
 
 namespace LeanPlot
 
-open Lean ProofWidgets ProofWidgets.Recharts
+open Lean ProofWidgets
 open LeanPlot.Constants LeanPlot.Palette
 open scoped ProofWidgets.Jsx
 
@@ -336,28 +336,28 @@ private def sampleFn (f : Float → Float) (opts : PlotOpts) : Array Json :=
 
 /-- Internal: Collect all leaf layers from a graphic for rendering. -/
 private partial def collectLayers (g : Graphic) (colorIdx : Nat := 0) :
-    Array (String × String × Array Json) × Nat :=
+    Array (SeriesDSpecPacked × Array Json) × Nat :=
   match g.tag with
   | GraphicTag.fn =>
     let data := sampleFn g.func g.opts
     let name := g.opts.name.getD s!"series{colorIdx}"
     let color := g.opts.color.getD (colorFromNat colorIdx)
-    (#[(name, color, data)], colorIdx + 1)
+    (#[(SeriesDSpecPacked.mkLine name name color, data)], colorIdx + 1)
   | GraphicTag.area =>
     let data := sampleFn g.func g.opts
     let name := g.opts.name.getD s!"area{colorIdx}"
     let color := g.opts.color.getD (colorFromNat colorIdx)
-    (#[(name, color, data)], colorIdx + 1)
+    (#[(SeriesDSpecPacked.mkArea name name color, data)], colorIdx + 1)
   | GraphicTag.points =>
     let data := g.pts.map fun (x, y) => Json.mkObj [("x", toJson x), ("y", toJson y)]
     let name := g.opts.name.getD s!"scatter{colorIdx}"
     let color := g.opts.color.getD (colorFromNat colorIdx)
-    (#[(name, color, data)], colorIdx + 1)
+    (#[(SeriesDSpecPacked.mkScatter name name color, data)], colorIdx + 1)
   | GraphicTag.bars =>
     let data := g.pts.map fun (x, y) => Json.mkObj [("x", toJson x), ("y", toJson y)]
     let name := g.opts.name.getD s!"bar{colorIdx}"
     let color := g.opts.color.getD (colorFromNat colorIdx)
-    (#[(name, color, data)], colorIdx + 1)
+    (#[(SeriesDSpecPacked.mkBar name name color, data)], colorIdx + 1)
   | GraphicTag.overlay =>
     match g.child1, g.child2 with
     | some g1, some g2 =>
@@ -405,13 +405,13 @@ private partial def hasFacets (g : Graphic) : Bool :=
   | GraphicTag.area => false
 
 /-- Internal: Merge all layer data into unified chart data with named columns. -/
-private def mergeChartData (layers : Array (String × String × Array Json)) : Array Json :=
+private def mergeChartData (layers : Array (SeriesDSpecPacked × Array Json)) : Array Json :=
   if layers.isEmpty then #[] else
     -- Find the layer with most points to use as the x-axis reference
-    let maxLen := layers.foldl (fun acc (_, _, data) => max acc data.size) 0
+    let maxLen := layers.foldl (fun acc (_, data) => max acc data.size) 0
     (List.range maxLen).toArray.map fun i =>
       -- Build object from all layers for row i
-      let obj := layers.foldl (init := ([] : List (String × Json))) fun acc (name, _, data) =>
+      let obj := layers.foldl (init := ([] : List (String × Json))) fun acc (series, data) =>
         if h : i < data.size then
           let row := data[i]
           -- Extract x value from first layer only
@@ -422,53 +422,36 @@ private def mergeChartData (layers : Array (String × String × Array Json)) : A
           else acc
           -- Extract y value and store under series name
           match row.getObjVal? "y" with
-          | .ok y => acc' ++ [(name, y)]
+          | .ok y => acc' ++ [(SeriesDSpecPacked.name series, y)]
           | .error _ => acc'
         else acc
       Json.mkObj obj
 
-/-- Render a single (non-faceted) graphic to HTML. -/
-private def renderSingle (g : Graphic) : Html :=
+/-- Convert a `Graphic` into a `PlotSpec` for HTML rendering. -/
+def toPlotSpec (g : Graphic) : PlotSpec :=
   let style := getStyle g
   let (layers, _) := collectLayers g
   let chartData := mergeChartData layers
-  let w := style.width
-  let h := style.height
+  let series := layers.map (·.1)
+  let yKey := if h : series.size > 0 then
+    SeriesDSpecPacked.dataKey series[0]!
+  else
+    "y"
+  let yLabel := style.yLabel.orElse (if series.size == 1 then some (SeriesDSpecPacked.name series[0]!) else none)
+  {
+    chartData := chartData,
+    series := series,
+    xAxis := some { dataKey := "x", label := style.xLabel },
+    yAxis := some { dataKey := yKey, label := yLabel },
+    title := style.title,
+    width := style.width,
+    height := style.height,
+    legend := style.showLegend
+  }
 
-  -- Build series components
-  let seriesHtml := layers.map fun (name, color, _) =>
-    (<Line type={LineType.monotone} dataKey={Json.str name} stroke={color} dot?={some false} /> : Html)
-
-  -- Legend
-  let legendHtml : Html :=
-    if style.showLegend && layers.size > 1 then
-      Html.element "Legend" #[] #[]
-    else
-      Html.text ""
-
-  -- Build chart
-  let chartHtml : Html :=
-    (<LineChart width={w} height={h} data={chartData}>
-      <XAxis dataKey?="x" />
-      <YAxis />
-      {legendHtml}
-      {... seriesHtml}
-    </LineChart> : Html)
-
-  -- Wrap with title if present
-  match style.title with
-  | some t =>
-    let titleStyle := Json.mkObj [
-      ("fontSize", Json.str "14px"),
-      ("fontWeight", Json.str "600"),
-      ("marginBottom", Json.str "8px"),
-      ("fontFamily", Json.str "ui-monospace, monospace")
-    ]
-    (<div>
-      <div style={titleStyle}>{Html.text t}</div>
-      {chartHtml}
-    </div> : Html)
-  | none => chartHtml
+/-- Render a single (non-faceted) graphic to HTML. -/
+private def renderSingle (g : Graphic) : Html :=
+  PlotSpec.render (toPlotSpec g)
 
 mutual
 /-- Render faceted graphics. -/
@@ -535,6 +518,9 @@ end
 /-- This instance allows `#eval g` to render a `Graphic` in the infoview. -/
 instance : HtmlEval Graphic where
   eval g := pure (render g)
+
+instance : ToPlotSpec Graphic where
+  toPlotSpec := Graphic.toPlotSpec
 
 /-! ## Convenience Aliases -/
 

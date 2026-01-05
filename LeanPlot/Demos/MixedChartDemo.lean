@@ -25,9 +25,9 @@ def mixedChartDemo : PlotSpec :=
     chartData := barData,
     series := #[
       -- Bar series for sales
-      { name := "Sales", dataKey := "sales", color := "#8884d8", type := "bar" },
+      SeriesDSpecPacked.mkBar "Sales" "sales" "#8884d8",
       -- Line series for trend
-      { name := "Trend", dataKey := "trend", color := "#82ca9d", type := "line" }
+      SeriesDSpecPacked.mkLine "Trend" "trend" "#82ca9d"
     ],
     xAxis := some { dataKey := "month", label := some "Month" },
     yAxis := some { dataKey := "sales", label := some "Amount ($)" },

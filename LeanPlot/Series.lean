@@ -1,5 +1,5 @@
 import Lean
-import LeanPlot.Specification
+import LeanPlot.LegacyLayer
 import ProofWidgets.Component.HtmlDisplay
 import ProofWidgets.Component.Recharts
 import LeanPlot.Components
@@ -8,13 +8,9 @@ import LeanPlot.Components
 # LeanPlot.Series
 
 Foundational data types for a *type-safe* representation of heterogeneous
-series/layers in `PlotSpec`.  This is the first step towards the dependent
-Σ-type design outlined in `llms.txt` (2025-05-06 & 2025-05-12 entries).
-
-At the moment these types are **not** yet integrated with the existing
-rendering pipeline; they merely establish the core enum and detail records so
-that subsequent commits can build conversion helpers and renderer
-instances incrementally without a giant diff.
+series/layers in `PlotSpec`. This is the core dependent Σ-type design outlined
+in `llms.txt` (2025-05-06 & 2025-05-12 entries), and it now backs the main
+rendering pipeline.
 -/
 
 namespace LeanPlot
@@ -133,8 +129,8 @@ structure SeriesDSpecPacked where
   /-- The wrapped specification. -/
   spec : SeriesDSpec kind
 
-/-- Convert from the legacy string-based `LayerSpec` to the new dependent
-`SeriesDSpecPacked`.  Returns `none` if the `type` field is unrecognised. -/
+/-- Convert from the legacy string-based `LegacyLayerSpec` to the new dependent
+`SeriesDSpecPacked`. Returns `none` if the `type` field is unrecognised. -/
 def LegacyLayerSpec.toSeriesDSpec? (layer : LegacyLayerSpec) : Option SeriesDSpecPacked :=
   SeriesKind.fromString? layer.type |>.map fun kind =>
     let details : SeriesDetails kind :=
@@ -147,8 +143,8 @@ def LegacyLayerSpec.toSeriesDSpec? (layer : LegacyLayerSpec) : Option SeriesDSpe
       spec := ⟨layer.name, layer.dataKey, details⟩ }
 
 /-- Convert from the new dependent `SeriesDSpecPacked` back to the legacy
-`LayerSpec` for compatibility with existing code. -/
-def SeriesDSpecPacked.toLayerSpec (packed : SeriesDSpecPacked) : LayerSpec :=
+`LegacyLayerSpec` for compatibility with existing code. -/
+def SeriesDSpecPacked.toLegacyLayerSpec (packed : SeriesDSpecPacked) : LegacyLayerSpec :=
   let ⟨kind, spec⟩ := packed
   let (color, dot) : String × Option Bool :=
     match spec.details with
@@ -185,6 +181,37 @@ namespace SeriesDSpecPacked
   | _, _ => none
 /-- Convert the series kind to a string representation -/
 @[inline] def typeString (p : SeriesDSpecPacked) : String := toString p.kind
+
+-- constructors
+/-- Construct a line series (defaults to no dots). -/
+@[inline] def mkLine (name dataKey color : String) (dot : Bool := false) : SeriesDSpecPacked :=
+  { kind := .line
+    spec := { name := name, dataKey := dataKey, details := .line { color := color, dot := dot } } }
+
+/-- Construct a scatter series. -/
+@[inline] def mkScatter (name dataKey color : String) (shape : String := "") : SeriesDSpecPacked :=
+  { kind := .scatter
+    spec := { name := name, dataKey := dataKey, details := .scatter { color := color, shape := shape } } }
+
+/-- Construct a bar series. -/
+@[inline] def mkBar (name dataKey color : String) : SeriesDSpecPacked :=
+  { kind := .bar
+    spec := { name := name, dataKey := dataKey, details := .bar { color := color } } }
+
+/-- Construct an area series. -/
+@[inline] def mkArea (name dataKey fill : String) (stroke : String := "") : SeriesDSpecPacked :=
+  { kind := .area
+    spec := { name := name, dataKey := dataKey, details := .area { fill := fill, stroke := stroke } } }
+
+-- updates
+/-- Update the color for any series kind. -/
+@[inline] def setColor (p : SeriesDSpecPacked) (color : String) : SeriesDSpecPacked :=
+  match p.kind, p.spec.details with
+  | .line,    .line d    => { p with spec := { p.spec with details := .line { d with color := color } } }
+  | .scatter, .scatter d => { p with spec := { p.spec with details := .scatter { d with color := color } } }
+  | .bar,     .bar d     => { p with spec := { p.spec with details := .bar { d with color := color } } }
+  | .area,    .area d    =>
+      { p with spec := { p.spec with details := .area { d with fill := color, stroke := if d.stroke.isEmpty then "" else d.stroke } } }
 
 end SeriesDSpecPacked
 

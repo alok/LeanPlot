@@ -12,7 +12,7 @@ import ProofWidgets.Component.Recharts
 import ProofWidgets.Data.Html -- Explicit import for Html.empty and Html.text
 import Lean.Server -- For HtmlEval
 import LeanPlot.JsonExt -- For jsonHasKeys helper
-import LeanPlot.LegacyLayer
+import LeanPlot.Series
 
 open Lean ProofWidgets ProofWidgets.Recharts LeanPlot.Constants
 open LeanPlot -- For WarningBannerProps, WarningBanner, Render
@@ -46,8 +46,10 @@ structure AxisSpec where
   domain   : Option (Array Json) := none
   deriving ToJson, FromJson, Inhabited
 
-/-- For now, use the legacy type directly as LayerSpec -/
-abbrev LayerSpec := LegacyLayerSpec
+/-! ## Series representation -/
+
+/-- Series representation for `PlotSpec` (type-safe dependent form). -/
+abbrev LayerSpec := SeriesDSpecPacked
 
 -- Maintain compatibility alias for SeriesSpec
 /-- Compatibility alias for LayerSpec to maintain backward compatibility -/
@@ -72,6 +74,18 @@ structure PlotSpec where
   /-- Whether to show the legend. -/
   legend    : Bool := true
   deriving Inhabited
+
+/-! ## PlotSpec conversion -/
+
+/-- Types that can be lowered to a `PlotSpec`. -/
+class ToPlotSpec (α : Type u) where
+  /-- Convert `α` into a `PlotSpec`. -/
+  toPlotSpec : α → PlotSpec
+
+export ToPlotSpec (toPlotSpec)
+
+instance : ToPlotSpec PlotSpec where
+  toPlotSpec := id
 
 -- Basic constructor functions
 -- These are in the `PlotSpec` namespace to avoid conflicts with LeanPlot.Graphic
@@ -102,12 +116,7 @@ def line {β} [ToFloat β]
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[{
-      name      := name,
-      dataKey   := name,
-      color     := seriesColor,
-      type      := "line"
-    }],
+    series := #[SeriesDSpecPacked.mkLine name name seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := name, label := some name },
     legend    := true
@@ -121,13 +130,7 @@ def scatter (points : Array (Float × Float)) (name : String := "y")
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[{
-      name      := name,
-      dataKey   := "y", -- `xyArrayToJson` produces {x:_, y:_}
-      color     := seriesColor,
-      type      := "scatter"
-      -- dot is not applicable for scatter
-    }],
+    series := #[SeriesDSpecPacked.mkScatter name "y" seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" }, -- Default x-axis label
     yAxis     := some { dataKey := "y", label := some name },
     legend    := !(name == "y")
@@ -143,12 +146,7 @@ def bar (points : Array (Float × Float)) (name : String := "y")
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[{
-      name      := name,
-      dataKey   := "y", -- `xyArrayToJson` produces objects with `y` by default
-      color     := seriesColor,
-      type      := "bar"
-    }],
+    series := #[SeriesDSpecPacked.mkBar name "y" seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := "y", label := some name },
     legend    := !(name == "y")
@@ -178,12 +176,7 @@ def area {β} [ToFloat β]
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[{
-      name      := name,
-      dataKey   := name,
-      color     := seriesColor,
-      type      := "area"
-    }],
+    series := #[SeriesDSpecPacked.mkArea name name seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := name, label := some name },
     legend    := true
@@ -218,12 +211,8 @@ def lines {β} [Inhabited β] [ToFloat β]
     | none => (List.range fns.size).toArray.map LeanPlot.Palette.colorFromNat
   let seriesArr : Array LayerSpec :=
     (List.range fns.size).toArray.map fun idx =>
-      let (name, _) := fns[idx]!; {
-        name      := name,
-        dataKey   := name,
-        color     := chosenColors[idx]!,
-        type      := "line"
-      : LayerSpec }
+      let (name, _) := fns[idx]!
+      SeriesDSpecPacked.mkLine name name (chosenColors[idx]!)
   {
     chartData := data,
     series    := seriesArr,
@@ -290,6 +279,22 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
   | some yAxisSpec => { spec with yAxis := some { yAxisSpec with domain := some newDomain } }
   | none           => { spec with yAxis := some { dataKey := "y", domain := some newDomain } }
 
+/-- Set the color of a series by name. Updates all series with the matching name. -/
+@[inline]
+def withSeriesColor (spec : PlotSpec) (name : String) (color : String) : PlotSpec :=
+  let updated := spec.series.map fun s =>
+    if SeriesDSpecPacked.name s == name then s.setColor color else s
+  { spec with series := updated }
+
+/-- Set the color of a series by index (0-based). No-op if out of bounds. -/
+@[inline]
+def withSeriesColorAt (spec : PlotSpec) (idx : Nat) (color : String) : PlotSpec :=
+  if h : idx < spec.series.size then
+    let updated := spec.series.set! idx ((spec.series[idx]!).setColor color)
+    { spec with series := updated }
+  else
+    spec
+
 /-- Append a new series to the plot. The caller must ensure that `spec.chartData` already provides the data for `series.dataKey`. -/
 @[inline]
 def addSeries (spec : PlotSpec) (series : LayerSpec) : PlotSpec :=
@@ -323,12 +328,8 @@ instance : HAdd PlotSpec PlotSpec PlotSpec where
   let xKey := (spec.xAxis.getD {dataKey := "x"}).dataKey
   let effectiveSteps := stepsOverride.getD 200
 
-  let newLayer : LayerSpec := {
-    name    := name,
-    dataKey := name,
-    color   := color.getD (LeanPlot.Palette.colorFromNat spec.series.size),
-    type    := "line"
-  }
+  let newLayer : LayerSpec :=
+    SeriesDSpecPacked.mkLine name name (color.getD (LeanPlot.Palette.colorFromNat spec.series.size))
 
   let toJsonNumAsFloatOption (j : Json) : Option Float :=
     match j.getNum? with
@@ -400,19 +401,7 @@ abbrev RenderSeries (α : Type) := RenderFragment α
 -- Default instance for `LayerSpec` dispatching on its `type` field.
 instance : RenderFragment LayerSpec where
   render (s : LayerSpec) (_allChartData : Array Json) : Html :=
-    if s.type == "line" then
-      (<Line type={LineType.monotone} dataKey={toJson s.dataKey} stroke={s.color} dot?={some (s.dot.getD false)} /> : Html)
-    else if s.type == "scatter" then
-      let scatterProps : LeanPlot.Components.ScatterProps := { dataKey := toJson s.dataKey, fill := s.color }
-      (<LeanPlot.Components.Scatter {...scatterProps} /> : Html)
-    else if s.type == "area" then
-      let areaProps : LeanPlot.Components.AreaProps := { dataKey := toJson s.dataKey, fill := s.color, stroke := s.color }
-      (<LeanPlot.Components.Area {...areaProps} /> : Html)
-    else if s.type == "bar" then
-      let barProps : LeanPlot.Components.BarProps := { dataKey := toJson s.dataKey, fill := s.color }
-      (<LeanPlot.Components.Bar {...barProps} /> : Html)
-    else
-      (Html.text s!"Unsupported series type: {s.type}" : Html)
+    s.render
 
 instance : RenderFragment AxisSpec where
   render (_ax : AxisSpec) (_allChartData : Array Json) : Html := (Html.text "AxisSpec Fragment (dummy)" : Html)
@@ -453,10 +442,10 @@ instance : RenderFragment AxisSpec where
 
   let legendHtml := if spec.legend then (<Legend /> : Html) else (Html.text "" : Html)
 
-  let allAre (t : String) : Bool := spec.series.all (fun s => s.type == t)
+  let allAre (k : SeriesKind) : Bool := spec.series.all (fun s => s.kind == k)
 
   -- Check if we have mixed chart types
-  let chartTypes := spec.series.map (fun s => s.type) |>.toList.eraseDups
+  let chartTypes := spec.series.map (fun s => s.kind) |>.toList.eraseDups
   let isMixed := chartTypes.length > 1
 
   let mainChartComponent : Html :=
@@ -468,14 +457,14 @@ instance : RenderFragment AxisSpec where
         {legendHtml}
         {... chartComponents}
       </ComposedChart> : Html)
-    else if allAre "bar" then
+    else if allAre .bar then
       (<BarChart width={spec.width} height={spec.height} data={spec.chartData}>
         {xAxisHtml}
         {yAxisHtml}
         {legendHtml}
         {... chartComponents}
       </BarChart> : Html)
-    else if allAre "area" then
+    else if allAre .area then
       (<AreaChart width={spec.width} height={spec.height} data={spec.chartData}>
         {xAxisHtml}
         {yAxisHtml}
@@ -493,7 +482,7 @@ instance : RenderFragment AxisSpec where
   let finalHtml := match spec.title with
     | some t => (<div><h4>{Html.text t}</h4>{mainChartComponent}</div> : Html)
     | none => mainChartComponent
-  let keysToCheck := spec.series.map (fun s => s.dataKey) |>.push "x"
+  let keysToCheck := spec.series.map (fun s => SeriesDSpecPacked.dataKey s) |>.push "x"
   if LeanPlot.Utils.jsonDataHasInvalidFloats spec.chartData keysToCheck then
     let warningProps : LeanPlot.WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
     let warningHtml := LeanPlot.WarningBanner warningProps
@@ -524,7 +513,7 @@ instance : HtmlEval PlotSpec where
 
     -- 2. Collect all series data keys and append the x-axis key.
     let requiredKeys : Array String :=
-      (spec.series.map (fun s => s.dataKey)).push xKey
+      (spec.series.map (fun s => SeriesDSpecPacked.dataKey s)).push xKey
 
     -- 3b. Ensure series names and dataKeys are unique – duplicated names lead
     --     to runtime clashes in Recharts (legend/tooltips).  We detect this
@@ -534,13 +523,15 @@ instance : HtmlEval PlotSpec where
     let mut dupNames : Std.HashSet String := {}
     let mut dupKeys  : Std.HashSet String := {}
     for s in spec.series do
-      if nameSet.contains s.name then
-        dupNames := dupNames.insert s.name
-      nameSet := nameSet.insert s.name
+      let sName := SeriesDSpecPacked.name s
+      let sKey := SeriesDSpecPacked.dataKey s
+      if nameSet.contains sName then
+        dupNames := dupNames.insert sName
+      nameSet := nameSet.insert sName
 
-      if dataKeySet.contains s.dataKey then
-        dupKeys := dupKeys.insert s.dataKey
-      dataKeySet := dataKeySet.insert s.dataKey
+      if dataKeySet.contains sKey then
+        dupKeys := dupKeys.insert sKey
+      dataKeySet := dataKeySet.insert sKey
 
     if !dupNames.isEmpty || !dupKeys.isEmpty then
       let formatList (hs : Std.HashSet String) : String :=
