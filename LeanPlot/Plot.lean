@@ -45,7 +45,7 @@ def withCaption (caption : String) (inner : Html) : Html :=
 
 /-- Any term {lit}`t` that can be evaluated to {lean}`Html` (via {name}`ProofWidgets.HtmlEval`)
 can be displayed with {lit}`#plot t`.  Optionally prefix with a doc comment to
-add a caption.  This mirrors the behavior of {lit}`#html`. Use `{lit}`+tunable``
+add a caption.  This mirrors the behavior of {lit}`#html`. Use {lit}`+tunable`
 to expose interactive controls that write parameters back to source. -/
 syntax (name := plotCmd) (docComment)? "#plot" ("+tunable")? term : command
 
@@ -69,7 +69,7 @@ open Elab Command ProofWidgets.HtmlCommand in
 {lit}`LeanPlot` to improve discoverability. When preceded by a doc comment,
 the doc string is displayed as a caption above the chart.  -/
 @[command_elab plotCmd]
-def elabPlotCmd : CommandElab := fun stx => do
+unsafe def elabPlotCmd : CommandElab := fun stx => do
   -- Pattern match the syntax to extract optional doc comment + tunable flag
   let (doc?, tunable, term) ← match stx with
     | `($doc:docComment #plot +tunable $t:term) => pure (some doc, true, t)
