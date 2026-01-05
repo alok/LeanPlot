@@ -428,7 +428,7 @@ private def mergeChartData (layers : Array (SeriesDSpecPacked × Array Json)) : 
       Json.mkObj obj
 
 /-- Convert a `Graphic` into a `PlotSpec` for HTML rendering. -/
-def toPlotSpec (g : Graphic) : PlotSpec :=
+def Graphic.toPlotSpec (g : Graphic) : PlotSpec :=
   let style := getStyle g
   let (layers, _) := collectLayers g
   let chartData := mergeChartData layers
@@ -451,7 +451,7 @@ def toPlotSpec (g : Graphic) : PlotSpec :=
 
 /-- Render a single (non-faceted) graphic to HTML. -/
 private def renderSingle (g : Graphic) : Html :=
-  PlotSpec.render (toPlotSpec g)
+  PlotSpec.render (Graphic.toPlotSpec g)
 
 mutual
 /-- Render faceted graphics. -/

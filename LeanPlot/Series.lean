@@ -99,7 +99,7 @@ structure SeriesDSpec (k : SeriesKind) where
   /-- Kind-specific styling & behaviour options. -/
   details  : SeriesDetails k
 
-namespace LeanPlot.SeriesKind
+namespace SeriesKind
 
 /-- Map a `SeriesKind` to its corresponding detail type. -/
 @[reducible] def toDetailType : SeriesKind → Type
@@ -117,9 +117,7 @@ def fromString? (s : String) : Option SeriesKind :=
   | "area"    => some .area
   | _         => none
 
-end LeanPlot.SeriesKind
-
-namespace LeanPlot
+end SeriesKind
 
 /-- Existential wrapper for series specifications with different kinds. This
 allows us to put heterogeneous series into arrays. -/
@@ -206,14 +204,32 @@ namespace SeriesDSpecPacked
 -- updates
 /-- Update the color for any series kind. -/
 @[inline] def setColor (p : SeriesDSpecPacked) (color : String) : SeriesDSpecPacked :=
-  match p.kind, p.spec.details with
-  | .line,    .line d    => { p with spec := { p.spec with details := .line { d with color := color } } }
-  | .scatter, .scatter d => { p with spec := { p.spec with details := .scatter { d with color := color } } }
-  | .bar,     .bar d     => { p with spec := { p.spec with details := .bar { d with color := color } } }
-  | .area,    .area d    =>
-      { p with spec := { p.spec with details := .area { d with fill := color, stroke := if d.stroke.isEmpty then "" else d.stroke } } }
+  match p with
+  | ⟨.line, spec⟩ =>
+      match spec.details with
+      | .line d =>
+          { kind := .line
+            spec := { spec with details := .line { d with color := color } } }
+  | ⟨.scatter, spec⟩ =>
+      match spec.details with
+      | .scatter d =>
+          { kind := .scatter
+            spec := { spec with details := .scatter { d with color := color } } }
+  | ⟨.bar, spec⟩ =>
+      match spec.details with
+      | .bar d =>
+          { kind := .bar
+            spec := { spec with details := .bar { d with color := color } } }
+  | ⟨.area, spec⟩ =>
+      match spec.details with
+      | .area d =>
+          { kind := .area
+            spec := { spec with details := .area { d with fill := color, stroke := if d.stroke.isEmpty then "" else d.stroke } } }
 
 end SeriesDSpecPacked
+
+instance : Inhabited SeriesDSpecPacked :=
+  ⟨SeriesDSpecPacked.mkLine "y" "y" "#000000"⟩
 
 end LeanPlot
 

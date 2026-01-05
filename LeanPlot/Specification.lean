@@ -82,7 +82,9 @@ class ToPlotSpec (α : Type u) where
   /-- Convert `α` into a `PlotSpec`. -/
   toPlotSpec : α → PlotSpec
 
-export ToPlotSpec (toPlotSpec)
+@[inline]
+def toPlotSpec {α} [ToPlotSpec α] (value : α) : PlotSpec :=
+  ToPlotSpec.toPlotSpec value
 
 instance : ToPlotSpec PlotSpec where
   toPlotSpec := id
@@ -116,7 +118,7 @@ def line {β} [ToFloat β]
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[SeriesDSpecPacked.mkLine name name seriesColor],
+    series := #[_root_.LeanPlot.SeriesDSpecPacked.mkLine name name seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := name, label := some name },
     legend    := true
@@ -130,7 +132,7 @@ def scatter (points : Array (Float × Float)) (name : String := "y")
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[SeriesDSpecPacked.mkScatter name "y" seriesColor],
+    series := #[_root_.LeanPlot.SeriesDSpecPacked.mkScatter name "y" seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" }, -- Default x-axis label
     yAxis     := some { dataKey := "y", label := some name },
     legend    := !(name == "y")
@@ -146,7 +148,7 @@ def bar (points : Array (Float × Float)) (name : String := "y")
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[SeriesDSpecPacked.mkBar name "y" seriesColor],
+    series := #[_root_.LeanPlot.SeriesDSpecPacked.mkBar name "y" seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := "y", label := some name },
     legend    := !(name == "y")
@@ -176,7 +178,7 @@ def area {β} [ToFloat β]
   let seriesColor := color.getD (LeanPlot.Palette.colorFromNat 0)
   {
     chartData := data,
-    series := #[SeriesDSpecPacked.mkArea name name seriesColor],
+    series := #[_root_.LeanPlot.SeriesDSpecPacked.mkArea name name seriesColor],
     xAxis     := some { dataKey := "x", label := some "x" },
     yAxis     := some { dataKey := name, label := some name },
     legend    := true
@@ -212,7 +214,7 @@ def lines {β} [Inhabited β] [ToFloat β]
   let seriesArr : Array LayerSpec :=
     (List.range fns.size).toArray.map fun idx =>
       let (name, _) := fns[idx]!
-      SeriesDSpecPacked.mkLine name name (chosenColors[idx]!)
+      _root_.LeanPlot.SeriesDSpecPacked.mkLine name name (chosenColors[idx]!)
   {
     chartData := data,
     series    := seriesArr,
@@ -283,7 +285,7 @@ def withYDomain (spec : PlotSpec) (min max : Float) : PlotSpec :=
 @[inline]
 def withSeriesColor (spec : PlotSpec) (name : String) (color : String) : PlotSpec :=
   let updated := spec.series.map fun s =>
-    if SeriesDSpecPacked.name s == name then s.setColor color else s
+    if s.spec.name == name then s.setColor color else s
   { spec with series := updated }
 
 /-- Set the color of a series by index (0-based). No-op if out of bounds. -/
@@ -329,7 +331,7 @@ instance : HAdd PlotSpec PlotSpec PlotSpec where
   let effectiveSteps := stepsOverride.getD 200
 
   let newLayer : LayerSpec :=
-    SeriesDSpecPacked.mkLine name name (color.getD (LeanPlot.Palette.colorFromNat spec.series.size))
+    _root_.LeanPlot.SeriesDSpecPacked.mkLine name name (color.getD (LeanPlot.Palette.colorFromNat spec.series.size))
 
   let toJsonNumAsFloatOption (j : Json) : Option Float :=
     match j.getNum? with
@@ -399,8 +401,8 @@ class RenderFragment (α : Type) where
 abbrev RenderSeries (α : Type) := RenderFragment α
 
 -- Default instance for `LayerSpec` dispatching on its `type` field.
-instance : RenderFragment LayerSpec where
-  render (s : LayerSpec) (_allChartData : Array Json) : Html :=
+instance : RenderFragment _root_.LeanPlot.LayerSpec where
+  render (s : _root_.LeanPlot.LayerSpec) (_allChartData : Array Json) : Html :=
     s.render
 
 instance : RenderFragment AxisSpec where
@@ -482,7 +484,7 @@ instance : RenderFragment AxisSpec where
   let finalHtml := match spec.title with
     | some t => (<div><h4>{Html.text t}</h4>{mainChartComponent}</div> : Html)
     | none => mainChartComponent
-  let keysToCheck := spec.series.map (fun s => SeriesDSpecPacked.dataKey s) |>.push "x"
+  let keysToCheck := spec.series.map (fun s => s.spec.dataKey) |>.push "x"
   if LeanPlot.Utils.jsonDataHasInvalidFloats spec.chartData keysToCheck then
     let warningProps : LeanPlot.WarningBannerProps := { message := "Plot data contains invalid values (NaN/Infinity) and may not render correctly." }
     let warningHtml := LeanPlot.WarningBanner warningProps
@@ -513,7 +515,7 @@ instance : HtmlEval PlotSpec where
 
     -- 2. Collect all series data keys and append the x-axis key.
     let requiredKeys : Array String :=
-      (spec.series.map (fun s => SeriesDSpecPacked.dataKey s)).push xKey
+      (spec.series.map (fun s => s.spec.dataKey)).push xKey
 
     -- 3b. Ensure series names and dataKeys are unique – duplicated names lead
     --     to runtime clashes in Recharts (legend/tooltips).  We detect this
@@ -523,8 +525,8 @@ instance : HtmlEval PlotSpec where
     let mut dupNames : Std.HashSet String := {}
     let mut dupKeys  : Std.HashSet String := {}
     for s in spec.series do
-      let sName := SeriesDSpecPacked.name s
-      let sKey := SeriesDSpecPacked.dataKey s
+      let sName := s.spec.name
+      let sKey := s.spec.dataKey
       if nameSet.contains sName then
         dupNames := dupNames.insert sName
       nameSet := nameSet.insert sName
