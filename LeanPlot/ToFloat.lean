@@ -47,7 +47,7 @@ instance instToFloatInt : ToFloat Int where
 instance [Coe α Float] : ToFloat α where
   toFloat a := ↑a
 
-/-! ### `Rat` instance
+/-! ## `Rat` instance
 
 Lean 4 ships with a rational number type `Rat` in `Init.Data.Rat`.
 The conversion takes the numerator/denominator and performs a floating-point
