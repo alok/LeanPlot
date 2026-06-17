@@ -54,7 +54,9 @@ root = "TestExport"
 [[require]]
 name = "proofwidgets"
 scope = "leanprover-community"
+rev = "v0.0.99"
 
 [[require]]
 name = "verso"
 scope = "leanprover"
+rev = "v4.30.0"
