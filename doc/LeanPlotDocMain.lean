@@ -11,11 +11,11 @@ open Verso.Genre.Manual.InlineLean
 
 def config : Config where
   emitTeX := false
-  emitHtmlSingle := true
-  emitHtmlMulti := true
+  emitHtmlSingle := .immediately
+  emitHtmlMulti := .immediately
   htmlDepth := 2
   destination := "_out/docs"
   sourceLink := some "https://github.com/alok/LeanPlot"
   issueLink := some "https://github.com/alok/LeanPlot/issues"
 
-def main := manualMain (%doc Manual) (config := config)
+def main := manualMain (%doc Manual) (config := { config with })
