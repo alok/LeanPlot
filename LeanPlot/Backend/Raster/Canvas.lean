@@ -75,6 +75,7 @@ the pixel at byte offset `i` of `d`. -/
       (((d.set! i ((sr * α + dr * k) * inv + K.half).toUInt8).set! (i+1) ((sg * α + dg * k) * inv + K.half).toUInt8).set!
         (i+2) ((sb * α + db * k) * inv + K.half).toUInt8).set! (i+3) (oa * K.c255 + K.half).toUInt8
 
+/-- Blending never changes the buffer size (it only overwrites four bytes). -/
 theorem size_blendPx (d : ByteArray) (i : Nat) (sr sg sb α : Float) :
     (blendPx d i sr sg sb α).size = d.size := by
   unfold blendPx; dsimp only

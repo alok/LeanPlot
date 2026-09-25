@@ -133,9 +133,13 @@ end Level
 A token is a `UInt32`: a literal byte `b` is `b`; a match is
 `0x80000000 ||| (len <<< 16) ||| dist` with `3 ≤ len ≤ 258`, `1 ≤ dist ≤ 32767`. -/
 
+/-- Encode a match token. -/
 @[inline] def mkMatch (len dist : Nat) : UInt32 := (0x80000000 : UInt32) ||| (len.toUInt32 <<< 16) ||| dist.toUInt32
+/-- Is the token a match (rather than a literal)? -/
 @[inline] def isMatch (t : UInt32) : Bool := t &&& 0x80000000 != 0
+/-- Match length of a match token. -/
 @[inline] def matchLen (t : UInt32) : Nat := ((t >>> 16) &&& 0x1FF).toNat
+/-- Match distance of a match token. -/
 @[inline] def matchDist (t : UInt32) : Nat := (t &&& 0xFFFF).toNat
 
 /-! ## Block emission -/
