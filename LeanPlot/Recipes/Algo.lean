@@ -4,6 +4,7 @@ import LeanPlot.Recipes.Algo.Streamplot
 import LeanPlot.Recipes.Algo.Contour
 import LeanPlot.Recipes.Algo.Isoband
 import LeanPlot.Recipes.Algo.Arrows
+import LeanPlot.Recipes.Algo.Surface
 
 /-!
 # Recipe algorithms
@@ -20,4 +21,6 @@ reproduce Makie/CairoMakie plots. Outputs are `LeanPlot` data types
   `_group_polys` and the `contourf` recipe data.
 * `LeanPlot.Recipes.Algo.Arrows`: `arrows2d`/`arrows3d` geometry and Cartan's
   `spacing`/`scaledarrows` scaling.
+* `LeanPlot.Recipes.Algo.Surface`: `surface2mesh`, mesh normals, wireframe
+  segments and CairoMakie's per-vertex Blinn–Phong shading.
 -/
