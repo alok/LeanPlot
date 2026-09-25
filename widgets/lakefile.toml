@@ -26,6 +26,10 @@ options = { errorOnBuild = "ProofWidgets wants to rebuild its JavaScript with np
 
 [[lean_lib]]
 name = "LeanPlotWidgets"
+# Load LeanPlot, ProofWidgets and these modules as native shared libraries when elaborating
+# `#figure`/`#plot`, instead of interpreting them: laying out and rendering a figure drops
+# from ~50-300 ms to ~1 ms, and PNG output from ~3 s to ~16 ms (docs/WIDGETS.md).
+precompileModules = true
 
 [[lean_lib]]
 name = "LeanPlotWidgetsTest"
