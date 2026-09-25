@@ -112,6 +112,11 @@ def tests : T Unit := do
   let huge := polyline [(-1.0e9, 20.0), (1.0e9, 80.0)]
   let (cvHuge, ms) ← timeMs (IO.lazyPure fun _ => strokeBlack 200 100 huge { width := 2, dash := #[2, 2] })
   check "huge dashed path bounded" (ms < 200.0 && darkArea cvHuge > 100.0) s!"{ms} ms, ink {darkArea cvHuge}"
+  -- dashing is linear in its output: 10⁵ dashes (a buffer copy per dash
+  -- start would move ~80 GB here and take seconds)
+  let longLine := polyline [(0.0, 0.0), (600000.0, 0.0)]
+  let (dl, msDash) ← timeMs (IO.lazyPure fun _ => dashPolylines (flatten longLine) #[3, 3])
+  check "10⁵ dashes in linear time" (dl.count == 100000 && msDash < 250.0) s!"{dl.count} dashes, {msDash} ms"
   -- sub-pixel dash periods become a solid stroke with alpha × on-fraction
   checkNear "sub-pixel dashes ≈ half ink" (darkArea (strokeBlack 130 100 line { width := 2, dash := #[0.2, 0.2] })) 100.0 1.0
   -- clip applies to strokes

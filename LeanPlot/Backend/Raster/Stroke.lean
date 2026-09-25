@@ -272,11 +272,13 @@ namespace DashSt
 @[inline] def startDash (s : DashSt) (x y : Float) : DashSt :=
   { s with pend := true, sx := x, sy := y, inDash := true }
 
-/-- Append a point to the open dash, materialising a pending start. -/
+/-- Append a point to the open dash, materialising a pending start (whose
+index is recorded before the pushes, as in `FlatSt.begin`, so the buffers
+are never copied). -/
 @[inline] def addPoint (s : DashSt) (x y : Float) : DashSt :=
   if s.pend then
-    { s with starts := s.starts.push s.xs.size, xs := (s.xs.push s.sx).push x, ys := (s.ys.push s.sy).push y,
-             pend := false }
+    let s := { s with starts := s.starts.push s.xs.size, pend := false }
+    { s with xs := (s.xs.push s.sx).push x, ys := (s.ys.push s.sy).push y }
   else { s with xs := s.xs.push x, ys := s.ys.push y }
 
 /-- Advance to the next pattern element at point `(x, y)`. -/
@@ -286,20 +288,24 @@ namespace DashSt
   let s := { s with idx, rem := pat[idx]!, on, inDash := false, pend := false }
   if on then s.startDash x y else s
 
+/-- `advance`'s element loop: consume elements while `d ≥ rem` (at most
+`fuel` of them), then leave `rem - d` of the current one. -/
+def advanceLoop (s : DashSt) (pat : Array Float) (d rem : Float) (idx : Nat) (on : Bool) (fuel : Nat) : DashSt :=
+  match fuel with
+  | 0 => { s with idx, on, rem := rem - d }
+  | fuel + 1 =>
+    if d ≥ rem then
+      let idx := (idx + 1) % pat.size
+      advanceLoop s pat (d - rem) pat[idx]! idx (!on) fuel
+    else { s with idx, on, rem := rem - d }
+
 /-- Advance the pattern by arc length `d` without emitting anything
 (`pat` has even length, so whole periods can be skipped). -/
-def advance (s : DashSt) (pat : Array Float) (total d : Float) : DashSt := Id.run do
-  if d < s.rem then return { s with rem := s.rem - d }
-  let mut d := d - s.rem
-  let mut idx := (s.idx + 1) % pat.size
-  let mut on := !s.on
-  let mut rem := pat[idx]!
-  d := d - total * (d / total).floor
-  let mut guard := 0
-  while d ≥ rem && guard ≤ pat.size do
-    guard := guard + 1
-    d := d - rem; idx := (idx + 1) % pat.size; on := !on; rem := pat[idx]!
-  return { s with idx, on, rem := rem - d }
+def advance (s : DashSt) (pat : Array Float) (total d : Float) : DashSt :=
+  if d < s.rem then { s with rem := s.rem - d } else
+  let d := d - s.rem
+  let idx := (s.idx + 1) % pat.size
+  advanceLoop s pat (d - total * (d / total).floor) pat[idx]! idx (!s.on) (pat.size + 1)
 
 /-- Walk the segment `(px, py) → (qx, qy)` of length `len` starting at arc
 position `pos`. -/
@@ -327,102 +333,138 @@ def dashPattern? (d : Array Float) : Option (Array Float) :=
   let p := if d.size % 2 == 1 then d ++ d else d
   if p.foldl (· + ·) K.zero ≤ K.zero then none else some p
 
+/-- Liang–Barsky lower bound update for the constraint `p·t ≤ q`: raises `t`
+when `p < 0`, and empties the interval (`t = 2`) when `p = 0` and `q < 0`. -/
+@[inline] def lbLo (t p q : Float) : Float :=
+  if p < K.zero then max t (q / p) else if p == K.zero && q < K.zero then K.two else t
+
+/-- Liang–Barsky upper bound update for `p·t ≤ q`: lowers `t` when `p > 0`. -/
+@[inline] def lbHi (t p q : Float) : Float := if p > K.zero then min t (q / p) else t
+
 /-- Parameter interval `[t0, t1] ⊆ [0, 1]` of the segment `P → Q` inside the
 box (Liang–Barsky); empty when `t0 > t1`. -/
-def clipParam (px py qx qy bx0 by0 bx1 by1 : Float) : Float × Float := Id.run do
+@[inline] def clipParam (px py qx qy bx0 by0 bx1 by1 : Float) : Float × Float :=
   let dx := qx - px; let dy := qy - py
-  let mut t0 := K.zero; let mut t1 := K.one
-  for (p, q) in [(-dx, px - bx0), (dx, bx1 - px), (-dy, py - by0), (dy, by1 - py)] do
-    if p == K.zero then
-      if q < K.zero then t0 := K.two
-    else
-      let r := q / p
-      if p < K.zero then t0 := max t0 r else t1 := min t1 r
-  return (t0, t1)
+  let t0 := lbLo (lbLo (lbLo (lbLo K.zero (-dx) (px - bx0)) dx (bx1 - px)) (-dy) (py - by0)) dy (by1 - py)
+  let t1 := lbHi (lbHi (lbHi (lbHi K.one (-dx) (px - bx0)) dx (bx1 - px)) (-dy) (py - by0)) dy (by1 - py)
+  (t0, t1)
+
+/-- Visible length of the segments `i ∈ [i, stop)` of a subpath with points
+`[a, e)` (segment `i` ends at `i + 1`, or wraps to `a`), added to `acc`. -/
+def visibleLengthSegs (xs ys : FloatArray) (a e : Nat) (bx0 by0 bx1 by1 : Float) (i stop : Nat) (acc : Float) :
+    Float :=
+  if i < stop then
+    let i2 := if i + 1 < e then i + 1 else a
+    let px := xs.get! i; let py := ys.get! i
+    let qx := xs.get! i2; let qy := ys.get! i2
+    let (t0, t1) := clipParam px py qx qy bx0 by0 bx1 by1
+    let acc := if t0 < t1 then acc + (t1 - t0) * ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt else acc
+    visibleLengthSegs xs ys a e bx0 by0 bx1 by1 (i + 1) stop acc
+  else acc
+termination_by stop - i
+
+/-- `visibleLength` over subpaths `[k, count)`, added to `acc`. -/
+def visibleLengthFrom (pl : Polylines) (bx0 by0 bx1 by1 : Float) (k : Nat) (acc : Float) : Float :=
+  if k < pl.count then
+    let (a, e) := pl.range k
+    let acc := if e ≤ a then acc else
+      let segs := if pl.closed[k]! then e - a else e - a - 1
+      visibleLengthSegs pl.xs pl.ys a e bx0 by0 bx1 by1 a (a + segs) acc
+    visibleLengthFrom pl bx0 by0 bx1 by1 (k + 1) acc
+  else acc
+termination_by pl.count - k
 
 /-- Total length of the parts of `pl`'s segments inside the box. -/
-def visibleLength (pl : Polylines) (bx0 by0 bx1 by1 : Float) : Float := Id.run do
-  let mut total := K.zero
-  for k in [0:pl.count] do
+def visibleLength (pl : Polylines) (bx0 by0 bx1 by1 : Float) : Float :=
+  visibleLengthFrom pl bx0 by0 bx1 by1 0 K.zero
+
+/-- Pattern phase at arc length `off` from the start of a subpath: consume
+whole elements while `off ≥ rem` (at most `fuel` of them). -/
+def DashSt.phase (s : DashSt) (pat : Array Float) (off rem : Float) (idx : Nat) (on : Bool) (fuel : Nat) : DashSt :=
+  match fuel with
+  | 0 => { s with idx, rem, on }
+  | fuel + 1 =>
+    if off > K.zero then
+      if off ≥ rem then
+        let idx := (idx + 1) % pat.size
+        DashSt.phase s pat (off - rem) pat[idx]! idx (!on) fuel
+      else { s with idx, rem := rem - off, on }
+    else { s with idx, rem, on }
+
+/-- Break the open dash, skip `d` of arc length, and reopen a dash at `(x, y)`
+if the pattern is then "on". -/
+@[inline] def DashSt.skip (s : DashSt) (pat : Array Float) (total d x y : Float) : DashSt :=
+  let s := ({ s with inDash := false, pend := false } : DashSt).advance pat total d
+  if s.on then s.startDash x y else s
+
+/-- Dash one segment `P → Q` of length `len > 0`, of which only the parameter
+interval `[t0, t1]` is visible. -/
+@[inline] def DashSt.segment (s : DashSt) (pat : Array Float) (total px py qx qy len t0 t1 : Float) : DashSt :=
+  if t0 > t1 then s.skip pat total len qx qy else
+  -- invisible prefix
+  let s := if t0 > K.zero then s.skip pat total (t0 * len) (px + (qx - px) * t0) (py + (qy - py) * t0) else s
+  let vis := (t1 - t0) * len
+  let s := if vis > K.zero then
+      -- bound the steps: every step either finishes the segment or an element
+      let fuel := ((vis / total).ceil.toUInt64.toNat + 2) * pat.size + 4
+      s.seg pat (px + (qx - px) * t0) (py + (qy - py) * t0) (px + (qx - px) * t1) (py + (qy - py) * t1) vis K.zero fuel
+    else s
+  -- invisible suffix
+  if t1 < K.one then s.skip pat total ((K.one - t1) * len) qx qy else s
+
+/-- Dash segments `i ∈ [i, stop)` of a subpath with points `[a, e)`. With
+`culled`, only the part of each segment inside the box is cut into dashes. -/
+def dashSegs (pat : Array Float) (total : Float) (culled : Bool) (bx0 by0 bx1 by1 : Float) (xs ys : FloatArray)
+    (a e i stop : Nat) (s : DashSt) : DashSt :=
+  if i < stop then
+    let i2 := if i + 1 < e then i + 1 else a
+    let px := xs.get! i; let py := ys.get! i
+    let qx := xs.get! i2; let qy := ys.get! i2
+    let len := ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt
+    let s := if len > K.zero then
+        let (t0, t1) := if culled then clipParam px py qx qy bx0 by0 bx1 by1 else (K.zero, K.one)
+        s.segment pat total px py qx qy len t0 t1
+      else s
+    dashSegs pat total culled bx0 by0 bx1 by1 xs ys a e (i + 1) stop s
+  else s
+termination_by stop - i
+
+/-- Dash subpaths `[k, count)`; every subpath starts at the pattern phase
+`ph` (only its `idx`, `rem` and `on` are read). -/
+def dashSubpaths (pl : Polylines) (pat : Array Float) (total : Float) (ph : DashSt) (culled : Bool)
+    (bx0 by0 bx1 by1 : Float) (k : Nat) (s : DashSt) : DashSt :=
+  if k < pl.count then
     let (a, e) := pl.range k
-    if e ≤ a then continue
+    if e ≤ a then dashSubpaths pl pat total ph culled bx0 by0 bx1 by1 (k + 1) s else
+    let s := { s with idx := ph.idx, rem := ph.rem, on := ph.on, inDash := false, pend := false }
+    let s := if ph.on then s.startDash (pl.xs.get! a) (pl.ys.get! a) else s
     let segs := if pl.closed[k]! then e - a else e - a - 1
-    for j in [0:segs] do
-      let i := a + j
-      let i2 := if i + 1 < e then i + 1 else a
-      let px := pl.xs[i]!; let py := pl.ys[i]!
-      let qx := pl.xs[i2]!; let qy := pl.ys[i2]!
-      let (t0, t1) := clipParam px py qx qy bx0 by0 bx1 by1
-      if t0 < t1 then
-        total := total + (t1 - t0) * ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt
-  return total
+    let s := dashSegs pat total culled bx0 by0 bx1 by1 pl.xs pl.ys a e a (a + segs) s
+    dashSubpaths pl pat total ph culled bx0 by0 bx1 by1 (k + 1) { s with inDash := false, pend := false }
+  else s
+termination_by pl.count - k
 
 /-- Cut polylines into dashes. Every output subpath is open. Segment parts
 outside `box` (x0, y0, x1, y1), when given, only advance the pattern
 analytically; no dashes are produced there. The work is then bounded by the
 visible length, even for a far-off path with a fine pattern. -/
 def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zero)
-    (box : Option (Float × Float × Float × Float) := none) : Polylines := Id.run do
-  let some pat := dashPattern? dash | return pl
-  let total := pat.foldl (· + ·) K.zero
-  let off0 := if offset.isFinite then offset - total * (offset / total).floor else K.zero
-  let mut s : DashSt := { xs := .emptyWithCapacity pl.xs.size, ys := .emptyWithCapacity pl.ys.size,
-                          starts := #[], idx := 0, rem := pat[0]!, on := true, inDash := false }
-  for k in [0:pl.count] do
-    let (a, e) := pl.range k
-    if e ≤ a then continue
-    -- reset the pattern and consume the offset
-    let mut idx := 0
-    let mut rem := pat[0]!
-    let mut on := true
-    let mut off := off0
-    let mut guard := 0
-    while off > K.zero && guard < 100000 do
-      guard := guard + 1
-      if off ≥ rem then
-        off := off - rem; idx := (idx + 1) % pat.size; rem := pat[idx]!; on := !on
-      else
-        rem := rem - off; off := K.zero
-    s := { s with idx, rem, on, inDash := false, pend := false }
-    let x0 := pl.xs[a]!; let y0 := pl.ys[a]!
-    if on then s := s.startDash x0 y0
-    let closed := pl.closed[k]!
-    let n := e - a
-    let segs := if closed then n else n - 1
-    for j in [0:segs] do
-      let i := a + j
-      let i2 := if i + 1 < e then i + 1 else a
-      let px := pl.xs[i]!; let py := pl.ys[i]!
-      let qx := pl.xs[i2]!; let qy := pl.ys[i2]!
-      let len := ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt
-      if len > K.zero then
-        let (t0, t1) := match box with
-          | none => (K.zero, K.one)
-          | some (bx0, by0, bx1, by1) => clipParam px py qx qy bx0 by0 bx1 by1
-        if t0 > t1 then
-          -- invisible: close any open dash and skip ahead
-          s := { s with inDash := false, pend := false }
-          s := s.advance pat total len
-          if s.on then s := s.startDash qx qy
-        else
-          -- invisible prefix
-          if t0 > K.zero then
-            s := { s with inDash := false, pend := false }
-            s := s.advance pat total (t0 * len)
-            if s.on then s := s.startDash (px + (qx - px) * t0) (py + (qy - py) * t0)
-          let ax := px + (qx - px) * t0; let ay := py + (qy - py) * t0
-          let cx := px + (qx - px) * t1; let cy := py + (qy - py) * t1
-          let vis := (t1 - t0) * len
-          if vis > K.zero then
-            -- bound the steps: every step either finishes the segment or an element
-            let fuel := ((vis / total).ceil.toUInt64.toNat + 2) * pat.size + 4
-            s := s.seg pat ax ay cx cy vis K.zero fuel
-          -- invisible suffix
-          if t1 < K.one then
-            s := { s with inDash := false, pend := false }
-            s := s.advance pat total ((K.one - t1) * len)
-            if s.on then s := s.startDash qx qy
-    s := { s with inDash := false, pend := false }
-  return { xs := s.xs, ys := s.ys, starts := s.starts, closed := Array.replicate s.starts.size false }
+    (box : Option (Float × Float × Float × Float) := none) : Polylines :=
+  match dashPattern? dash with
+  | none => pl
+  | some pat =>
+    let total := pat.foldl (· + ·) K.zero
+    let off0 := if offset.isFinite then offset - total * (offset / total).floor else K.zero
+    let s : DashSt := { xs := .emptyWithCapacity pl.xs.size, ys := .emptyWithCapacity pl.ys.size,
+                        starts := #[], idx := 0, rem := pat[0]!, on := true, inDash := false }
+    -- the phase at the start of every subpath (the offset consumed); built
+    -- from its own empty state so that `s`'s buffers stay unshared
+    let ph := ({ xs := .empty, ys := .empty, starts := #[], idx := 0, rem := pat[0]!, on := true,
+                 inDash := false } : DashSt).phase pat off0 pat[0]! 0 true 100000
+    let (culled, bx0, by0, bx1, by1) := match box with
+      | none => (false, K.zero, K.zero, K.zero, K.zero)
+      | some (bx0, by0, bx1, by1) => (true, bx0, by0, bx1, by1)
+    let s := dashSubpaths pl pat total ph culled bx0 by0 bx1 by1 0 s
+    { xs := s.xs, ys := s.ys, starts := s.starts, closed := Array.replicate s.starts.size false }
 
 end LeanPlot.Raster
