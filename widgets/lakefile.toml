@@ -1,0 +1,35 @@
+name = "LeanPlotWidgets"
+version = "0.2.0"
+description = "Infoview widgets for LeanPlot: #figure and #plot show LeanPlot figures in the Lean infoview via ProofWidgets"
+keywords = ["plotting", "visualization", "widgets", "infoview"]
+license = "Apache-2.0"
+defaultTargets = ["LeanPlotWidgets", "LeanPlotWidgetsTest"]
+# The tests are checked while `LeanPlotWidgetsTest` elaborates, so `lake test` just builds it.
+testDriver = "LeanPlotWidgetsTest"
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+pp.unicode.fun = true
+
+[[require]]
+name = "LeanPlot"
+path = ".."
+
+[[require]]
+name = "proofwidgets"
+scope = "leanprover-community"
+rev = "v0.0.114"
+# ProofWidgets ships its compiled JavaScript (`widget/js`), so npm is never needed. If a build
+# would run npm anyway, fail with instructions instead (Mathlib does the same).
+options = { errorOnBuild = "ProofWidgets wants to rebuild its JavaScript with npm, which LeanPlotWidgets never needs: its checkout under widgets/.lake/packages/proofwidgets is modified or stale. Delete that directory and run `lake build` again." }
+
+[[lean_lib]]
+name = "LeanPlotWidgets"
+# Load LeanPlot, ProofWidgets and these modules as native shared libraries when elaborating
+# `#figure`/`#plot`, instead of interpreting them: laying out and rendering a figure drops
+# from ~50-300 ms to ~1 ms, and PNG output from ~3 s to ~16 ms (docs/WIDGETS.md).
+precompileModules = true
+
+[[lean_lib]]
+name = "LeanPlotWidgetsTest"
