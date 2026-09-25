@@ -2,6 +2,7 @@ import LeanPlotTest.Recipes.Harness
 import LeanPlotTest.Recipes.LevelsTest
 import LeanPlotTest.Recipes.StreamTest
 import LeanPlotTest.Recipes.ContourTest
+import LeanPlotTest.Recipes.IsobandTest
 
 /-!
 Recipe-algorithm test suites (`LeanPlot.Recipes.Algo`). `LeanPlotTest.Recipes.run`
@@ -17,7 +18,8 @@ def run : IO (Nat × Nat) := do
   let suites : List (String × TestM Unit) :=
     [("recipes/levels", LevelsTest.suite),
      ("recipes/streamplot", StreamTest.suite),
-     ("recipes/contour", ContourTest.suite)]
+     ("recipes/contour", ContourTest.suite),
+     ("recipes/isoband", IsobandTest.suite)]
   let mut p := 0
   let mut f := 0
   for (name, s) in suites do
