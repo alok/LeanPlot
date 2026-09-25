@@ -148,12 +148,14 @@ def lower (cb : Colorbar) (p : ColorbarPrep) (box : BBox) (figH : Float) : Array
   let st := cb.axisStyle
   let dy (y : Float) : Float := figH - y
   let mut ops : Array (Float × DrawOp) := #[]
-  -- colours at the midpoints of LinRange(lo, hi, nsteps)
+  -- colours at the midpoints of LinRange(lo, hi, nsteps), mapped linearly: Makie draws the
+  -- gradient as an `image!` without the colour scale (`makielayout/blocks/colorbar.jl:306-346`),
+  -- so a nonlinear `colorscale` only moves the ticks
   let n := max 2 cb.nsteps
   let steps := Num.linRange p.lo p.hi n
   let mids : FloatArray := (Array.range (n - 1)).foldl (init := FloatArray.emptyWithCapacity (n - 1)) fun acc i =>
     acc.push ((steps[i]! + steps[i + 1]!) / 2)
-  let rgba := p.mapping.toRGBA8 p.lo p.hi mids
+  let rgba := { p.mapping with colorscale := .identity }.toRGBA8 p.lo p.hi mids
   let img : ByteArray :=
     if cb.vertical then
       -- one column, top row = largest value
