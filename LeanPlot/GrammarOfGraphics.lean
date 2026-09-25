@@ -165,19 +165,14 @@ namespace PlotBuilder
     if layer.data.isEmpty then acc else acc ++ layer.data
 
   -- Convert layers to series
-  let series := pb.layers.filterMap fun layer =>
+  let series := pb.layers.enum.filterMap fun ⟨idx, layer⟩ =>
     layer.name.map fun name =>
-      let layerType := match layer.geom with
-        | Geom.Point => "scatter"
-        | Geom.Line => "line"
-        | Geom.Bar => "bar"
-        | Geom.Area => "area"
-      {
-        name := name,
-        dataKey := name,
-        color := Palette.colorFromNat pb.spec.series.size,
-        type := layerType
-      }
+      let color := Palette.colorFromNat (pb.spec.series.size + idx)
+      match layer.geom with
+      | Geom.Point => SeriesDSpecPacked.mkScatter name name color
+      | Geom.Line  => SeriesDSpecPacked.mkLine name name color
+      | Geom.Bar   => SeriesDSpecPacked.mkBar name name color
+      | Geom.Area  => SeriesDSpecPacked.mkArea name name color
 
   { pb.spec with
     chartData := allData,
@@ -217,6 +212,9 @@ end PlotBuilder
 @[inline] def plotScatter (points : Array (Float × Float))
     (name : String := "y") : PlotSpec :=
   PlotSpec.scatter points name
+
+instance : ToPlotSpec PlotBuilder where
+  toPlotSpec pb := pb.build
 
 /-- Transform points into a bar plot -/
 @[inline] def plotBar (points : Array (Float × Float))

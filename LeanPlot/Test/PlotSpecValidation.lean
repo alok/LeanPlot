@@ -55,7 +55,7 @@ fail.
 ```
 def badSpec : PlotSpec := {
   chartData := #[json% {x: 1}],
-  series    := # [{ name := "y", dataKey := "y", color := "#ff0000" }],
+  series    := #[SeriesDSpecPacked.mkLine "y" "y" "#ff0000"],
   xAxis     := some { dataKey := "x" },
   legend    := false
 }

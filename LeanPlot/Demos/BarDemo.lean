@@ -11,7 +11,7 @@ namespace LeanPlot.Demos
 
 /- TODO: `#plot` should take docstrings and put them below the figure as a caption. latex rendering ftw -/
 /-- TODO this should be the title. -/
-#plot (bar barData "values").withTitle "Simple Bar Chart"
+#plot +tunable (bar barData "values")
 
 
 end LeanPlot.Demos

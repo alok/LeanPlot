@@ -76,17 +76,8 @@ def renderingDemo : PlotSpec :=
     json% { x: 4, temp: 23, obs: 24, sales: 140, coverage: 80 }
   ]
 
-  -- Convert our type-safe series to legacy format for now
-  -- (until PlotSpec is updated to use SeriesDSpec directly)
-  let series := #[
-    typeSafeLine.toLayerSpec,
-    typeSafeScatter.toLayerSpec,
-    typeSafeBar.toLayerSpec,
-    typeSafeArea.toLayerSpec
-  ]
-
   { chartData := data
-    series := series
+    series := #[typeSafeLine, typeSafeScatter, typeSafeBar, typeSafeArea]
     title := some "Type-Safe Series Demo"
     width := 600
     height := 400

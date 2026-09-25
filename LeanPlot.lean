@@ -5,6 +5,7 @@ import LeanPlot.Plot
 -- Core API (what users should import)
 import LeanPlot.Graphic  -- First-class algebraic graphics (overrides some Specification names)
 import LeanPlot.Interactive  -- Two-way slider widgets
+import LeanPlot.TunablePlot  -- Tunable #plot widget
 import LeanPlot.API
 import LeanPlot.DSL
 import LeanPlot.ToFloat
