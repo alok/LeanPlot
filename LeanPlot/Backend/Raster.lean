@@ -34,18 +34,19 @@ path-filling backend, SVG included, can then draw). The default outliner is a
 stub that draws nothing.
 
 Measured on Apple Silicon, v4.35.0-rc3 (`LeanPlotTest/Raster/Perf.lean`,
-minimum of 3 runs):
+minimum of 3 runs; the machine was shared, so treat these as upper bounds):
 
 | workload | time |
 |---|---|
 | 1000×1000, 10⁵-segment polyline stroke (miter / round joins) | 26 / 32 ms |
+| 1000×1000, 10⁵-segment polyline stroke, dashed 6/3 | 21 ms |
 | 1000×1000, 10⁵-segment random-walk stroke | 38 ms |
 | 1000×1000, 10⁵-vertex band fill (area plot) | 11 ms |
 | 1000×1000, 10⁵-vertex star (10⁵ overlapping spikes) | 116 ms |
 | 800×600 typical plot (231 ops: grid, 5×1000-pt lines, 200 markers, heatmap) | 6.4 ms |
-| 1000×1000, 10⁴ markers (fill + outline, one op each) | 60 ms |
-| 1000×1000, 80k-triangle Gouraud mesh | 120–170 ms |
-| 800×600 PNG encode (filters + DEFLATE) | 25 ms, 92 KB (Pillow level 6: same size) |
+| 1000×1000, 10⁴ markers (fill + outline, one op each) | 76 ms |
+| 1000×1000, 79k-triangle Gouraud mesh (200×200 grid) | 81–90 ms |
+| 800×600 PNG encode (filters + DEFLATE) | 25 ms, 92 KB (Pillow level 6: 91.7 KB) |
 
 Parity with Cairo (`LeanPlotTest/Raster/Cairo.lean`): mean |Δ| ≤ 0.13/255
 per channel on the reference scenes.

@@ -164,6 +164,7 @@ def tests : T Unit := do
   let st : Stroke := { color := ⟨0.1, 0.2, 0.6, 1⟩, width := 1.5 }
   let (tSweep, _) ← bench 3 fun _ => paint 1000 1000 #[.path sweep none (some st) none]
   let (tSweepRound, _) ← bench 3 fun _ => paint 1000 1000 #[.path sweep none (some { st with join := .round, cap := .round }) none]
+  let (tDash, _) ← bench 3 fun _ => paint 1000 1000 #[.path sweep none (some { st with dash := #[6, 3] }) none]
   let (tWalk, _) ← bench 3 fun _ => paint 1000 1000 #[.path walk none (some st) none]
   let (tStar, _) ← bench 3 fun _ => paint 1000 1000 #[.path star (some { color := .black }) none none]
   let (tBand, _) ← bench 3 fun _ => paint 1000 1000 #[.path bnd (some { color := ⟨0.2, 0.4, 0.8, 0.5⟩ }) none none]
@@ -179,6 +180,7 @@ def tests : T Unit := do
   let (pngFast, tPngFast) ← timeMs (IO.lazyPure fun _ => plotCv.toPNG { level := .fast })
   IO.println s!"  perf: 1000×1000, 10⁵-segment sine stroke (miter)     {tSweep} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-segment sine stroke (round)     {tSweepRound} ms"
+  IO.println s!"  perf: 1000×1000, 10⁵-segment sine stroke (dashed)    {tDash} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-segment random-walk stroke      {tWalk} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-vertex star polygon fill         {tStar} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-vertex band fill (area plot)     {tBand} ms"
@@ -188,6 +190,7 @@ def tests : T Unit := do
   IO.println s!"  perf: 800×600 typical plot ({plot.ops.size} ops)          {tPlot} ms"
   IO.println s!"  perf: 800×600 PNG encode default: {tPng} ms, {png.size} B; fast: {tPngFast} ms, {pngFast.size} B"
   check "10⁵-segment stroke < 5× target (200 ms)" (tSweep < 1000.0) s!"{tSweep} ms"
+  check "10⁵-segment dashed stroke < 5× target" (tDash < 1000.0) s!"{tDash} ms"
   check "10⁵-segment random walk < 5× target" (tWalk < 1000.0) s!"{tWalk} ms"
   check "10⁵-vertex star fill < 1 s" (tStar < 1000.0) s!"{tStar} ms"
   check "10⁵-vertex band fill < 5× 200 ms" (tBand < 1000.0) s!"{tBand} ms"
