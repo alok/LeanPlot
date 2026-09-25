@@ -184,6 +184,16 @@ def hvlinesAspect : Figure :=
     |>.vlines #[0] (color := ColorSpec.ofName "red") (linestyle := .dash)) with autolimitaspect := some 1 }
   Figure.new |>.axis 1 1 ax
 
+/-- 22. rotated tick labels, a clipped colour range with lowclip/highclip triangles. -/
+def rotatedClip : Figure :=
+  let z : Grid2 12 9 := Grid2.ofFn 12 9 fun i j => Float.sin (Num.ofInt (i + 1 : Nat) / 2) * Float.cos (Num.ofInt (j + 1 : Nat) / 3)
+  let ax : Axis2 := Axis2.new (xlabel := "x")
+    |>.heatmap (Recipes.oneTo 12) (Recipes.oneTo 9) z (colorrange := some (-0.5, 0.5))
+      (lowclip := some (RGBA.rgb 1 0 0)) (highclip := some (RGBA.rgb 0 0 1))
+  let ax := { ax with style := { ax.style with x := { ax.style.x with ticklabelrotation := Num.pi / 4 }
+                                               y := { ax.style.y with ticklabelrotation := Num.pi / 2 } } }
+  Figure.new |>.axis 1 1 ax |>.colorbar 1 2 (1, 1)
+
 /-- All oracle figures by name. -/
 def specs : Array (String × Figure) := #[
   ("basic", basic), ("empty", empty), ("twoaxes", twoaxes), ("grid22", grid22), ("limits", limits),
@@ -191,6 +201,6 @@ def specs : Array (String × Figure) := #[
   ("dataaspect", dataaspect), ("bandpoly", bandpoly), ("axis3", axis3), ("surface3", surface3),
   ("markers", markers), ("colormapped", colormapped), ("heatmap_image", heatmapImage),
   ("legend_horizontal", legendHorizontal), ("label_log_reversed", labelLogReversed), ("axis3_wire", axis3Wire),
-  ("hvlines_aspect", hvlinesAspect)]
+  ("hvlines_aspect", hvlinesAspect), ("rotated_clip", rotatedClip)]
 
 end LeanPlotTest.Figure

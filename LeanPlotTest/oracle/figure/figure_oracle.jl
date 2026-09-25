@@ -335,6 +335,15 @@ let f = Figure()
     push!(figs, figure_json("hvlines_aspect", f))
 end
 
+# 22. rotated tick labels, clipped colour range with lowclip/highclip triangles
+let f = Figure()
+    ax = Axis(f[1, 1], xticklabelrotation = pi / 4, yticklabelrotation = pi / 2, xlabel = "x")
+    hm = heatmap!(ax, collect(1.0:12.0), collect(1.0:9.0), [sin(i / 2) * cos(j / 3) for i in 1:12, j in 1:9],
+                  colorrange = (-0.5, 0.5), lowclip = :red, highclip = :blue)
+    Colorbar(f[1, 2], hm)
+    push!(figs, figure_json("rotated_clip", f))
+end
+
 # 21. a streamplot (its computed lines and arrowheads are dumped to streamplot.json so the
 #     Lean test draws exactly the same data)
 let f = Figure()
