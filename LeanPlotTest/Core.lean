@@ -4,6 +4,7 @@ import LeanPlotTest.Core.TicksTest
 import LeanPlotTest.Core.ColorTest
 import LeanPlotTest.Core.GeometryTest
 import LeanPlotTest.Core.DataTest
+import LeanPlotTest.Core.SVGTest
 
 /-!
 Core test suites. `LeanPlotTest.Core.run` runs every suite and returns
@@ -20,7 +21,8 @@ def run : IO (Nat × Nat) := do
      ("core/ticks", TicksTest.suite),
      ("core/color", ColorTest.suite),
      ("core/geometry", GeometryTest.suite),
-     ("core/data", DataTest.suite)]
+     ("core/data", DataTest.suite),
+     ("core/svg", SVGTest.suite)]
   let mut p := 0
   let mut f := 0
   for (name, s) in suites do
