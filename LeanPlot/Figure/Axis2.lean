@@ -192,11 +192,28 @@ def ticksFor (spec : TickSpec) (sc : Scale) (st : LineAxisStyle) (lo hi : Float)
     else #[]
   { values := vals, labels, minor }
 
+/-- Makie `calculate_real_ticklabel_align` for automatic alignment: the tick label anchor
+for an axis that is horizontal or not, flipped (top/right) or not, at a rotation. -/
+def autoTickAlign (horizontal flipped : Bool) (rot : Float) : HAlign × VAlign :=
+  let near (a b : Float) : Bool := (a - b).abs ≤ 1.4901161193847656e-8 * max a.abs b.abs
+  if rot == 0 then
+    if horizontal then (.center, if flipped then .bottom else .top) else (if flipped then .left else .right, .middle)
+  else if near rot (Num.pi / 2) then
+    if horizontal then (if flipped then .left else .right, .middle) else (.center, if flipped then .top else .bottom)
+  else if near rot (-Num.pi / 2) then
+    if horizontal then (if flipped then .right else .left, .middle) else (.center, if flipped then .bottom else .top)
+  else if rot > 0 then
+    if horizontal then (if flipped then .left else .right, if flipped then .bottom else .top)
+    else (if flipped then .left else .right, .middle)
+  else
+    if horizontal then (if flipped then .right else .left, if flipped then .bottom else .top)
+    else (if flipped then .left else .right, .middle)
+
 /-- Tick label text style of one direction (`horizontal` for the x axis). -/
 def tickLabelStyle (st : LineAxisStyle) (horizontal : Bool) : TextStyle :=
+  let (ha, va) := autoTickAlign horizontal false st.ticklabelrotation
   { size := st.ticklabelsize, color := st.ticklabelcolor, rotation := st.ticklabelrotation
-    halign := if horizontal then .center else .right
-    valign := if horizontal then .top else .middle }
+    halign := ha, valign := va }
 
 /-- Axis label text style (`horizontal` for the x label). -/
 def labelStyle (st : LineAxisStyle) (horizontal : Bool) : TextStyle :=

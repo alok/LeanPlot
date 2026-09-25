@@ -61,13 +61,11 @@ namespace Colorbar
 /-- The axis direction of the tick labels is horizontal for horizontal bars. -/
 def horizontal (cb : Colorbar) : Bool := !cb.vertical
 
-/-- Tick label style: left/centre aligned beside a vertical bar (`flipaxis`), centre/bottom
-above a horizontal one. -/
+/-- Tick label style: Makie's automatic alignment beside the (flipped) colorbar axis. -/
 def tickLabelStyle (cb : Colorbar) : TextStyle :=
   let st := cb.axisStyle
-  let base : TextStyle := { size := st.ticklabelsize, color := st.ticklabelcolor }
-  if cb.vertical then { base with halign := if cb.flipaxis then .left else .right, valign := .middle }
-  else { base with halign := .center, valign := if cb.flipaxis then .bottom else .top }
+  let (ha, va) := Axis2.autoTickAlign (!cb.vertical) cb.flipaxis st.ticklabelrotation
+  { size := st.ticklabelsize, color := st.ticklabelcolor, rotation := st.ticklabelrotation, halign := ha, valign := va }
 
 /-- Label style (rotated for vertical bars). -/
 def labelStyle (cb : Colorbar) : TextStyle :=
@@ -115,22 +113,39 @@ def computedBox (cb : Colorbar) (cell : BBox) : BBox :=
   let (aw, ah) : Option Float × Option Float := if cb.vertical then (some cb.size, none) else (none, some cb.size)
   place cell cb.width cb.height aw ah (reportedSize cb.width aw true) (reportedSize cb.height ah true) cb.halign cb.valign
 
-/-- The axis line of the bar `(start, end, position across)` in figure pixels: along the
-right (vertical, `flipaxis`) or top edge of the rounded frame box. -/
-def axisLine (cb : Colorbar) (box : BBox) : Float × Float × Float :=
+/-- Space reserved for the low/high clip triangles when the mapping has a
+`lowclip`/`highclip` colour, else 0. Makie intends `sin(π/3)` times the bar thickness, but
+its `tri_heights` returns before applying the factor, so the full thickness is reserved
+(the triangles themselves are `sin(π/3)` tall, leaving a small gap); we match that. -/
+def triHeights (cb : Colorbar) (m : ColorMapping) (fb : BBox) : Float × Float :=
+  let t := if cb.vertical then fb.width else fb.height
+  ((if m.lowclip.isSome then t else 0), (if m.highclip.isSome then t else 0))
+
+/-- The bar box: the rounded frame box minus the clip triangles (Makie `barbox`). -/
+def barBox (cb : Colorbar) (m : ColorMapping) (box : BBox) : BBox :=
   let fb := box.roundInt
-  if cb.vertical then (fb.bottom, fb.top, if cb.flipaxis then fb.right else fb.left)
-  else (fb.left, fb.right, if cb.flipaxis then fb.top else fb.bottom)
+  let (lo, hi) := cb.triHeights m fb
+  if cb.vertical then ⟨fb.left, fb.right, fb.bottom + lo, fb.top - hi⟩
+  else ⟨fb.left + lo, fb.right - hi, fb.bottom, fb.top⟩
+
+/-- The axis line of the bar `(start, end, position across)` in figure pixels: along the
+right (vertical, `flipaxis`) or top edge of the bar box. -/
+def axisLineOf (cb : Colorbar) (bb : BBox) : Float × Float × Float :=
+  if cb.vertical then (bb.bottom, bb.top, if cb.flipaxis then bb.right else bb.left)
+  else (bb.left, bb.right, if cb.flipaxis then bb.top else bb.bottom)
+
+/-- The axis line for a prepared colorbar in its computed box. -/
+def axisLine (cb : Colorbar) (p : ColorbarPrep) (box : BBox) : Float × Float × Float :=
+  cb.axisLineOf (cb.barBox p.mapping box)
 
 /-- Tick positions along the bar (figure pixels). -/
 def tickPositions (cb : Colorbar) (p : ColorbarPrep) (box : BBox) : Array Float :=
-  let (a, b, _) := cb.axisLine box
+  let (a, b, _) := cb.axisLine p box
   Axis2.tickPositions p.mapping.colorscale p.lo p.hi a b false p.ticks.values
 
 /-- Draw ops (z-tagged) for a colorbar with computed box `box`. -/
 def lower (cb : Colorbar) (p : ColorbarPrep) (box : BBox) (figH : Float) : Array (Float × DrawOp) := Id.run do
   let st := cb.axisStyle
-  let fb := box.roundInt
   let dy (y : Float) : Float := figH - y
   let mut ops : Array (Float × DrawOp) := #[]
   -- colours at the midpoints of LinRange(lo, hi, nsteps)
@@ -147,15 +162,43 @@ def lower (cb : Colorbar) (p : ColorbarPrep) (box : BBox) (figH : Float) : Array
         (((acc.push (rgba.get! k)).push (rgba.get! (k + 1))).push (rgba.get! (k + 2))).push (rgba.get! (k + 3))
     else rgba
   let (iw, ih) := if cb.vertical then (1, n - 1) else (n - 1, 1)
-  let dst : Rect := ⟨fb.left, dy fb.top, fb.width, fb.height⟩
+  let bb := cb.barBox p.mapping box
+  let dst : Rect := ⟨bb.left, dy bb.top, bb.width, bb.height⟩
   ops := ops.push (0, .image iw ih img dst .linear none)
-  -- outline (a closed `lines` plot)
+  -- clip triangles (high first, as Makie creates them) and their tips
+  let s3 := Float.sin (Num.pi / 3)
+  let hiTip : Float × Float :=
+    if cb.vertical then (bb.left + 0.5 * bb.width, bb.top + bb.width * s3)
+    else (bb.right + bb.height * s3, bb.bottom + 0.5 * bb.height)
+  let loTip : Float × Float :=
+    if cb.vertical then (bb.left + 0.5 * bb.width, bb.bottom - bb.width * s3)
+    else (bb.left - bb.height * s3, bb.bottom + 0.5 * bb.height)
+  let tri (a b c : Float × Float) : Path :=
+    ((((({} : Path).moveTo a.1 (dy a.2)).lineTo b.1 (dy b.2)).lineTo c.1 (dy c.2))).close
+  if let some hc := p.mapping.highclip then
+    let path := if cb.vertical then tri (bb.left, bb.top) (bb.right, bb.top) hiTip
+                else tri (bb.right, bb.top) (bb.right, bb.bottom) hiTip
+    ops := ops.push (0, .path path (some { color := hc }) none none)
+  if let some lc := p.mapping.lowclip then
+    let path := if cb.vertical then tri (bb.left, bb.bottom) (bb.right, bb.bottom) loTip
+                else tri (bb.left, bb.bottom) (bb.left, bb.top) loTip
+    ops := ops.push (0, .path path (some { color := lc }) none none)
+  -- outline (a closed `lines` plot through the triangle tips)
   if cb.spinewidth > 0 then
-    let path := (((((({} : Path).moveTo fb.right (dy fb.bottom)).lineTo fb.right (dy fb.top)).lineTo fb.left (dy fb.top)).lineTo
-      fb.left (dy fb.bottom)).lineTo fb.right (dy fb.bottom)).close
-    ops := ops.push (0, .path path none (some { color := cb.spinecolor, width := cb.spinewidth, miterLimit := 2.0 }) none)
+    let pts : Array (Float × Float) :=
+      if cb.vertical then
+        #[(bb.right, bb.bottom), (bb.right, bb.top)] ++ (if p.mapping.highclip.isSome then #[hiTip] else #[]) ++
+        #[(bb.left, bb.top), (bb.left, bb.bottom)] ++ (if p.mapping.lowclip.isSome then #[loTip] else #[]) ++
+        #[(bb.right, bb.bottom)]
+      else
+        #[(bb.left, bb.bottom), (bb.right, bb.bottom)] ++ (if p.mapping.highclip.isSome then #[hiTip] else #[]) ++
+        #[(bb.right, bb.top), (bb.left, bb.top)] ++ (if p.mapping.lowclip.isSome then #[loTip] else #[]) ++
+        #[(bb.left, bb.bottom)]
+    let path := pts.foldl (init := ({} : Path)) fun acc (x, y) =>
+      if acc.verbs.isEmpty then acc.moveTo x (dy y) else acc.lineTo x (dy y)
+    ops := ops.push (0, .path path.close none (some { color := cb.spinecolor, width := cb.spinewidth, miterLimit := 2.0 }) none)
   -- the LineAxis along the flipped side
-  let (a, b, pos) := cb.axisLine box
+  let (a, b, pos) := cb.axisLine p box
   let positions := cb.tickPositions p box
   let sgn : Float := if cb.flipaxis then 1 else -1
   let tickspace := if st.ticksvisible then max 0 (st.ticksize * (1 - st.tickalign)) else 0
