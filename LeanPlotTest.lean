@@ -1,0 +1,1 @@
+/-! LeanPlot golden tests. -/

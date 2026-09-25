@@ -1,62 +1,22 @@
 name = "LeanPlot"
-# Semantic-versioned package metadata
-version = "0.1.0"
-
-# Build default
-defaultTargets = ["leanplot"]
-
+version = "0.2.0"
+description = "Plotting for Lean 4: a zero-dependency figure/layout core with deterministic SVG and anti-aliased PNG backends"
+keywords = ["plotting", "visualization", "svg", "png"]
+license = "Apache-2.0"
+defaultTargets = ["LeanPlot", "leanplot-golden"]
+testDriver = "leanplot-golden"
 
 [leanOptions]
-pp.unicode.fun = true
-autoImplicit = true
+autoImplicit = false
 relaxedAutoImplicit = false
-linter.missingDocs = true
-doc.verso = true
+pp.unicode.fun = true
 
 [[lean_lib]]
 name = "LeanPlot"
-globs = ["LeanPlot.*"]
 
-# Documentation library using Verso
 [[lean_lib]]
-name = "Manual"
-srcDir = "doc"
-globs = ["Manual", "Manual.*"]
+name = "LeanPlotTest"
 
 [[lean_exe]]
-name = "leanplot"
-root = "Main"
-
-[[lean_exe]]
-name = "jsonKeyCheckTest"
-root = "LeanPlot.Test.JsonKeyCheck"
-
-# Minimal CLI to export sampled data as JSON for the headless PNG tool.
-[[lean_exe]]
-name = "leanplot-export"
-root = "LeanPlot.CLI.ExportMain"
-
-# Documentation generator executable
-[[lean_exe]]
-name = "leanplot-docs"
-root = "doc.LeanPlotDocMain"
-
-# Generate documentation images (SVG)
-[[lean_exe]]
-name = "gendocimages"
-root = "GenDocImages"
-
-# Test PNG/SVG export
-[[lean_exe]]
-name = "testexport"
-root = "TestExport"
-
-[[require]]
-name = "proofwidgets"
-scope = "leanprover-community"
-rev = "v0.0.104"
-
-[[require]]
-name = "verso"
-scope = "leanprover"
-rev = "v4.32.0-rc1"
+name = "leanplot-golden"
+root = "LeanPlotTest.Main"
