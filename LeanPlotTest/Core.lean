@@ -5,6 +5,7 @@ import LeanPlotTest.Core.ColorTest
 import LeanPlotTest.Core.GeometryTest
 import LeanPlotTest.Core.DataTest
 import LeanPlotTest.Core.SVGTest
+import LeanPlotTest.Core.ScaleTest
 
 /-!
 Core test suites. `LeanPlotTest.Core.run` runs every suite and returns
@@ -19,6 +20,7 @@ def run : IO (Nat × Nat) := do
   let suites : List (String × TestM Unit) :=
     [("core/num", NumTest.suite),
      ("core/ticks", TicksTest.suite),
+     ("core/scale", ScaleTest.suite),
      ("core/color", ColorTest.suite),
      ("core/geometry", GeometryTest.suite),
      ("core/data", DataTest.suite),
