@@ -68,8 +68,12 @@ def run : IO (Nat × Nat) := do
   let (nsLayout, c1) ← timeEach labels 5 fun s => (layout Font.regular s .center .top).codes.size
   let (nsPath, c2) ← timeEach labels 5 fun s => (textPath { size := 12 } s 0 0).verbs.size
   let (msTicks, c3) ← timeBatch ticks 5
+  -- one-time decoding of the three embedded faces (paid at program start in compiled code)
+  let blobs := #[Data.herosRegularBlob, Data.herosBoldBlob, Data.dejaVuSansBlob]
+  let (nsDecode, _) ← timeEach blobs 3 fun b => match Face.decode b with
+    | .ok f => f.numGlyphs | .error _ => 0
   let (nsMeasure, c4) ← timeEach ticks 5 fun s => (measure { size := 14 } s).advance.toUInt64.toNat
-  IO.println s!"  font/perf: layout 40-char label {fmt (nsLayout / 1000) 3} µs; textPath 40-char label {fmt (nsPath / 1000) 3} µs; 1000 tick-label paths {fmt msTicks 3} ms; measure tick label {fmt (nsMeasure / 1000) 3} µs (checksums {c1} {c2} {c3} {c4})"
+  IO.println s!"  font/perf: layout 40-char label {fmt (nsLayout / 1000) 3} µs; textPath 40-char label {fmt (nsPath / 1000) 3} µs; 1000 tick-label paths {fmt msTicks 3} ms; measure tick label {fmt (nsMeasure / 1000) 3} µs; decode all faces {fmt (3 * nsDecode / 1e6) 3} ms (checksums {c1} {c2} {c3} {c4})"
   let t : Tally := {}
   let t := t.check (nsLayout < 20000) s!"layout of a 40-char label took {nsLayout} ns (budget 20 µs)"
   let t := t.check (msTicks < 20) s!"1000 tick labels took {msTicks} ms (budget 20 ms)"

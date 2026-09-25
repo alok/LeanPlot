@@ -158,6 +158,18 @@ def checkUnits (t : Tally) : Tally := Id.run do
     t := t.check ((subscriptChar? c).all (fun s => Font.regular.resolve s.toNat != 0)) s!"subscript {c} embedded"
   for c in "0123456789+-=()abcdefghijklmnoprstuvwxyzABDEGHIJKLMNOPRTUVWαβγδεθιφχ".toList do
     t := t.check ((superscriptChar? c).all (fun s => Font.regular.resolve s.toNat != 0)) s!"superscript {c} embedded"
+  -- lowering text ops to paths
+  let st2 : TextStyle := { size := 16, color := ⟨1, 0, 0, 1⟩, halign := .right }
+  let clip : Rect := { x := 0, y := 0, w := 50, h := 50 }
+  let sc : Scene := { width := 100, height := 100, ops := #[.text 10 20 "Tx" st2 (some clip), .path {} none none none] }
+  let lo := sc.lowerText
+  t := t.check (match lo.ops[0]! with
+    | .path p (some f) none (some c) =>
+      p.coords.toList == (textPath st2 "Tx" 10 20).coords.toList && p.verbs == (textPath st2 "Tx" 10 20).verbs &&
+        f.color == st2.color && f.rule == .nonzero && c == clip
+    | _ => false) "Scene.lowerText turns text into a filled path"
+  t := t.check (lo.ops.size == 2 && (match lo.ops[1]! with | .path _ none none none => true | _ => false))
+    "Scene.lowerText keeps other ops"
   -- bold differs from regular and uses the bold face
   t := t.check ((layout Font.bold "m").width > (layout Font.regular "m").width) "bold m is wider"
   return t
