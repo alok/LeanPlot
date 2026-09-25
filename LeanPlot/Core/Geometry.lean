@@ -229,6 +229,58 @@ def perspective (fovy aspect znear zfar : Float) : Mat4 :=
   let w := h * aspect
   frustum (-w) w (-h) h znear zfar
 
+/-- Determinant (cofactor expansion along the first row of the 2×2 minors). -/
+def det (m : Mat4) : Float :=
+  let s0 := m.m00 * m.m11 - m.m10 * m.m01
+  let s1 := m.m00 * m.m12 - m.m10 * m.m02
+  let s2 := m.m00 * m.m13 - m.m10 * m.m03
+  let s3 := m.m01 * m.m12 - m.m11 * m.m02
+  let s4 := m.m01 * m.m13 - m.m11 * m.m03
+  let s5 := m.m02 * m.m13 - m.m12 * m.m03
+  let c5 := m.m22 * m.m33 - m.m32 * m.m23
+  let c4 := m.m21 * m.m33 - m.m31 * m.m23
+  let c3 := m.m21 * m.m32 - m.m31 * m.m22
+  let c2 := m.m20 * m.m33 - m.m30 * m.m23
+  let c1 := m.m20 * m.m32 - m.m30 * m.m22
+  let c0 := m.m20 * m.m31 - m.m30 * m.m21
+  s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0
+
+/-- The inverse by the adjugate (Laplace expansion in 2×2 minors); `none` when singular. -/
+def inverse? (m : Mat4) : Option Mat4 :=
+  let s0 := m.m00 * m.m11 - m.m10 * m.m01
+  let s1 := m.m00 * m.m12 - m.m10 * m.m02
+  let s2 := m.m00 * m.m13 - m.m10 * m.m03
+  let s3 := m.m01 * m.m12 - m.m11 * m.m02
+  let s4 := m.m01 * m.m13 - m.m11 * m.m03
+  let s5 := m.m02 * m.m13 - m.m12 * m.m03
+  let c5 := m.m22 * m.m33 - m.m32 * m.m23
+  let c4 := m.m21 * m.m33 - m.m31 * m.m23
+  let c3 := m.m21 * m.m32 - m.m31 * m.m22
+  let c2 := m.m20 * m.m33 - m.m30 * m.m23
+  let c1 := m.m20 * m.m32 - m.m30 * m.m22
+  let c0 := m.m20 * m.m31 - m.m30 * m.m21
+  let d := s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0
+  if d == 0 || !d.isFinite then none else
+  let k := 1 / d
+  -- entries (row, col) of the inverse, stored column-major
+  let i00 := (m.m11 * c5 - m.m12 * c4 + m.m13 * c3) * k
+  let i01 := (-m.m01 * c5 + m.m02 * c4 - m.m03 * c3) * k
+  let i02 := (m.m31 * s5 - m.m32 * s4 + m.m33 * s3) * k
+  let i03 := (-m.m21 * s5 + m.m22 * s4 - m.m23 * s3) * k
+  let i10 := (-m.m10 * c5 + m.m12 * c2 - m.m13 * c1) * k
+  let i11 := (m.m00 * c5 - m.m02 * c2 + m.m03 * c1) * k
+  let i12 := (-m.m30 * s5 + m.m32 * s2 - m.m33 * s1) * k
+  let i13 := (m.m20 * s5 - m.m22 * s2 + m.m23 * s1) * k
+  let i20 := (m.m10 * c4 - m.m11 * c2 + m.m13 * c0) * k
+  let i21 := (-m.m00 * c4 + m.m01 * c2 - m.m03 * c0) * k
+  let i22 := (m.m30 * s4 - m.m31 * s2 + m.m33 * s0) * k
+  let i23 := (-m.m20 * s4 + m.m21 * s2 - m.m23 * s0) * k
+  let i30 := (-m.m10 * c3 + m.m11 * c1 - m.m12 * c0) * k
+  let i31 := (m.m00 * c3 - m.m01 * c1 + m.m02 * c0) * k
+  let i32 := (-m.m30 * s3 + m.m31 * s1 - m.m32 * s0) * k
+  let i33 := (m.m20 * s3 - m.m21 * s1 + m.m22 * s0) * k
+  some ⟨i00, i10, i20, i30, i01, i11, i21, i31, i02, i12, i22, i32, i03, i13, i23, i33⟩
+
 /-- Makie `lookat(eye, target, up)`. -/
 def lookat (eye target up : Vec3) : Mat4 :=
   let zaxis := (eye.sub target).normalize

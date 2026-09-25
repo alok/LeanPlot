@@ -457,7 +457,13 @@ def lower (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Array (Floa
     let (x, y) := ax.titleAnchor box
     labelOps := labelOps.push (0, .text x (figH - y) ax.title style none)
   -- plots
-  let pr : Lower.Projector := { project := cam.project, clip := some devVp, depthSort := true }
+  let inv := (cam.proj * (cam.view * cam.model)).inverse?
+  let v := cam.view
+  let d := lightDirection
+  let light : Vec3 := ⟨v.m00 * d.x + v.m10 * d.y + v.m20 * d.z, v.m01 * d.x + v.m11 * d.y + v.m21 * d.z,
+    v.m02 * d.x + v.m12 * d.y + v.m22 * d.z⟩
+  let pr : Lower.Projector := { project := cam.project, clip := some devVp, depthSort := true
+                                ray? := inv.map fun m => cam.rayWith m, light }
   let mut plotOps : Array (Float × DrawOp) := #[]
   for it in ax.items do
     let ops := match it.mark with

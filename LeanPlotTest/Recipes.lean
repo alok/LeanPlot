@@ -8,6 +8,7 @@ import LeanPlotTest.Recipes.SurfaceTest
 import LeanPlotTest.Recipes.HeatmapTest
 import LeanPlotTest.Recipes.IsosurfaceTest
 import LeanPlotTest.Recipes.VoxelsTest
+import LeanPlotTest.Recipes.VolumeTest
 import LeanPlotTest.Recipes.PerfTest
 
 /-!
@@ -35,6 +36,8 @@ def run : IO (Nat × Nat) := do
      ("recipes/heatmap", HeatmapTest.suite),
      ("recipes/isosurface", IsosurfaceTest.suite),
      ("recipes/voxels", VoxelsTest.suite),
+     ("recipes/volume", VolumeTest.suite),
+     ("recipes/volume-geometry", VolumeTest.geometrySuite),
      ("recipes/perf", PerfTest.suite)]
   let mut p := 0
   let mut f := 0

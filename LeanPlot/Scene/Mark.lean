@@ -25,6 +25,7 @@ coordinates break lines (Makie convention).
 | `mesh` | `mesh` (triangles; per-vertex colours or values; optional shading in 3D) |
 | `arrows` | `arrows2d` (origins + directions; pixel-space shafts and tips) |
 | `labeledLines` | `contour(...; labels = true)` (lines masked under their level labels) |
+| `volume` | `volume` (ray-cast raster of a 3D box; drawn in 3D axes only) |
 
 `Mark.bounds?` is Makie's `data_limits` for autolimits and `Mark.tight` its
 `needs_tight_limits` (heatmaps and images remove the autolimit margins).
@@ -112,6 +113,8 @@ inductive Mark where
   /-- NaN-separated contour lines with level labels: the labels are drawn at their anchors and
   the line points under a label's box are dropped (Makie `contour(...; labels = true)`). -/
   | labeledLines (p : Pos) (s : LineSpec) (labels : ContourLabels)
+  /-- A volume in the box `box`, ray cast per device pixel (3D axes only). -/
+  | volume (box : Rect3) (s : VolumeSpec)
   deriving Inhabited
 
 namespace Mark
@@ -121,7 +124,7 @@ def kind : Mark → String
   | lines .. => "lines" | segments .. => "linesegments" | scatter .. => "scatter"
   | band .. => "band" | poly .. => "poly" | text .. => "text" | heatmap .. => "heatmap"
   | image .. => "image" | mesh .. => "mesh" | arrows .. => "arrows2d"
-  | hlines .. => "hlines" | vlines .. => "vlines" | labeledLines .. => "contour"
+  | hlines .. => "hlines" | vlines .. => "vlines" | labeledLines .. => "contour" | volume .. => "volume"
 
 /-- Bounds of the polygons. -/
 private def ringsBounds (rs : Array Pts2) : Option Rect3 :=
@@ -142,6 +145,7 @@ def bounds? : Mark → Option Rect3
     | _, _ => none
   | image x0 x1 y0 y1 .. => some (Rect3.ofRanges (min x0 x1) (max x0 x1) (min y0 y1) (max y0 y1) 0 0)
   | mesh m => (Pos.xyz m.mesh.pos).bounds?
+  | volume box _ => some box
   | hlines .. | vlines .. => none
   | arrows o d s =>
     -- union of start and end points (`_process_arrow_arguments` in direction mode)
@@ -191,6 +195,7 @@ def colorMapping? : Mark → Option (ColorMapping × Float × Float)
   | poly _ s => withRange s.color
   | mesh m => withRange m.color
   | arrows _ _ s => withRange s.color
+  | volume _ s => s.mapping
   | _ => none
 where
   withRange (c : ColorSpec) : Option (ColorMapping × Float × Float) :=
@@ -203,7 +208,7 @@ def is2D : Mark → Bool
   | lines p _ | segments p _ | scatter p _ | text p _ _ | labeledLines p _ _ => !p.is3D
   | band lo hi _ => !lo.is3D && !hi.is3D
   | arrows o d _ => !o.is3D && !d.is3D
-  | mesh _ => false
+  | mesh _ | volume .. => false
   | _ => true
 
 end Mark

@@ -489,6 +489,16 @@ structure ContourLabels where
   bold : Bool := false
   deriving Inhabited
 
+/-- A volume drawn by ray casting (Makie `volume`, see `Recipes.Algo.Volume`): `ray front back
+light` is the straight-alpha colour of the ray segment from `front` to `back` through the unit
+cube of the volume's box (texture coordinates, `front` nearest to the eye), lit from the
+world-space direction `light`. `mapping` feeds colorbars. -/
+structure VolumeSpec where
+  ray : Vec3 → Vec3 → Vec3 → RGBA
+  mapping : Option (ColorMapping × Float × Float) := none
+
+instance : Inhabited VolumeSpec := ⟨{ ray := fun _ _ _ => RGBA.transparent }⟩
+
 /-- Arrow style (Makie `arrows2d`; pixel-space metrics, `markerspace = :pixel`).
 `align` is `0` (tail at the point), `0.5` (centre) or `1` (tip at the point). -/
 structure ArrowSpec where

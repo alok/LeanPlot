@@ -1,5 +1,6 @@
 import LeanPlot.Scene.Mark
 import LeanPlot.Figure.Text
+import LeanPlot.Recipes.Algo.Volume
 
 /-!
 # Lowering marks to draw ops
@@ -24,6 +25,9 @@ device-space `DrawOp`s, following how CairoMakie draws the corresponding Makie p
   painted back to front (CairoMakie's `draw_mesh3D`).
 * `arrows`: Makie `arrows2d` geometry in pixel space (shaft rectangle, triangular tip,
   scaled down when the arrow is shorter than its parts, plus the `strokemask` outline).
+* `volume`: one ray per device pixel of the projected box (clipped to the viewport), traced
+  through the box in texture coordinates by the mark's ray function, as an RGBA `image` op (the
+  SVG backend embeds it as a PNG); nothing in 2D axes.
 * `labeledLines`: Makie's labelled contour (`basic_recipes/contours.jl:292-386`): every label
   is rotated along its line's projected direction (`register_projected_rotations_2d!`, made
   upright by `to_upright_angle`), its string bounding box is taken in pixel space, and the line
@@ -47,6 +51,11 @@ structure Projector where
   axisAligned : Bool := false
   /-- Paint mesh triangles back to front. -/
   depthSort : Bool := false
+  /-- The data-space ray (origin, direction away from the eye) through a device pixel, for ray
+  cast marks (`volume`); `none` in 2D axes. -/
+  ray? : Option (Float → Float → Vec3 × Vec3) := none
+  /-- World-space direction of the scene light (lit volume algorithms). -/
+  light : Vec3 := ⟨-0.45679495, -0.6293204, -0.6287243⟩
 
 /-- Project positions; non-finite inputs become NaN. Returns device `xs`, `ys`, depths. -/
 def projectPos (pr : Projector) (p : Pos) : FloatArray × FloatArray × FloatArray :=
@@ -643,6 +652,45 @@ def labeledLines (pr : Projector) (p : Pos) (s : LineSpec) (l : ContourLabels) :
     | .xyz q => .xyz (Pts3.ofArrays (drop q.xs) (drop q.ys) (drop q.zs))
   ops ++ lines pr masked s
 
+/-- `volume`: ray cast every device pixel whose centre lies in the projected box. -/
+def volume (pr : Projector) (box : Rect3) (s : VolumeSpec) : Array DrawOp :=
+  match pr.ray? with
+  | none => #[]
+  | some ray =>
+    let lo := box.lo
+    let w := box.widths
+    if !(w.x > 0 && w.y > 0 && w.z > 0) then #[] else
+    -- device bounding box of the projected corners, clipped
+    let cs := box.corners.map pr.project
+    let bx0 := cs.foldl (fun m q => min m q.x) Num.inf
+    let bx1 := cs.foldl (fun m q => max m q.x) (-Num.inf)
+    let by0 := cs.foldl (fun m q => min m q.y) Num.inf
+    let by1 := cs.foldl (fun m q => max m q.y) (-Num.inf)
+    let (bx0, bx1, by0, by1) := match pr.clip with
+      | some r => (max bx0 r.x, min bx1 (r.x + r.w), max by0 r.y, min by1 (r.y + r.h))
+      | none => (bx0, bx1, by0, by1)
+    if !(bx0.isFinite && bx1.isFinite && by0.isFinite && by1.isFinite) || bx1 ≤ bx0 || by1 ≤ by0 then #[] else
+    let ix0 := Float.floor bx0
+    let iy0 := Float.floor by0
+    let iw := (Float.ceil bx1 - ix0).toUInt64.toNat
+    let ih := (Float.ceil by1 - iy0).toUInt64.toNat
+    let n := iw * ih
+    let rec go (k : Nat) (acc : ByteArray) : ByteArray :=
+      if k < n then
+        let px := ix0 + (k % iw).toUInt64.toFloat + Num.fHalf
+        let py := iy0 + (k / iw).toUInt64.toFloat + Num.fHalf
+        let (o, d) := ray px py
+        let ou : Vec3 := ⟨(o.x - lo.x) / w.x, (o.y - lo.y) / w.y, (o.z - lo.z) / w.z⟩
+        let du : Vec3 := ⟨d.x / w.x, d.y / w.y, d.z / w.z⟩
+        let c := match Recipes.Algo.Volume.clipRay ou du with
+          | some (f, b) => s.ray f b pr.light
+          | none => RGBA.transparent
+        go (k + 1) (RGBA.pushRGBA8 acc c)
+      else acc
+    termination_by n - k
+    let img := go 0 (ByteArray.emptyWithCapacity (4 * n))
+    #[.image iw ih img ⟨ix0, iy0, iw.toUInt64.toFloat, ih.toUInt64.toFloat⟩ .nearest pr.clip]
+
 /-- Lower one mark. -/
 def mark (pr : Projector) : Mark → Array DrawOp
   | .lines p s => lines pr p s
@@ -656,6 +704,7 @@ def mark (pr : Projector) : Mark → Array DrawOp
   | .mesh m => mesh pr m
   | .arrows o d s => arrows pr o d s
   | .labeledLines p s l => labeledLines pr p s l
+  | .volume box s => volume pr box s
   | .hlines .. | .vlines .. => #[]
 
 end LeanPlot.Lower

@@ -179,6 +179,31 @@ def project (c : Camera3) (p : Vec3) : Vec3 :=
   let nz := q.z / q.w
   ⟨c.viewport.x + (nx + 1) / 2 * c.viewport.w, c.viewport.y + (1 - ny) / 2 * c.viewport.h, nz⟩
 
+/-- The data-space ray through device pixel `(px, py)`: the points of normalised depth `-1`
+(near plane) and `1` (far plane) unprojected through `(proj·view·model)⁻¹`, as an origin and a
+direction pointing away from the eye; `none` for a singular camera. -/
+def ray (c : Camera3) (px py : Float) : Option (Vec3 × Vec3) :=
+  match (c.proj * (c.view * c.model)).inverse? with
+  | none => none
+  | some inv =>
+    let nx := (px - c.viewport.x) / c.viewport.w * 2 - 1
+    let ny := 1 - (py - c.viewport.y) / c.viewport.h * 2
+    let a := inv.mulVec ⟨nx, ny, -1, 1⟩
+    let b := inv.mulVec ⟨nx, ny, 1, 1⟩
+    let p0 : Vec3 := ⟨a.x / a.w, a.y / a.w, a.z / a.w⟩
+    let p1 : Vec3 := ⟨b.x / b.w, b.y / b.w, b.z / b.w⟩
+    some (p0, p1.sub p0)
+
+/-- `ray` with the inverse matrix precomputed (`inv = (proj·view·model)⁻¹`). -/
+@[inline] def rayWith (c : Camera3) (inv : Mat4) (px py : Float) : Vec3 × Vec3 :=
+  let nx := (px - c.viewport.x) / c.viewport.w * 2 - 1
+  let ny := 1 - (py - c.viewport.y) / c.viewport.h * 2
+  let a := inv.mulVec ⟨nx, ny, -1, 1⟩
+  let b := inv.mulVec ⟨nx, ny, 1, 1⟩
+  let p0 : Vec3 := ⟨a.x / a.w, a.y / a.w, a.z / a.w⟩
+  let p1 : Vec3 := ⟨b.x / b.w, b.y / b.w, b.z / b.w⟩
+  (p0, p1.sub p0)
+
 /-- Project many points (SoA in, SoA out: device `xs`, `ys` and depths). -/
 def projectAll (c : Camera3) (xs ys zs : FloatArray) : FloatArray × FloatArray × FloatArray :=
   let m := c.proj * (c.view * c.model)

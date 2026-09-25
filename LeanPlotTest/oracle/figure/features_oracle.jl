@@ -1,5 +1,6 @@
 # Julia/Makie oracle for the figure features added after v0.2: contour labels, reversible
-# (custom) axis and colour scales with a colorbar, the volume mark.
+# (custom) axis and colour scales with a colorbar, volumeslices. (CairoMakie draws no `volume`;
+# the ray marcher has its own oracle, LeanPlotTest/oracle/recipes/volume_oracle.jl.)
 #
 # Run from the repository root:
 #   julia --startup-file=no --project=<env with CairoMakie + JSON> \
@@ -58,6 +59,17 @@ lax(la) = Dict("values" => jf.(f64.(la.tickvalues[])), "labels" => string.(la.ti
 out["heatmap_scales"] = Dict("limits" => f64.([ax.finallimits[].origin..., ax.finallimits[].widths...]),
     "xticks" => lax(ax.xaxis), "yticks" => lax(ax.yaxis), "cbticks" => lax(cb.axis))
 save(joinpath(REF, "heatmap_scales.png"), fig; px_per_unit = 1)
+
+# ---- 3. volumeslices: the first slice along each axis and the bounding box --------------------
+r = LinRange(-1, 1, 16)
+vol = [x^2 + 0.5y - 0.3z^3 for x in r, y in r, z in r]
+fig = Figure()
+ax = Axis3(fig[1, 1])
+vs = volumeslices!(ax, r, r, r, vol)
+Mk.update_state_before_display!(fig)
+out["volumeslices"] = Dict("limits" => f64.([ax.finallimits[].origin..., ax.finallimits[].widths...]),
+    "colorrange" => f64.(collect(vs.computed_colorrange[])))
+save(joinpath(REF, "volumeslices.png"), fig; px_per_unit = 1)
 
 open(joinpath(OUT, "features.json"), "w") do io; JSON.print(io, out); end
 println("wrote features.json and ", length(out), " reference renders")

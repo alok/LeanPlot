@@ -14,10 +14,12 @@ CairoMakie's exactly, and the rendered pixels agree to within 1/255 on average.
 * **Figures**: a Makie-style grid layout (GridLayoutBase port) with `Axis2`, `Axis3` (Makie's
   camera, 3D frame and ticks), `Legend`, `Colorbar`, labels, and Makie's default theme values.
 * **Recipes**: lines (plain and colour-mapped), scatter with marker shapes, band, poly, text,
-  heatmap and image, mesh, surface and wireframe, arrows (2D/3D), streamplot, contour and contourf,
-  isosurfaces, voxels and volume slices. The algorithms are ports of Makie's, checked against the
-  Julia oracle, most of them bit for bit.
-* **Core**: exact Wilkinson ticks, scales (log, sqrt, symlog, …), colormaps (viridis, magma,
+  heatmap and image, mesh, surface and wireframe, arrows (2D/3D), streamplot, contour (with level
+  labels) and contourf, isosurfaces, voxels, volume slices and ray-cast volumes (`:mip`,
+  `:absorption`, `:iso`, `:indexedabsorption`, 3D contours). The algorithms are ports of Makie's,
+  checked against the Julia oracle, most of them bit for bit.
+* **Core**: exact Wilkinson ticks, scales (log, sqrt, symlog, logit, and Makie's `ReversibleScale`s
+  such as `AsinhScale`/`PowerScale` or any function pair), colormaps (viridis, magma,
   inferno, plasma, cividis, turbo, RdBu, …), colour parsing, and Julia `LinRange` semantics.
 * **Text**: the TeX Gyre Heros face Makie uses, plus a DejaVu Sans fallback, embedded as glyph
   outlines. Both backends draw text as paths, so SVG and PNG agree and layout metrics are exact.

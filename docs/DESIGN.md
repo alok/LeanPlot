@@ -33,8 +33,8 @@ LeanPlot/Backend/SVG.lean        Scene → SVG string (deterministic number form
 LeanPlot/Backend/Raster/*        RGBA8 canvas (size proof), AA scanline fill, stroker, image blit
 LeanPlot/Backend/PNG.lean        CRC32, Adler32, filters, DEFLATE (LZ77 + Huffman), base64
 LeanPlot/Figure/*                Figure, grid layout, Axis2, Axis3, Legend, Colorbar
-LeanPlot/Recipes/*               lines, scatter, arrows, streamplot, heatmap, contour(f), mesh,
-                                 surface, wireframe, poly, text, band
+LeanPlot/Recipes/*               lines, scatter, arrows, streamplot, heatmap, contour(f) (+labels), mesh,
+                                 surface, wireframe, poly, text, band, volume (ray cast), volumeslices
 LeanPlot/IO.lean                 save by extension (.svg/.png), frame sequences
 LeanPlotTest/*                   golden runner (`lake test`): SVG byte goldens, PNG pixel goldens
                                  with tolerance, numeric goldens vs Makie oracle JSON
