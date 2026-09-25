@@ -223,11 +223,11 @@ def trianglesBBox (xs ys : FloatArray) (idx : ByteArray) (nv nt : Nat) : Float �
   return (x0, y0, x1, y1)
 
 /-- Render a `triangles` op. -/
-def renderTriangles {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (xs ys : FloatArray)
-    (rgba idx : ByteArray) : Accum × Canvas w h :=
+def renderTriangles {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (xs ys : FloatArray)
+    (rgba idx : ByteArray) : Accum w h × Canvas w h :=
   let nv := min xs.size ys.size
   let nt := idx.size / 12
-  if nt == 0 || cl.isEmpty || acc.w != w || acc.h != h then (acc, cv) else
+  if nt == 0 || cl.isEmpty then (acc, cv) else
   let (fx0, fy0, fx1, fy1) := trianglesBBox xs ys idx nv nt
   if fx0 > fx1 then (acc, cv) else
   let fl (v : Float) (lo hi : Nat) : Nat :=
@@ -240,6 +240,6 @@ def renderTriangles {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (xs 
   let tb : TriBuf := { bx0, by0, bw, bh, col := (zeroBytes (4 * bw * bh)).markLinear,
                        mask := (zeroBytes (bw * bh)).markLinear }
   let (buf, tb) := trianglesLoop acc.buf w h cl tb xs ys rgba idx nv 0 nt
-  Accum.sweep { acc with buf } cv cl false (triPainter tb)
+  Accum.sweep ⟨buf⟩ cv cl false (triPainter tb)
 
 end LeanPlot.Raster

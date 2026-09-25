@@ -210,9 +210,9 @@ def StrokeGeom.ofStroke (s : Stroke) : StrokeGeom :=
 namespace Accum
 
 /-- Deposit the stroke outline of `pl` (already dashed, if dashing applies). -/
-def strokePolylines (acc : Accum) (cl : Clip) (pl : Polylines) (g : StrokeGeom) : Accum :=
+def strokePolylines {w h : Nat} (acc : Accum w h) (cl : Clip) (pl : Polylines) (g : StrokeGeom) : Accum w h :=
   if g.hw ≤ K.zero then acc else
-  { acc with buf := Stroker.strokeAll acc.buf acc.w acc.h cl g pl 0 }
+  ⟨Stroker.strokeAll acc.buf w h cl g pl 0⟩
 
 end Accum
 

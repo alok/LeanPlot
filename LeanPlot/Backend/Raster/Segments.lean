@@ -47,21 +47,21 @@ end Accum
 
 /-- Render segments `[i, n)`; `cur` is the packed colour of the pending run
 (already deposited into `acc`). -/
-def segmentsLoop {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (g : StrokeGeom)
-    (xs ys : FloatArray) (rgba : ByteArray) (i n : Nat) (cur : UInt32) : Accum × Canvas w h :=
+def segmentsLoop {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (g : StrokeGeom)
+    (xs ys : FloatArray) (rgba : ByteArray) (i n : Nat) (cur : UInt32) : Accum w h × Canvas w h :=
   if i < n then
     let c := rgbaAt rgba i
     let (acc, cv) := if c != cur && i > 0 then acc.sweep cv cl false (packedPainter cur) else (acc, cv)
     let buf := Accum.segment acc.buf w h cl g (xs.get! (2*i)) (ys.get! (2*i)) (xs.get! (2*i+1)) (ys.get! (2*i+1))
-    segmentsLoop { acc with buf } cv cl g xs ys rgba (i + 1) n c
+    segmentsLoop ⟨buf⟩ cv cl g xs ys rgba (i + 1) n c
   else if n > 0 then acc.sweep cv cl false (packedPainter cur)
   else (acc, cv)
 termination_by n - i
 
 /-- Render a `segments` op. -/
-def renderSegments {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (xs ys : FloatArray)
-    (rgba : ByteArray) (width : Float) (cap : LineCap) : Accum × Canvas w h :=
-  if !(width > K.zero) || cl.isEmpty || acc.w != w || acc.h != h then (acc, cv) else
+def renderSegments {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (xs ys : FloatArray)
+    (rgba : ByteArray) (width : Float) (cap : LineCap) : Accum w h × Canvas w h :=
+  if !(width > K.zero) || cl.isEmpty then (acc, cv) else
   let g : StrokeGeom := { hw := K.half * width, cap, join := .miter, miterLimit := K.four }
   let n := (min xs.size ys.size) / 2
   segmentsLoop acc cv cl g xs ys rgba 0 n (rgbaAt rgba 0)

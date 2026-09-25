@@ -24,20 +24,20 @@ structure RenderOptions where
   tol : Float := flattenTol
 
 /-- Fill flattened subpaths. -/
-def fillPolys {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (f : Fill) :
-    Accum × Canvas w h :=
+def fillPolys {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (f : Fill) :
+    Accum w h × Canvas w h :=
   if !(f.color.a > K.zero) then (acc, cv) else
   (acc.fillPolylines cl pl).sweepSolid cv cl f.rule f.color
 
 /-- Stroke flattened subpaths (dashing first when a pattern is set). -/
-def strokePolys {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (s : Stroke) :
-    Accum × Canvas w h :=
+def strokePolys {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (s : Stroke) :
+    Accum w h × Canvas w h :=
   if !(s.width > K.zero) || !(s.color.a > K.zero) then (acc, cv) else
   let pl := if s.dash.isEmpty then pl else dashPolylines pl s.dash s.dashOffset
   (acc.strokePolylines cl pl (StrokeGeom.ofStroke s)).sweepSolid cv cl .nonzero s.color
 
 /-- Paint one op. -/
-def renderOp {w h : Nat} (opts : RenderOptions) (acc : Accum) (cv : Canvas w h) (op : DrawOp) : Accum × Canvas w h :=
+def renderOp {w h : Nat} (opts : RenderOptions) (acc : Accum w h) (cv : Canvas w h) (op : DrawOp) : Accum w h × Canvas w h :=
   match op with
   | .path p fill stroke clip =>
     let cl := Clip.make w h clip
@@ -55,7 +55,7 @@ def renderOp {w h : Nat} (opts : RenderOptions) (acc : Accum) (cv : Canvas w h) 
   | .text x y s style clip => textInto opts.text acc cv (Clip.make w h clip) style s x y
 
 /-- Paint ops `[i, n)`. -/
-def renderOps {w h : Nat} (opts : RenderOptions) (ops : Array DrawOp) (i : Nat) (acc : Accum) (cv : Canvas w h) :
+def renderOps {w h : Nat} (opts : RenderOptions) (ops : Array DrawOp) (i : Nat) (acc : Accum w h) (cv : Canvas w h) :
     Canvas w h :=
   if hi : i < ops.size then
     let (acc, cv) := renderOp opts acc cv ops[i]

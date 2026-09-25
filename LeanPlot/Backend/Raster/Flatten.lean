@@ -250,11 +250,9 @@ def fillPolys (buf : FloatArray) (w h : Nat) (cl : Clip) (p : Polylines) (k : Na
   else buf
 termination_by p.count - k
 
-/-- Deposit every subpath of `p` as a closed polygon. (The buffer is taken
-out of `acc` before the loop, so the loop owns it uniquely.) -/
-def fillPolylines (acc : Accum) (cl : Clip) (p : Polylines) : Accum :=
-  match acc with
-  | ⟨w, h, buf⟩ => ⟨w, h, fillPolys buf w h cl p 0⟩
+/-- Deposit every subpath of `p` as a closed polygon. -/
+def fillPolylines {w h : Nat} (acc : Accum w h) (cl : Clip) (p : Polylines) : Accum w h :=
+  ⟨fillPolys acc.buf w h cl p 0⟩
 
 end Accum
 

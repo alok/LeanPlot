@@ -32,8 +32,8 @@ def defaultTextOutliner : TextOutliner := TextOutliner.none
 
 /-- Fill glyph outlines for `s` into the accumulator and resolve them with the
 text colour. -/
-def textInto {w h : Nat} (outline : TextOutliner) (acc : Accum) (cv : Canvas w h) (cl : Clip) (style : TextStyle)
-    (s : String) (x y : Float) : Accum × Canvas w h :=
+def textInto {w h : Nat} (outline : TextOutliner) (acc : Accum w h) (cv : Canvas w h) (cl : Clip)
+    (style : TextStyle) (s : String) (x y : Float) : Accum w h × Canvas w h :=
   if s.isEmpty || cl.isEmpty then (acc, cv) else
   let p := outline style s x y
   if p.verbs.isEmpty then (acc, cv) else

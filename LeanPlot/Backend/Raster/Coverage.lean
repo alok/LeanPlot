@@ -92,10 +92,11 @@ def inter (a b : Clip) : Clip :=
 end Clip
 
 /-- Coverage accumulator for a `w × h` canvas (see the module docstring for
-the layout). -/
-structure Accum where
-  w : Nat
-  h : Nat
+the layout). The dimensions are type indices, so an accumulator can only be
+swept onto a canvas of its own size. The structure has a single runtime
+field, so at runtime it *is* the `FloatArray`: there is no wrapper to
+allocate and no struct update that could alias the buffer. -/
+structure Accum (w h : Nat) where
   buf : FloatArray
 
 namespace Accum
@@ -107,7 +108,7 @@ namespace Accum
 @[inline] def spanBase (w h : Nat) : Nat := h * strideOf w
 
 /-- A zeroed accumulator. -/
-def new (w h : Nat) : Accum :=
+def new (w h : Nat) : Accum w h :=
   let S := strideOf w
   let cells := h * S
   let rec zeros (k : Nat) (a : FloatArray) : FloatArray :=
@@ -121,7 +122,7 @@ def new (w h : Nat) : Accum :=
   let a := zeros cells (FloatArray.emptyWithCapacity (cells + 2 * h + 2))
   let a := spans h a
   -- marked linear: with `LEAN_ABORT_ON_NONLINEAR=1` any accidental copy panics
-  { w, h, buf := ((a.push spanNone).push (-K.one)).markLinear }
+  ⟨((a.push spanNone).push (-K.one)).markLinear⟩
 
 /-- `a[i] += v`. -/
 @[inline] def addAt (a : FloatArray) (i : Nat) (v : Float) : FloatArray :=
@@ -243,8 +244,8 @@ def lineRaw (a : FloatArray) (w h : Nat) (cl : Clip) (x0 y0 x1 y1 : Float) : Flo
   piece a S sb h cl xa ya dxdy dir m1 ye
 
 /-- Deposit an edge. -/
-@[inline] def line (acc : Accum) (cl : Clip) (x0 y0 x1 y1 : Float) : Accum :=
-  { acc with buf := lineRaw acc.buf acc.w acc.h cl x0 y0 x1 y1 }
+@[inline] def line {w h : Nat} (acc : Accum w h) (cl : Clip) (x0 y0 x1 y1 : Float) : Accum w h :=
+  ⟨lineRaw acc.buf w h cl x0 y0 x1 y1⟩
 
 /-- Coverage from an accumulated winding integral. -/
 @[inline] def coverage (evenOdd : Bool) (acc : Float) : Float :=
@@ -320,23 +321,21 @@ termination_by yEnd - y
 
 /-- Resolve everything deposited so far onto the canvas with `paint`, then
 reset the accumulator to zero. -/
-@[specialize] def sweep {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (evenOdd : Bool)
-    (paint : Painter w h) : Accum × Canvas w h :=
+@[specialize] def sweep {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (evenOdd : Bool)
+    (paint : Painter w h) : Accum w h × Canvas w h :=
   let a := acc.buf
-  let k := spanBase acc.w acc.h + 2 * acc.h
+  let k := spanBase w h + 2 * h
   let r0 := a.get! k
   let r1 := a.get! (k + 1)
-  if r0 ≥ r1 || acc.w != w || acc.h != h then
-    -- nothing deposited (or a mismatched accumulator: drop it)
-    ({ acc with buf := (a.set! k spanNone).set! (k + 1) (-K.one) }, cv)
+  let a := (a.set! k spanNone).set! (k + 1) (-K.one)
+  if r0 ≥ r1 then (⟨a⟩, cv)
   else
-    let a := (a.set! k spanNone).set! (k + 1) (-K.one)
     let (a, cv) := sweepRows paint evenOdd cl (r0.toUInt64.toNat) (min h r1.toUInt64.toNat) a cv
-    ({ acc with buf := a }, cv)
+    (⟨a⟩, cv)
 
 /-- Sweep with a solid colour. -/
-def sweepSolid {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (rule : FillRule) (col : RGBA) :
-    Accum × Canvas w h :=
+def sweepSolid {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (rule : FillRule) (col : RGBA) :
+    Accum w h × Canvas w h :=
   sweep acc cv cl (rule == .evenOdd)
     (solidPainter (clamp01 col.r * K.c255) (clamp01 col.g * K.c255) (clamp01 col.b * K.c255) (clamp01 col.a))
 
