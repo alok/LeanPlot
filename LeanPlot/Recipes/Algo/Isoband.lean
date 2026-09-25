@@ -527,10 +527,18 @@ def bandColoring (cm : Colormap) (edges : FloatArray) (extendLow extendHigh : Bo
     lowclip := if extendLow then first else RGBA.transparent
     highclip := if extendHigh then last else RGBA.transparent }
 
+/-- Makie `numbers_to_colors` for one value with a binary32 colour range
+(`Vec2f`): `NaN` → transparent, below/above the range → the clip colours, else
+`interpolated_getindex` with the range width evaluated in binary32. -/
+def BandColoring.colorOf (bc : BandColoring) (v : Float) : RGBA :=
+  if v.isNaN then RGBA.transparent
+  else if v < bc.lo then bc.lowclip
+  else if v > bc.hi then bc.highclip
+  else bc.colormap.interpolatedGetIndex (clamp ((v - bc.lo) / F32.r32 (bc.hi - bc.lo)) 0 1)
+
 /-- The colour of each contourf polygon (Makie `numbers_to_colors` of the band
 centres through the banded colormap, with low/high clipping). -/
 def polygonColors (bc : BandColoring) (cf : Contourf) : Array RGBA :=
-  cf.colors.toList.toArray.map fun v =>
-    bc.colormap.mapValue bc.lo bc.hi { lowclip := some bc.lowclip, highclip := some bc.highclip } v
+  cf.colors.toList.toArray.map bc.colorOf
 
 end LeanPlot.Recipes.Algo.Isoband

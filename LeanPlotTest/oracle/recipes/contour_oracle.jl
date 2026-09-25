@@ -33,6 +33,9 @@ x = collect(1.0:6.0); y = collect(1.0:5.0)
 push!(cases, ("checker", x, y, [(-1.0)^(i + j) for i in 1:6, j in 1:5], [0.0, 0.1, -0.1]))
 x = collect(range(-3, 3, length = 25)); y = collect(range(-3, 3, length = 21))
 push!(cases, ("rings", x, y, [cos(a^2 + b^2) for a in x, b in y], [0.25, -0.5, 0.9]))
+x = collect(range(0, 1, length = 12)); y = collect(range(0, 1, length = 10))
+zz = [sin(7a) * cos(5b) for a in x, b in y]; zz[4, 5] = NaN; zz[8, 2] = NaN
+push!(cases, ("nans", x, y, zz, [-0.6, -0.1, 0.3, 0.8]))
 # curvilinear grid (matrix x, y)
 r = range(0.5, 2.0, length = 12); th = range(0, 3pi / 2, length = 17)
 xm = [a * cos(t) for a in r, t in th]; ym = [a * sin(t) for a in r, t in th]

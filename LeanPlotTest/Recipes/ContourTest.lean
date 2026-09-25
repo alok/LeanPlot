@@ -15,10 +15,28 @@ open LeanPlot
 open LeanPlot.Recipes.Algo
 open LeanPlotTest.Recipes
 
-/-- A bit-exact key for one line of a level. -/
+/-- A bit-exact key for one line of a level. Lines through `NaN` data have `NaN`
+vertices, which defeat `canonical_line_order` (comparisons with `NaN` are false),
+so Makie's own start point and direction depend on Julia's hash order there; for
+those lines the key is the smallest over directions (and rotations when the
+first and last vertices are bit-identical). -/
 def lineKey (lvl : Nat) (xs ys : FloatArray) : String :=
-  let pts := (List.range xs.size).map fun i => s!"{(xs.get! i).toBits}/{(ys.get! i).toBits}"
-  s!"{lvl}:" ++ ",".intercalate pts
+  let n := xs.size
+  let pt (i : Nat) : String := s!"{(xs.get! i).toBits}/{(ys.get! i).toBits}"
+  let seq (f : Nat → Nat) : String := ",".intercalate ((List.range n).map fun t => pt (f t))
+  let hasNaN := (List.range n).any fun i => (xs.get! i).isNaN || (ys.get! i).isNaN
+  let body :=
+    if !hasNaN || n == 0 then seq id else
+    let closed := n > 2 && pt 0 == pt (n - 1)
+    let m := if closed then n - 1 else n
+    let cands : List String :=
+      if closed then
+        (List.range m).foldl (fun acc st =>
+          (seq fun t => if t == n - 1 then st else (st + t) % m) ::
+          (seq fun t => if t == n - 1 then (m - 1 - st) % m else (m - 1 - (st + t) % m)) :: acc) []
+      else [seq id, seq fun t => n - 1 - t]
+    cands.foldl (fun b c => if c < b then c else b) (seq id)
+  s!"{lvl}:" ++ body
 
 /-- Sorted keys of traced lines. -/
 def keysOf (ls : Contour.Lines) : Array String :=
@@ -77,7 +95,8 @@ def suite : TestM Unit := do
     let wlc := (c.get "level_colors").arrD.map (·.floats)
     let lcOk := lcs.size == wlc.size && (Array.range lcs.size).all fun k =>
       floatsBitEq #[lcs[k]!.r, lcs[k]!.g, lcs[k]!.b, lcs[k]!.a] wlc[k]!
-    check s!"{name} level colours" lcOk (fun _ => s!"got {repr lcs} want {wlc}")
+    check s!"{name} level colours" lcOk (fun _ =>
+      s!"range {clo} {chi} got {lcs.map fun q => #[q.r.toBits, q.g.toBits, q.b.toBits, q.a.toBits]} want {wlc.map fun q => q.map (·.toBits)}")
     -- binary64 Contour.jl
     let raw := (c.get "raw64").arrD
     let ls64 := Contour.contourLines coords g zl false

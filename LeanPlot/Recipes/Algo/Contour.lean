@@ -405,6 +405,13 @@ def lookup32 (cm : Colormap) (v lo hi : Float) : RGBA :=
   let mix (a b : Float) : Float := r32 (r32 (a * r32 (1 - t)) + r32 (b * t))
   ⟨mix d.r u.r, mix d.g u.g, mix d.b u.b, mix d.a u.a⟩
 
+/-- Makie `interpolated_getindex(cmap, v, (lo, hi))` for a binary64 `v` and a
+binary32 colour range: `(v - lo)/(hi - lo)` with the range width `hi - lo`
+evaluated in binary32 (the range is a `Tuple{Float32, Float32}`/`Vec2f`), then
+the binary64 blend. -/
+def lookupMixed (cm : Colormap) (v lo hi : Float) : RGBA :=
+  cm.interpolatedGetIndex (clamp ((v - lo) / r32 (hi - lo)) 0 1)
+
 /-- Makie `color_per_level(nothing, colormap, identity, colorrange, alpha, zlevels)`:
 each level's colour, `interpolated_getindex(cmap, level, colorrange)`, with the
 alpha multiplied by `alpha`. Automatic levels are binary32 (`f32Levels`, looked
@@ -412,7 +419,7 @@ up in binary32); explicit levels stay binary64 (looked up in binary64). -/
 def levelColors (cm : Colormap) (levels : FloatArray) (lo hi : Float) (f32Levels : Bool := true)
     (alpha : Float := 1) : Array RGBA :=
   levels.toList.toArray.map fun l =>
-    let c := if f32Levels then lookup32 cm l lo hi else cm.lookup l lo hi
+    let c := if f32Levels then lookup32 cm l lo hi else lookupMixed cm l lo hi
     { c with a := r32 (c.a * alpha) }
 
 /-- Makie `label_info`: the three points around the middle vertex of a line
