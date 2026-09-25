@@ -82,6 +82,10 @@ structure Axis2 where
   autolimitaspect : Option Float := none
   xreversed : Bool := false
   yreversed : Bool := false
+  /-- Makie `xaxisposition = :top`. -/
+  xaxistop : Bool := false
+  /-- Makie `yaxisposition = :right`. -/
+  yaxisright : Bool := false
   xautolimitmargin : Float × Float := (margin05, margin05)
   yautolimitmargin : Float × Float := (margin05, margin05)
   width : SizeAttr := .fill
@@ -210,15 +214,15 @@ def autoTickAlign (horizontal flipped : Bool) (rot : Float) : HAlign × VAlign :
     else (if flipped then .left else .right, .middle)
 
 /-- Tick label text style of one direction (`horizontal` for the x axis). -/
-def tickLabelStyle (st : LineAxisStyle) (horizontal : Bool) : TextStyle :=
-  let (ha, va) := autoTickAlign horizontal false st.ticklabelrotation
+def tickLabelStyle (st : LineAxisStyle) (horizontal : Bool) (flipped : Bool := false) : TextStyle :=
+  let (ha, va) := autoTickAlign horizontal flipped st.ticklabelrotation
   { size := st.ticklabelsize, color := st.ticklabelcolor, rotation := st.ticklabelrotation
     halign := ha, valign := va }
 
 /-- Axis label text style (`horizontal` for the x label). -/
-def labelStyle (st : LineAxisStyle) (horizontal : Bool) : TextStyle :=
+def labelStyle (st : LineAxisStyle) (horizontal : Bool) (flipped : Bool := false) : TextStyle :=
   { size := st.labelsize, color := st.labelcolor, halign := .center
-    valign := if horizontal then .top else .bottom
+    valign := if horizontal then (if flipped then .bottom else .top) else (if flipped then .top else .bottom)
     rotation := if horizontal then 0 else Num.pi / 2 }
 
 /-- Title text style. -/
@@ -264,7 +268,8 @@ def prepareWith (ax : Axis2) (xl yl : Float × Float) : Axis2Prep :=
     if !ax.style.titlevisible || FigText.isBlank ax.title then 0
     else f32 ((FigText.stringSize ax.titleStyle ax.title).2 + ax.style.titlegap)
   { xlims := xl, ylims := yl, xt, yt, xTickSpace := xs, yTickSpace := ys
-    protrusions := { left := yprot, right := 0, bottom := xprot, top } }
+    protrusions := { left := if ax.yaxisright then 0 else yprot, right := if ax.yaxisright then yprot else 0
+                     bottom := if ax.xaxistop then 0 else xprot, top := f32 (top + (if ax.xaxistop then xprot else 0)) } }
 
 /-- Prepare with the target limits. -/
 def prepare (ax : Axis2) : Axis2Prep :=
@@ -340,6 +345,19 @@ def legendBox (_ax : Axis2) (lg : AxisLegend) (entries : Array LegendEntry) (vp 
   let (w, h) := Legend.autosize lg.style lg.title entries
   place vp .auto .auto (some w) (some h) (some w) (some h) lg.halign lg.valign
 
+/-- Position of the x axis line (bottom or top of the viewport). -/
+def xLinePos (ax : Axis2) (vp : BBox) : Float := if ax.xaxistop then vp.top else vp.bottom
+/-- Position of the y axis line (left or right of the viewport). -/
+def yLinePos (ax : Axis2) (vp : BBox) : Float := if ax.yaxisright then vp.right else vp.left
+/-- Outward direction of the x axis decorations (−1 down, +1 up). -/
+def xOut (ax : Axis2) : Float := if ax.xaxistop then 1 else -1
+/-- Outward direction of the y axis decorations (−1 left, +1 right). -/
+def yOut (ax : Axis2) : Float := if ax.yaxisright then 1 else -1
+/-- Height of the title plus its gap (0 without a title). -/
+def titleSpace (ax : Axis2) : Float :=
+  if !ax.style.titlevisible || FigText.isBlank ax.title then 0
+  else f32 ((FigText.stringSize ax.titleStyle ax.title).2 + ax.style.titlegap)
+
 /-- Positions of an axis's decorations in figure pixels (y up), as Makie computes them. -/
 structure Anchors where
   /-- Major tick positions along x (pixels) and along y. -/
@@ -366,11 +384,12 @@ def anchors (ax : Axis2) (p : Axis2Prep) (vp : BBox) : Anchors :=
     yticks := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.values
     xminor := tickPositions ax.xscale p.xlims.1 p.xlims.2 vp.left vp.right ax.xreversed p.xt.minor
     yminor := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.minor
-    xTickLabelY := f32 (vp.bottom - (sw + tickspace st.x + st.x.ticklabelpad))
-    yTickLabelX := f32 (vp.left - (sw + tickspace st.y + st.y.ticklabelpad))
-    xlabel := (f32 (vp.left + 0.5 * vp.width), f32 (vp.bottom - labelgap st.x p.xTickSpace))
-    ylabel := (f32 (vp.left - labelgap st.y p.yTickSpace), f32 (vp.bottom + 0.5 * vp.height))
-    title := (f32 (vp.left + st.titlealign * vp.width), f32 (vp.top + st.titlegap)) }
+    xTickLabelY := f32 (ax.xLinePos vp + ax.xOut * (sw + tickspace st.x + st.x.ticklabelpad))
+    yTickLabelX := f32 (ax.yLinePos vp + ax.yOut * (sw + tickspace st.y + st.y.ticklabelpad))
+    xlabel := (f32 (vp.left + 0.5 * vp.width), f32 (ax.xLinePos vp + ax.xOut * labelgap st.x p.xTickSpace))
+    ylabel := (f32 (ax.yLinePos vp + ax.yOut * labelgap st.y p.yTickSpace), f32 (vp.bottom + 0.5 * vp.height))
+    title := (f32 (vp.left + st.titlealign * vp.width),
+              f32 (vp.top + st.titlegap + (if ax.xaxistop then p.protrusions.top - ax.titleSpace else 0))) }
 
 /-- Draw ops of the axis (decorations, marks, axis legend), each tagged with Makie's
 z-value, for viewport `vp` (figure pixels, y up) in a figure of height `figH`. -/
@@ -393,43 +412,52 @@ def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float
     if let some op := g then ops := ops.push (-10, op)
   -- one LineAxis: ticks (10), minor ticks (10), label (0), spine (20), tick labels (0)
   let lineAxis (horizontal : Bool) (ls : LineAxisStyle) (pos minor : Array Float) (t : AxisTicks)
-      (label : String) (labelPos : Float × Float) (tickLabelAt : Float) (spineVisible : Bool) : Array (Float × DrawOp) := Id.run do
+      (label : String) (labelPos : Float × Float) (tickLabelAt : Float) (spineVisible : Bool)
+      (line o : Float) (flipped : Bool) : Array (Float × DrawOp) := Id.run do
     let mut out : Array (Float × DrawOp) := #[]
-    -- tick marks: start = pos + (align·size − ½ spinewidth) outward sign, length `size`
+    -- tick marks: start = line + o·(½ spinewidth − align·size), length `size` outward
     let tickSegs (ps : Array Float) (size align : Float) : Array (Float × Float × Float × Float) :=
       ps.map fun q =>
-        let s0 := align * size - 0.5 * sw
-        let s1 := s0 - size
-        if horizontal then (q, dy (vp.bottom + s0), q, dy (vp.bottom + s1))
-        else (vp.left + s0, dy q, vp.left + s1, dy q)
+        let s0 := o * (0.5 * sw - align * size)
+        let s1 := s0 + o * size
+        if horizontal then (q, dy (line + s0), q, dy (line + s1))
+        else (line + s0, dy q, line + s1, dy q)
     if ls.ticksvisible then
       if let some op := segOp (tickSegs pos ls.ticksize ls.tickalign) ls.tickcolor ls.tickwidth then out := out.push (10, op)
     if ls.minorticksvisible then
       if let some op := segOp (tickSegs minor ls.minorticksize ls.minortickalign) ls.minortickcolor ls.minortickwidth then out := out.push (10, op)
     -- axis label
     if ls.labelvisible && !FigText.isBlank label then
-      out := out.push (0, .text labelPos.1 (dy labelPos.2) label (labelStyle ls horizontal) none)
+      out := out.push (0, .text labelPos.1 (dy labelPos.2) label (labelStyle ls horizontal flipped) none)
     -- spine
     if spineVisible && sw > 0 then
-      let seg := if horizontal then (vp.left - 0.5 * sw, dy vp.bottom, vp.right + 0.5 * sw, dy vp.bottom)
-                 else (vp.left, dy (vp.bottom - 0.5 * sw), vp.left, dy (vp.top + 0.5 * sw))
+      let seg := if horizontal then (vp.left - 0.5 * sw, dy line, vp.right + 0.5 * sw, dy line)
+                 else (line, dy (vp.bottom - 0.5 * sw), line, dy (vp.top + 0.5 * sw))
       if let some op := segOp #[seg] st.spinecolor sw then out := out.push (20, op)
     -- tick labels
     if ls.ticklabelsvisible then
-      let style := tickLabelStyle ls horizontal
+      let style := tickLabelStyle ls horizontal flipped
       for i in [0:min pos.size t.labels.size] do
         let q := pos[i]!
         let (x, y) := if horizontal then (q, tickLabelAt) else (tickLabelAt, q)
         out := out.push (0, FigText.labelOp style t.labels[i]! x (dy y))
     return out
-  ops := ops ++ lineAxis true st.x an.xticks an.xminor p.xt ax.xlabel an.xlabel an.xTickLabelY st.bottomspinevisible
-  ops := ops ++ lineAxis false st.y an.yticks an.yminor p.yt ax.ylabel an.ylabel an.yTickLabelX st.leftspinevisible
+  let xSpine := if ax.xaxistop then st.topspinevisible else st.bottomspinevisible
+  let xOpp := if ax.xaxistop then st.bottomspinevisible else st.topspinevisible
+  let ySpine := if ax.yaxisright then st.rightspinevisible else st.leftspinevisible
+  let yOpp := if ax.yaxisright then st.leftspinevisible else st.rightspinevisible
+  ops := ops ++ lineAxis true st.x an.xticks an.xminor p.xt ax.xlabel an.xlabel an.xTickLabelY xSpine
+    (ax.xLinePos vp) ax.xOut ax.xaxistop
+  ops := ops ++ lineAxis false st.y an.yticks an.yminor p.yt ax.ylabel an.ylabel an.yTickLabelX ySpine
+    (ax.yLinePos vp) ax.yOut ax.yaxisright
   -- opposite spines
-  if st.topspinevisible then
-    if let some op := segOp #[(vp.left - 0.5 * sw, dy vp.top, vp.right + 0.5 * sw, dy vp.top)] st.spinecolor sw then
+  if xOpp then
+    let y := if ax.xaxistop then vp.bottom else vp.top
+    if let some op := segOp #[(vp.left - 0.5 * sw, dy y, vp.right + 0.5 * sw, dy y)] st.spinecolor sw then
       ops := ops.push (20, op)
-  if st.rightspinevisible then
-    if let some op := segOp #[(vp.right, dy (vp.bottom - 0.5 * sw), vp.right, dy (vp.top + 0.5 * sw))] st.spinecolor sw then
+  if yOpp then
+    let x := if ax.yaxisright then vp.left else vp.right
+    if let some op := segOp #[(x, dy (vp.bottom - 0.5 * sw), x, dy (vp.top + 0.5 * sw))] st.spinecolor sw then
       ops := ops.push (20, op)
   -- title
   if st.titlevisible && !FigText.isBlank ax.title then
