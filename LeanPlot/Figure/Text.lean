@@ -22,11 +22,20 @@ def richOf : TickLabel → Font.Rich
   | .plain s => .text s
   | .sup b e => .cat [.text b, .sup (.text e)]
 
+/-- Makie's tick-label superscript: `rich(base, superscript(exp, offset = (0.1, 0)))`, i.e.
+the exponent at 0.66 × size, raised by 0.4 × size, and shifted right by 0.1 × its own size. -/
+def supRun (font : Font.Font) (base exp : String) (halign : HAlign) (valign : VAlign) : Font.GlyphRun :=
+  let opts : Font.LayoutOptions := {}
+  let b := Font.Rich.shape font opts (.text base) 0 1 {}
+  let b := { b with x := b.x + 0.1 * 0.66, prev := 0 }
+  let b := Font.Rich.shape font opts (.text exp) 0.4 0.66 b
+  (b.finish font opts).align font opts halign valign
+
 /-- Lay out a tick label with a text style's font and alignment. -/
 def layoutLabel (style : TextStyle) (l : TickLabel) : Font.GlyphRun :=
   match l with
   | .plain s => Font.layoutStyled style s
-  | .sup .. => Font.layoutRich (Font.Font.ofStyle style) (richOf l) style.halign style.valign
+  | .sup b e => supRun (Font.Font.ofStyle style) b e style.halign style.valign
 
 /-- Device-space bounds (y down) of a label anchored at `(x, y)`. -/
 def labelBounds (style : TextStyle) (l : TickLabel) (x y : Float) : Rect :=
