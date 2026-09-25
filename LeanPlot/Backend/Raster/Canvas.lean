@@ -139,6 +139,12 @@ def blendAt (c : Canvas w h) (x y : Nat) (col : RGBA) (cov : Float := K.one) : C
       (clamp01 col.a * clamp01 cov)
   else c
 
+/-- Make the buffer unique (copying it if shared, e.g. a hoisted constant
+canvas) and mark it linear. With `LEAN_ABORT_ON_NONLINEAR=1` in the
+environment, any later accidental copy of the buffer then panics, which is
+how the tests check that painting stays in place. -/
+def markLinear (c : Canvas w h) : Canvas w h := ⟨c.data.markLinear, by simp [c.size_eq]⟩
+
 /-- Number of pixels. -/
 def numPixels (_ : Canvas w h) : Nat := w * h
 

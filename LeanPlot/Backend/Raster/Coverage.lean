@@ -120,7 +120,8 @@ def new (w h : Nat) : Accum :=
     | k + 1 => spans k ((a.push spanNone).push (-K.one))
   let a := zeros cells (FloatArray.emptyWithCapacity (cells + 2 * h + 2))
   let a := spans h a
-  { w, h, buf := (a.push spanNone).push (-K.one) }
+  -- marked linear: with `LEAN_ABORT_ON_NONLINEAR=1` any accidental copy panics
+  { w, h, buf := ((a.push spanNone).push (-K.one)).markLinear }
 
 /-- `a[i] += v`. -/
 @[inline] def addAt (a : FloatArray) (i : Nat) (v : Float) : FloatArray :=

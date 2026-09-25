@@ -242,15 +242,19 @@ def fillSub (buf : FloatArray) (w h : Nat) (cl : Clip) (xs ys : FloatArray) (a i
   else buf
 termination_by b - i
 
-/-- Deposit every subpath of `p` as a closed polygon. -/
+/-- Deposit subpaths `[k, count)` of `p` as closed polygons. -/
+def fillPolys (buf : FloatArray) (w h : Nat) (cl : Clip) (p : Polylines) (k : Nat) : FloatArray :=
+  if k < p.count then
+    let (a, b) := p.range k
+    fillPolys (fillSub buf w h cl p.xs p.ys a a b) w h cl p (k + 1)
+  else buf
+termination_by p.count - k
+
+/-- Deposit every subpath of `p` as a closed polygon. (The buffer is taken
+out of `acc` before the loop, so the loop owns it uniquely.) -/
 def fillPolylines (acc : Accum) (cl : Clip) (p : Polylines) : Accum :=
-  let rec go (k : Nat) (buf : FloatArray) : FloatArray :=
-    if k < p.count then
-      let (a, b) := p.range k
-      go (k + 1) (fillSub buf acc.w acc.h cl p.xs p.ys a a b)
-    else buf
-  termination_by p.count - k
-  { acc with buf := go 0 acc.buf }
+  match acc with
+  | ⟨w, h, buf⟩ => ⟨w, h, fillPolys buf w h cl p 0⟩
 
 end Accum
 

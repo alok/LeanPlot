@@ -236,7 +236,8 @@ def renderTriangles {w h : Nat} (acc : Accum) (cv : Canvas w h) (cl : Clip) (xs 
   let by0 := fl fy0 cl.iy0 cl.iy1; let by1 := max by0 (fl (fy1 + K.one) cl.iy0 cl.iy1)
   let bw := bx1 - bx0; let bh := by1 - by0
   if bw == 0 || bh == 0 then (acc, cv) else
-  let tb : TriBuf := { bx0, by0, bw, bh, col := zeroBytes (4 * bw * bh), mask := zeroBytes (bw * bh) }
+  let tb : TriBuf := { bx0, by0, bw, bh, col := (zeroBytes (4 * bw * bh)).markLinear,
+                       mask := (zeroBytes (bw * bh)).markLinear }
   let (buf, tb) := trianglesLoop acc.buf w h cl tb xs ys rgba idx nv 0 nt
   Accum.sweep { acc with buf } cv cl false (triPainter tb)
 

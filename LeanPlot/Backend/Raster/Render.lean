@@ -65,7 +65,7 @@ termination_by ops.size - i
 
 /-- Paint `ops` onto an existing canvas. -/
 def Canvas.drawOps {w h : Nat} (cv : Canvas w h) (ops : Array DrawOp) (opts : RenderOptions := {}) : Canvas w h :=
-  if ops.isEmpty then cv else renderOps opts ops 0 (Accum.new w h) cv
+  if ops.isEmpty then cv else renderOps opts ops 0 (Accum.new w h) cv.markLinear
 
 /-- Paint one op onto an existing canvas (allocates a fresh accumulator; for
 many ops prefer `drawOps`). -/
