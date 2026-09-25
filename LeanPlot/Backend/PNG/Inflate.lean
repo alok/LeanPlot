@@ -12,12 +12,13 @@ namespace LeanPlot.PNG.Inflate
 
 open LeanPlot.PNG.Deflate (lenBase lenExtra distBase distExtra clOrder fixedLitLens fixedDistLens)
 
-/-- Bit reader state. -/
+/-- Bit reader state. The bit buffer is a `UInt64` (at most 23 bits are
+pending): `Nat.shiftLeft` goes through GMP on every call. -/
 structure Reader where
   data : ByteArray
   pos : Nat := 0
-  bitbuf : Nat := 0
-  bitcnt : Nat := 0
+  bitbuf : UInt64 := 0
+  bitcnt : UInt64 := 0
 
 /-- Canonical Huffman decoding table in puff's `count`/`symbol` form. -/
 structure Table where
@@ -27,16 +28,17 @@ structure Table where
 /-- Decoder monad: state + error. -/
 abbrev M := StateT Reader (Except String)
 
-/-- Read `k` bits LSB-first. -/
+/-- Read `k ≤ 16` bits LSB-first. -/
 def bits (k : Nat) : M Nat := do
   let mut r ← get
-  while r.bitcnt < k do
+  let k64 := k.toUInt64
+  while r.bitcnt < k64 do
     if r.pos ≥ r.data.size then throw "inflate: unexpected end of input"
-    r := { r with bitbuf := r.bitbuf ||| ((r.data.get! r.pos).toNat <<< r.bitcnt),
+    r := { r with bitbuf := r.bitbuf ||| ((r.data.get! r.pos).toUInt64 <<< r.bitcnt),
                   pos := r.pos + 1, bitcnt := r.bitcnt + 8 }
-  let v := r.bitbuf &&& ((1 <<< k) - 1)
-  set { r with bitbuf := r.bitbuf >>> k, bitcnt := r.bitcnt - k }
-  return v
+  let v := r.bitbuf &&& (((1 : UInt64) <<< k64) - 1)
+  set { r with bitbuf := r.bitbuf >>> k64, bitcnt := r.bitcnt - k64 }
+  return v.toNat
 
 /-- Build a decoding table from code lengths. -/
 def mkTable (lens : Array Nat) : Table := Id.run do
@@ -62,14 +64,14 @@ def decode (t : Table) : M Nat := do
     let c := t.count[len]!
     if code < first + c then return t.symbol[index + (code - first)]!
     index := index + c
-    first := (first + c) <<< 1
-    code := code <<< 1
+    first := (first + c) * 2
+    code := code * 2
   throw "inflate: invalid Huffman code"
 
 /-- Decode the compressed data of one block into `out`. -/
 def codes (out : ByteArray) (lit dist : Table) : M ByteArray := do
   let mut out := out
-  let mut fuel := 1 <<< 40
+  let mut fuel := 1099511627776
   while fuel > 0 do
     fuel := fuel - 1
     let sym ← decode lit

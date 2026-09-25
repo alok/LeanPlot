@@ -279,9 +279,12 @@ def wsize : Nat := 32768
 /-- Hash table size. -/
 def hsize : Nat := 32768
 
-/-- Hash of `data[i], data[i+1], data[i+2]`. -/
+/-- Hash of `data[i], data[i+1], data[i+2]`. Computed in `UInt32`:
+`Nat.shiftLeft` is not inlined by the runtime and goes through GMP on
+every call. -/
 @[inline] def hash3 (data : ByteArray) (i : Nat) : Nat :=
-  (((data.get! i).toNat <<< 10) ^^^ ((data.get! (i+1)).toNat <<< 5) ^^^ (data.get! (i+2)).toNat) &&& (hsize - 1)
+  ((((data.get! i).toUInt32 <<< 10) ^^^ ((data.get! (i+1)).toUInt32 <<< 5) ^^^ (data.get! (i+2)).toUInt32)
+    &&& 0x7FFF).toNat
 
 /-- Length of the common prefix of `data[p…]` and `data[i…]`, at most `maxLen`. -/
 @[inline] def commonPrefix (data : ByteArray) (p i maxLen : Nat) : Nat :=

@@ -29,11 +29,12 @@ namespace LeanPlot.Raster
 
 open LeanPlot
 
-/-- Little-endian `UInt32` at byte `4k` of `idx`, as `Nat`. -/
+/-- Little-endian `UInt32` at byte `4k` of `idx`, as `Nat` (assembled in
+`UInt32`: `Nat.shiftLeft` goes through GMP). -/
 @[inline] def u32At (idx : ByteArray) (k : Nat) : Nat :=
   let i := 4 * k
-  (idx.get! i).toNat ||| ((idx.get! (i+1)).toNat <<< 8) ||| ((idx.get! (i+2)).toNat <<< 16) |||
-    ((idx.get! (i+3)).toNat <<< 24)
+  ((idx.get! i).toUInt32 ||| ((idx.get! (i+1)).toUInt32 <<< 8) ||| ((idx.get! (i+2)).toUInt32 <<< 16) |||
+    ((idx.get! (i+3)).toUInt32 <<< 24)).toNat
 
 /-- Affine colour plane over a triangle: `c(x, y) = c₀ + gx·(x − x₀) + gy·(y − y₀)`
 for each of R, G, B, A (byte units). -/
