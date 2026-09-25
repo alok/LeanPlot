@@ -430,6 +430,44 @@ def levelColors (cm : Colormap) (levels : FloatArray) (lo hi : Float) (f32Levels
     let c := if f32Levels then lookup32 cm l lo hi else lookupMixed cm l lo hi
     { c with a := r32 (c.a * alpha) }
 
+/-- Julia `print(x::Float32)`: shortest round-trip digits (Ryu, binary32) with
+`Float64`'s layout rules (fixed for `1e-4 ≤ |x| < 1e6`, else `d.ddde±x`). -/
+def showFloat32 (x : Float) : String :=
+  if x.isNaN then "NaN"
+  else if !x.isFinite then (if x > 0 then "Inf" else "-Inf")
+  else
+    let sign := if signBit x then "-" else ""
+    if x == 0 then sign ++ "0.0" else
+    let (k, j) := shortest32 x.toFloat32
+    let ds := toString k
+    let n := ds.length
+    let lead : Int := j + n - 1
+    if lead ≥ -4 && lead ≤ 5 then
+      if j ≥ 0 then sign ++ ds ++ "".pushn '0' j.toNat ++ ".0"
+      else
+        let fr := (-j).toNat
+        let padded := if n ≤ fr then "".pushn '0' (fr + 1 - n) ++ ds else ds
+        let m := padded.length
+        sign ++ String.ofList (padded.toList.take (m - fr)) ++ "." ++ String.ofList (padded.toList.drop (m - fr))
+    else
+      let mant := if n == 1 then ds ++ ".0" else String.ofList (ds.toList.take 1) ++ "." ++ String.ofList (ds.toList.drop 1)
+      sign ++ mant ++ "e" ++ toString lead
+
+/-- Makie `contour_label_formatter(level)`: `round(level; digits = 2)`, printed as
+an integer when integral. Binary32 levels (`f32`, automatic levels) round and
+print in binary32. -/
+def labelText (level : Float) (f32 : Bool := true) : String :=
+  let r := if f32 then
+      let y := r32 (roundEven (r32 (level * 100)) / 100)
+      if y.isFinite then y else level
+    else
+      let y := roundEven (level * 100) / 100
+      if y.isFinite then y else level
+  if r.isFinite && r == r.round then
+    let i := toIntExact r
+    toString i
+  else if f32 then showFloat32 r else showFloat r
+
 /-- Makie `label_info`: the three points around the middle vertex of a line
 (`mid = ceil(0.5·n)`, 1-based, clamped), used to place and orient a contour label. -/
 def labelAnchors (p : Pts2) : Vec2 × Vec2 × Vec2 :=

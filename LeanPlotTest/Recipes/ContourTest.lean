@@ -106,6 +106,16 @@ def suite : TestM Unit := do
     check s!"{name} raw64 lines" (got64.size == want64.size && bad64.isEmpty)
       (fun _ => s!"sizes {got64.size} {want64.size}, {bad64.length} differ")
 
+/-- Contour label texts. -/
+def labelSuite : TestM Unit := do
+  let some j ← loadOracle "contour.json" | return
+  for c in (j.get "labels").arrD do
+    let v := (c.get "v").float
+    let f32 := (c.get "f32").boolean
+    let got := Contour.labelText v f32
+    let want := (c.get "text").string
+    check s!"label {v} f32={f32}" (got == want) (fun _ => s!"got {got} want {want}")
+
 /-- `contour3d` lifts every point to its level. -/
 def liftSuite : TestM Unit := do
   let xs := LeanPlot.Num.range (-1) 1 9

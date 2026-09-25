@@ -64,4 +64,12 @@ for (name, x, y, z, levels) in cases
     push!(out, d)
     println(name, ": ", length(zl), " levels, ", length(eps), " lines, ", length(pts), " points")
 end
-open(joinpath(OUT, "contour.json"), "w") do io; JSON.print(io, Dict("cases" => out)); end
+# contour label texts (Makie contour_label_formatter) for binary32 and binary64 levels
+labels = Any[]
+vals = vcat([0.0, 1.0, -2.0, 0.005, 0.015, 2.345, 2.355, 1e-5, 123456.789, 1e7, -0.004, 99.999, 0.1, 0.3],
+            randn(rng, 40) .* 10.0 .^ rand(rng, -3:4))
+for v in vals
+    push!(labels, Dict("v" => jf(v), "f32" => false, "text" => Mk.contour_label_formatter(v)))
+    push!(labels, Dict("v" => jf(Float32(v)), "f32" => true, "text" => Mk.contour_label_formatter(Float32(v))))
+end
+open(joinpath(OUT, "contour.json"), "w") do io; JSON.print(io, Dict("cases" => out, "labels" => labels)); end

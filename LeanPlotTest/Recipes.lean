@@ -27,6 +27,7 @@ def run : IO (Nat × Nat) := do
      ("recipes/streamplot-hook", StreamTest.hookSuite),
      ("recipes/contour", ContourTest.suite),
      ("recipes/contour3d", ContourTest.liftSuite),
+     ("recipes/contour-labels", ContourTest.labelSuite),
      ("recipes/isoband", IsobandTest.suite),
      ("recipes/arrows", ArrowsTest.suite),
      ("recipes/cartan", ArrowsTest.cartanSuite),
