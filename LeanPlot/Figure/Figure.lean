@@ -79,6 +79,11 @@ structure Figure where
   rowSizes : Array (Nat × GridSize) := #[]
   /-- Column sizes by 1-based index (default `auto`). -/
   colSizes : Array (Nat × GridSize) := #[]
+  /-- Gap overrides: `(i, px)` sets the gap after row `i` (1-based); `i = 0` sets every gap
+  (Makie `rowgap!(layout, px)`). -/
+  rowGaps : Array (Nat × Float) := #[]
+  /-- Gap overrides after column `i` (1-based; `0` = all), Makie `colgap!`. -/
+  colGaps : Array (Nat × Float) := #[]
   deriving Inhabited
 
 /-- Per-block layout state. -/
@@ -126,6 +131,12 @@ def rowsize (f : Figure) (r : Nat) (s : GridSize) : Figure := { f with rowSizes 
 
 /-- Set a column size (1-based). -/
 def colsize (f : Figure) (c : Nat) (s : GridSize) : Figure := { f with colSizes := f.colSizes.push (c, s) }
+
+/-- `colgap!(f.layout, px)` (`i = 0`, all gaps) or `colgap!(f.layout, i, px)`. -/
+def colgap (f : Figure) (px : Float) (i : Nat := 0) : Figure := { f with colGaps := f.colGaps.push (i, px) }
+
+/-- `rowgap!(f.layout, px)` (`i = 0`, all gaps) or `rowgap!(f.layout, i, px)`. -/
+def rowgap (f : Figure) (px : Float) (i : Nat := 0) : Figure := { f with rowGaps := f.rowGaps.push (i, px) }
 
 /-- Width and height in pixels as floats. -/
 def dims (f : Figure) : Float × Float := (Num.ofInt f.size.1, Num.ofInt f.size.2)
@@ -214,7 +225,12 @@ def grid (f : Figure) : Grid :=
   let nc := f.content.foldl (fun acc p => max acc p.cols.2) 0
   let rs := (Array.range nr).map fun i => ((f.rowSizes.reverse.find? (·.1 == i + 1)).map (·.2)).getD .auto
   let cs := (Array.range nc).map fun i => ((f.colSizes.reverse.find? (·.1 == i + 1)).map (·.2)).getD .auto
+  -- later settings win; `0` addresses every gap
+  let gapAt (gs : Array (Nat × Float)) (default : Float) (i : Nat) : Float :=
+    gs.foldl (init := default) fun acc (k, px) => if k == 0 || k == i + 1 then px else acc
   { nrows := nr, ncols := nc, rowSizes := rs, colSizes := cs
+    rowGaps := (Array.range (nr - 1)).map (gapAt f.rowGaps f.theme.rowgap)
+    colGaps := (Array.range (nc - 1)).map (gapAt f.colGaps f.theme.colgap)
     defaultRowGap := f.theme.rowgap, defaultColGap := f.theme.colgap
     align := .outside f.theme.figurePadding }
 
