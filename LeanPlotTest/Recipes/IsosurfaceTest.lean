@@ -94,6 +94,12 @@ def suite : TestM Unit := do
   check "two spheres euler = 4" (euler tw.mesh == 4) (fun _ => s!"{euler tw.mesh}")
   -- level outside the data: empty
   check "empty isosurface" ((Isosurface.extract sph 5.0).mesh.numTriangles == 0)
+  -- volume slices
+  let (sl, ax1, ax2) := sph.slice 2 10
+  check "volume slice xy" (sl.nx == 21 && sl.ny == 21 && ax1.size == 21 && ax2.size == 21 &&
+    bitEq (sl.grid.get! 3 4) (sph.values.get! (3 + 21 * (4 + 21 * 10))))
+  let (sl0, _, _) := sph.slice 0 0
+  check "volume slice yz" (bitEq (sl0.grid.get! 5 7) (sph.values.get! (0 + 21 * (5 + 21 * 7))))
   -- levels follow Makie's to_levels on binary32 data
   check "volume levels" (faBitEq (Isosurface.volumeLevels sph 3) (Levels.contourLevels 3 0 3))
     (fun _ => showFA (Isosurface.volumeLevels sph 3))

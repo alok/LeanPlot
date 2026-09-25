@@ -88,6 +88,19 @@ def grad (v : Volume) (g : Nat) : Vec3 :=
   let ny := v.ny
   ⟨v.xs.get! (g % nx), v.ys.get! ((g / nx) % ny), v.zs.get! (g / (nx * ny))⟩
 
+/-- A plane of the volume (Makie `volumeslices`, which shows the planes at index
+1 of each axis by default): `axis = 0` gives the `yz` plane `v[i, :, :]`
+(`ny × nz`), `1` the `xz` plane `v[:, j, :]` (`nx × nz`), `2` the `xy` plane
+`v[:, :, k]` (`nx × ny`), as a column-major grid with its two coordinate axes. -/
+def slice (v : Volume) (axis index : Nat) : AnyGrid2 × FloatArray × FloatArray :=
+  let nx := v.nx
+  let ny := v.ny
+  let nz := v.nz
+  let at3 (i j k : Nat) : Float := v.values.get! (i + nx * (j + ny * k))
+  if axis == 0 then (⟨ny, nz, Grid2.ofFn ny nz fun j k => at3 index j k⟩, v.ys, v.zs)
+  else if axis == 1 then (⟨nx, nz, Grid2.ofFn nx nz fun i k => at3 i index k⟩, v.xs, v.zs)
+  else (⟨nx, ny, Grid2.ofFn nx ny fun i j => at3 i j index⟩, v.xs, v.ys)
+
 end Volume
 
 /-- The six Kuhn tetrahedra of a cell, as corner indices (bit 0 = +x, bit 1 = +y,
