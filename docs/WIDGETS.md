@@ -109,9 +109,10 @@ disk. If evaluation throws, the error is reported on the command and no widget i
   `#plot (fun x => x ^ 2)` need no type ascription. Only if that fails is `e` elaborated
   without an expected type, and then the `Plottable` instance picks the recipe. This is how
   parametric curves (`fun t => (Float.cos t, Float.sin t)`) and data are handled.
-* **Default domain `-5..5`, 201 samples.** Makie has no domain-less function plot. It copies
-  `tryrange` from Plots.jl, which starts at `-5..5`, and `range(-5, 5, length = 201)` has step
-  0.05 and hits 0 exactly. `using n` sets the sample count, and `n ≥ 2` is required. The
+* **Default domain `-5..5`, 201 samples.** Makie has no domain-less function plot. Plots.jl
+  gives `plot(f)` the domain `-5..5` (RecipesPipeline's `user_recipe.jl` calls
+  `tryrange(f, [-5, -1, 0, 0.01])` and `tryrange(f, [5, 1, 0.99, 0, -0.01])`).
+  `range(-5, 5, length = 201)` has step 0.05 and hits 0 exactly. `using n` sets the sample count, and `n ≥ 2` is required. The
   domain must be finite and non-empty.
 * **Uniform sampling, not Makie's adaptive grid.** For a function on an interval,
   `lines(a..b, f)` samples with `PlotUtils.adapted_grid`, which jitters its points with a

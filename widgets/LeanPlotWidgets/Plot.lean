@@ -25,8 +25,9 @@ import LeanPlotWidgets.Figure
 | `Figure`, `Scene`, `Axis2`, `Axis3` | shown as is (as `#figure`) |
 
 Functions are first elaborated as `Float → Float`, so `fun x => x * x` needs no type
-ascription. The domain defaults to `-5..5`, the range Makie's (and Plots.jl's) `tryrange`
-starts from for a function plotted without one. Makie samples `lines(a..b, f)` adaptively
+ascription. The domain defaults to `-5..5`, the domain Plots.jl gives `plot(f)` (via
+`tryrange` in RecipesPipeline); Makie has no domain-less function plot. Makie samples
+`lines(a..b, f)` adaptively
 (`PlotUtils.adapted_grid`, with a seeded random jitter); `#plot` instead samples Julia's
 `range(a, b, length = n)` exactly (`Num.range`), which is deterministic and matches
 `lines(range(a, b, length = n), f)` point for point.
