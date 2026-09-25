@@ -58,22 +58,38 @@ def captionOf (doc? : Option (TSyntax ``Lean.Parser.Command.docComment)) : Comma
 unsafe def evalSceneIOUnsafe (e : Expr) : TermElabM (IO Scene) :=
   Meta.evalExpr (IO Scene) (mkApp (mkConst ``IO) (mkConst ``LeanPlot.Scene)) e
 
-/-- Evaluate a closed expression of type `IO Scene` (compiled and run by the interpreter). -/
+/-- Evaluate a closed expression of type `IO Scene`. The expression itself is compiled to IR
+and interpreted; the library code it calls runs natively (`precompileModules`). -/
 @[implemented_by evalSceneIOUnsafe]
 opaque evalSceneIO (e : Expr) : TermElabM (IO Scene)
 
-/-- Elaborate `stx` against `type`; `none` (with the state and message log restored) if it does
-not elaborate without errors, leaves metavariables, or contains `sorry`. -/
-def elabClosed? (stx : Term) (type? : Option Expr) : TermElabM (Option Expr) :=
-  commitIfNoErrors? <| withoutErrToSorry do
+/-- Elaborate `stx` (against `type?` if given). On failure return `none` and leave no trace:
+the state, the message log and the info trees are restored, so a failed attempt adds no
+errors or hovers. -/
+def elabAttempt? (stx : Term) (type? : Option Expr) : TermElabM (Option Expr) := do
+  let saved ← saveState
+  let r ← commitIfNoErrors? <| withoutErrToSorry do
     let v ← elabTerm stx type?
     let v ← match type? with
       | some ty => ensureHasType ty v
       | none => pure v
     synthesizeSyntheticMVarsNoPostponing
-    let v ← instantiateMVars v
-    if v.hasMVar || v.hasSyntheticSorry then throwError "not closed"
-    return v
+    instantiateMVars v
+  if r.isNone then saved.restore (restoreInfo := true)
+  return r
+
+/-- Elaborate `stx` with the given expected types in turn; if none works, elaborate it once
+more without an expected type to report its errors. -/
+def elabFirst (stx : Term) (types : List (Option Expr)) : TermElabM Expr := do
+  for type? in types do
+    if let some v ← elabAttempt? stx type? then return v
+  let v ← withoutErrToSorry (elabTermAndSynthesize stx none)
+  instantiateMVars v
+
+/-- Reject values that cannot be evaluated, naming the command `cmd` in the message. -/
+def ensureEvaluable (cmd : String) (stx : Syntax) (v : Expr) : MetaM Unit := do
+  if v.hasSorry then throwErrorAt stx "{cmd}: the term contains `sorry`"
+  if v.hasMVar then throwErrorAt stx m!"{cmd}: the term is not fully elaborated:{indentExpr v}"
 
 /-- `FigureEval.eval v` for a closed `v`, or `none` when its type has no `FigureEval` instance. -/
 def figureEvalExpr? (v : Expr) : MetaM (Option Expr) := do
@@ -101,10 +117,8 @@ def elabFigure : CommandElab := fun stx => do
   | `($[$doc?:docComment]? #figure $e:term) =>
     let caption ← captionOf doc?
     let sceneIO ← liftTermElabM do
-      let some v ← elabClosed? e none | do
-        -- re-elaborate to report the actual error
-        let _ ← withoutErrToSorry (elabTermAndSynthesize e none)
-        throwErrorAt e "#figure: could not elaborate the figure"
+      let v ← elabFirst e [none]
+      ensureEvaluable "#figure" e v
       match ← figureEvalExpr? v with
       | some x => pure x
       | none =>

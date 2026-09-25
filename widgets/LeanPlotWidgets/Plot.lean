@@ -158,13 +158,8 @@ def plotSceneExpr (e : Term) (specStx : Term) (hasSpec : Bool) : TermElabM Expr 
     synthesizeSyntheticMVarsNoPostponing
     instantiateMVars s
   let floatFn ← mkArrow (mkConst ``Float) (mkConst ``Float)
-  let v ← match ← elabClosed? e floatFn with
-    | some v => pure v
-    | none => match ← elabClosed? e none with
-      | some v => pure v
-      | none =>
-        let _ ← withoutErrToSorry (elabTermAndSynthesize e none)
-        throwErrorAt e "#plot: could not elaborate the plotted term"
+  let v ← elabFirst e [some floatFn, none]
+  ensureEvaluable "#plot" e v
   let ty ← instantiateMVars (← inferType v)
   if let some inst ← synthInstance? (mkApp (mkConst ``Plottable) ty) then
     if hasSpec && !(← isSampled ty) then

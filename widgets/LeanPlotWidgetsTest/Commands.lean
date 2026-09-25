@@ -100,6 +100,18 @@ expected a Figure, Scene, Axis2 or Axis3, or an IO action returning one
 #guard_msgs in
 #figure (throw (IO.userError "boom") : IO Figure)
 
+/-- error: #figure: the term contains `sorry` -/
+#guard_msgs in
+#figure (sorry : Figure)
+
+/--
+error: #figure: cannot display a value of type
+  Type
+expected a Figure, Scene, Axis2 or Axis3, or an IO action returning one
+-/
+#guard_msgs in
+#figure Nat
+
 #guard_no_widget #guard_msgs (drop error) in #figure (1 : Nat)
 
 /-! ## `#plot` -/
@@ -175,6 +187,14 @@ expected a function `Float → Float` (or `Float → Float × Float`), a list or
 /-- error: Unknown identifier `noSuchFunction` -/
 #guard_msgs in
 #plot noSuchFunction
+
+/-- error: #plot: the term contains `sorry` -/
+#guard_msgs in
+#plot sorry
+
+-- the failed attempt at `Float → Float` leaves no message behind
+#guard_msgs in
+#plot #[1.0, 2.0]
 
 #guard_no_widget #guard_msgs (drop error) in #plot Float.sin using 1
 
