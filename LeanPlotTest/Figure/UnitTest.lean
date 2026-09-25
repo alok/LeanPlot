@@ -145,6 +145,33 @@ def markTests : TestM Unit := do
   | #[.path path (some _) none none] => check "band: 6 vertices, closed" (path.coords.size == 12 && path.verbs.toList.getLast? == some 4)
   | _ => check "band: one filled path" false
 
+/-- Polygons with holes and direction-aligned markers. -/
+def extraMarkTests : TestM Unit := do
+  let pr : Lower.Projector := { project := fun v => v, clip := none }
+  let outer := Pts2.ofArrays ⟨#[0, 10, 10, 0]⟩ ⟨#[0, 0, 10, 10]⟩
+  let hole := Pts2.ofArrays ⟨#[3, 7, 7, 3]⟩ ⟨#[3, 3, 7, 7]⟩
+  let ax := Axis2.new |>.contourfPolygons #[(outer, #[hole])] ⟨#[1]⟩
+  match ax.items[0]!.mark with
+  | .poly rs s =>
+    match Lower.poly pr rs s with
+    | #[.path p (some f) _ _] =>
+      check "poly with hole: two rings" ((p.verbs.toList.filter (· == 0)).length == 2)
+      check "poly with hole: even-odd" (f.rule == .evenOdd)
+    | _ => check "poly with hole: one op" false
+  | _ => check "contourfPolygons makes a poly" false
+  -- markers aligned with directions: a right-pointing direction rotates `:utriangle` by −90°
+  let pts := Pts2.ofArrays ⟨#[0]⟩ ⟨#[0]⟩
+  let dirs := Pts2.ofArrays ⟨#[1]⟩ ⟨#[0]⟩
+  let spec : MarkerSpec := { shape := .utriangle, size := 10, alongDirections := some (.xy dirs, -Num.pi / 2) }
+  -- identity projector with y up in data = y down on screen: flip y to mimic a real axis
+  let prFlip : Lower.Projector := { project := fun v => ⟨v.x, -v.y, 0⟩, clip := none }
+  match Lower.scatter prFlip (.xy pts) spec with
+  | #[.path p _ _ _] =>
+    -- the tip (first vertex, unit (0, 0.485)) must point to +x on screen
+    check "aligned marker tip points along the direction" ((p.coords[0]! - 4.85).abs < 1e-9 && p.coords[1]!.abs < 1e-9)
+      (fun _ => s!"{p.coords[0]!} {p.coords[1]!}")
+  | _ => check "aligned marker: one op" false
+
 /-- Figure-level helpers. -/
 def figureUnitTests : TestM Unit := do
   let ops : Array (Float × DrawOp) := #[(20, .text 0 0 "a" {} none), (0, .text 0 0 "b" {} none),
@@ -177,6 +204,7 @@ def unitSuite : TestM Unit := do
   limitTests
   helperTests
   markTests
+  extraMarkTests
   figureUnitTests
 
 end LeanPlotTest.Figure
