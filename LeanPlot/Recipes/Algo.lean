@@ -7,6 +7,7 @@ import LeanPlot.Recipes.Algo.Arrows
 import LeanPlot.Recipes.Algo.Surface
 import LeanPlot.Recipes.Algo.Heatmap
 import LeanPlot.Recipes.Algo.Isosurface
+import LeanPlot.Recipes.Algo.Voxels
 
 /-!
 # Recipe algorithms
@@ -29,4 +30,6 @@ reproduce Makie/CairoMakie plots. Outputs are `LeanPlot` data types
   points) and CairoMakie's regular-grid test.
 * `LeanPlot.Recipes.Algo.Isosurface`: volume isosurfaces (marching tetrahedra),
   LeanPlot's replacement for Makie's volume-rendered `contour(volume)`.
+* `LeanPlot.Recipes.Algo.Voxels`: Makie `voxels` ids, colormap and CairoMakie's
+  cube placement.
 -/
