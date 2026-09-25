@@ -340,6 +340,23 @@ def clipParam (px py qx qy bx0 by0 bx1 by1 : Float) : Float × Float := Id.run d
       if p < K.zero then t0 := max t0 r else t1 := min t1 r
   return (t0, t1)
 
+/-- Total length of the parts of `pl`'s segments inside the box. -/
+def visibleLength (pl : Polylines) (bx0 by0 bx1 by1 : Float) : Float := Id.run do
+  let mut total := K.zero
+  for k in [0:pl.count] do
+    let (a, e) := pl.range k
+    if e ≤ a then continue
+    let segs := if pl.closed[k]! then e - a else e - a - 1
+    for j in [0:segs] do
+      let i := a + j
+      let i2 := if i + 1 < e then i + 1 else a
+      let px := pl.xs[i]!; let py := pl.ys[i]!
+      let qx := pl.xs[i2]!; let qy := pl.ys[i2]!
+      let (t0, t1) := clipParam px py qx qy bx0 by0 bx1 by1
+      if t0 < t1 then
+        total := total + (t1 - t0) * ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt
+  return total
+
 /-- Cut polylines into dashes. Every output subpath is open. Segment parts
 outside `box` (x0, y0, x1, y1), when given, only advance the pattern
 analytically; no dashes are produced there. The work is then bounded by the

@@ -34,20 +34,29 @@ scaled by the "on" fraction: sub-pixel dashes are indistinguishable from
 that, and cutting them would cost one dash per fraction of a pixel. -/
 def minDashPeriod : Float := K.one
 
+/-- Work budget for dashing, in dashes × pixels of dash footprint (each
+dash's quad costs about its clipped extent). A fine pattern on a very long
+visible path, or on an absurdly wide stroke, beyond this is drawn solid with
+alpha scaled by the on fraction, the same approximation as for sub-pixel
+periods. Ordinary plots use well under 1 % of it. -/
+def dashBudget : Float := 4000000.0
+
 /-- Stroke flattened subpaths (dashing first when a pattern is set). -/
 def strokePolys {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (s : Stroke) :
     Accum w h × Canvas w h :=
   if !(s.width > K.zero) || !(s.color.a > K.zero) then (acc, cv) else
   let g := StrokeGeom.ofStroke s
+  let diag := (natF w * natF w + natF h * natF h).sqrt
   let (pl, color) := match dashPattern? s.dash with
     | none => (pl, s.color)
     | some pat =>
       let total := pat.foldl (· + ·) K.zero
-      if total < minDashPeriod then
-        let onLen := (pat.toList.zipIdx.filter (·.2 % 2 == 0)).foldl (fun a p => a + p.1) K.zero
+      let gc := g.withClip cl
+      let onLen := (pat.toList.zipIdx.filter (·.2 % 2 == 0)).foldl (fun a p => a + p.1) K.zero
+      let footprint := min (K.two * g.hw) diag + K.two
+      if total < minDashPeriod || visibleLength pl gc.bx0 gc.by0 gc.bx1 gc.by1 * footprint > dashBudget * total then
         (pl, s.color.withAlpha (s.color.a * onLen / total))
       else
-        let gc := g.withClip cl
         (dashPolylines pl pat s.dashOffset (some (gc.bx0, gc.by0, gc.bx1, gc.by1)), s.color)
   (acc.strokePolylines cl pl g).sweepSolid cv cl .nonzero color
 
