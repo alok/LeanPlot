@@ -13,6 +13,7 @@
 #    metrics, marker placements and rotations; the Cylinder/Cone marker meshes;
 #  * "spacing": Cartan-style spacing of sampled curves.
 using CairoMakie, JSON, Random, LinearAlgebra
+import Cartan, Grassmann
 const Mk = CairoMakie.Makie
 const GB = Mk.GeometryBasics
 const OUT = @__DIR__
@@ -89,13 +90,19 @@ for (name, prim) in (("cylinder", GB.Cylinder(Mk.Point3f(0, 0, 0), Mk.Point3f(0,
 end
 out["markers"] = markers
 
+# Cartan.spacing on TensorFields (curves and a 2D grid)
 sp = Any[]
 for n in (5, 26, 50)
-    t = range(0, 2pi, length = n)
+    t = LinRange(0, 2pi, n)
     curve = [Mk.Point3d(cos(s), sin(s), 0.1s) for s in t]
-    push!(sp, Dict("pts" => cols(curve), "spacing" => sum(norm.(diff(curve))) / (length(curve) - 1)))
+    tf = Cartan.TensorField(t, [Grassmann.Chain(cos(s), sin(s), 0.1s) for s in t])
+    push!(sp, Dict("pts" => cols(curve), "spacing" => Cartan.spacing(tf)))
 end
 out["spacing"] = sp
+gx = LinRange(0, 1, 5); gy = LinRange(0, 2, 4)
+gf = Cartan.TensorField(Cartan.ProductSpace(gx, gy), [Grassmann.Chain(x + 0.1y*y, y + x*x, 0.3x*y) for x in gx, y in gy])
+out["spacing_grid"] = Dict("n1" => 5, "n2" => 4,
+    "pts" => cols(vec([Mk.Point3d(x + 0.1y*y, y + x*x, 0.3x*y) for x in gx, y in gy])), "spacing" => Cartan.spacing(gf))
 
 open(joinpath(OUT, "arrows.json"), "w") do io; JSON.print(io, out); end
 println("process ", length(proc), ", arrows2d ", length(a2), ", arrows3d ", length(a3), "; world type ", a3[1]["world_type"])

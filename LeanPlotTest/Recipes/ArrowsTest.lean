@@ -141,12 +141,16 @@ def suite : TestM Unit := do
     let bad := (List.range (min g.size wt.size)).filter fun i => g[i]! != wt[i]!
     check s!"marker {name}" (g.size == wt.size && bad.isEmpty)
       (fun _ => s!"sizes {g.size} {wt.size}; {bad.length} differ: got {g[bad.headD 0]?} want {wt[bad.headD 0]?}")
-  -- Cartan spacing
+  -- Cartan spacing (Julia's `sum` may reassociate, so relative 1e-12)
   for c in (j.get "spacing").arrD do
     let p := cols3 (c.get "pts")
     let s := Arrows.Cartan.spacing p
     let w := (c.get "spacing").float
     check s!"spacing n={p.size}" ((s - w).abs ≤ 1e-12 * w.abs) (fun _ => s!"got {s} want {w}")
+  let sg := j.get "spacing_grid"
+  let s2 := Arrows.Cartan.spacingGrid (sg.get "n1").nat (sg.get "n2").nat (cols3 (sg.get "pts"))
+  let w2 := (sg.get "spacing").float
+  check "spacing grid" ((s2 - w2).abs ≤ 1e-12 * w2.abs) (fun _ => s!"got {s2} want {w2}")
 
 /-- Cartan operator scalings on hand-made columns. -/
 def cartanSuite : TestM Unit := do
