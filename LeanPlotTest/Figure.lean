@@ -1,4 +1,5 @@
 import LeanPlotTest.Figure.LayoutTest
+import LeanPlotTest.Figure.RenderTest
 
 /-!
 Figure/layout test suites. `LeanPlotTest.Figure.run` runs every suite and returns
@@ -14,7 +15,7 @@ open LeanPlotTest.Core
 /-- Run all figure suites; returns `(passed, failed)`. -/
 def run : IO (Nat × Nat) := do
   let suites : List (String × TestM Unit) :=
-    [("figure/layout", layoutSuite)]
+    [("figure/layout", layoutSuite), ("figure/render", renderSuite)]
   let mut p := 0
   let mut f := 0
   for (name, s) in suites do
