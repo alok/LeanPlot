@@ -19,7 +19,8 @@ import LeanPlot.Backend.PNG
   blending (`Canvas.lean`).
 * Exact-area coverage accumulation with nonzero and even-odd rules, sparse
   row spans, and antialiased clipping (`Coverage.lean`).
-* Bézier flattening at 0.25 px tolerance (`Flatten.lean`).
+* Bézier flattening at 0.1 px tolerance (Cairo's default), with area
+  compensation for chords (`Flatten.lean`).
 * Stroker with butt/round/square caps, miter/round/bevel joins, miter limit
   and dashes (`Stroke.lean`).
 * `segments` (per-segment colours), `triangles` (seamless Gouraud meshes),
@@ -27,8 +28,10 @@ import LeanPlot.Backend.PNG
 * `Scene.toCanvas`, `Scene.toPNG`, `Scene.writePNG`, `Canvas.toPNG`.
 
 Text: pass the font module's outliner, `s.toCanvas LeanPlot.Font.textPath`
-(it has exactly the `TextOutliner` type), or lower first with
-`s.lowerText.toCanvas`. The default outliner is a stub that draws nothing.
+(it has exactly the `TextOutliner` type), or lower the text ops to filled
+paths first with `(s.lowerText LeanPlot.Font.textPath).toCanvas` (which any
+path-filling backend, SVG included, can then draw). The default outliner is a
+stub that draws nothing.
 
 Measured on Apple Silicon, v4.35.0-rc3 (`LeanPlotTest/Raster/Perf.lean`,
 minimum of 3 runs):
