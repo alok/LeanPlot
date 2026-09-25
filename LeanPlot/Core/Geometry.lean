@@ -76,9 +76,13 @@ def rotate (a : Vec2) (θ : Float) : Vec2 :=
   ⟨c * a.x - s * a.y, s * a.x + c * a.y⟩
 /-- Both coordinates finite. -/
 @[inline] def isFinite (a : Vec2) : Bool := a.x.isFinite && a.y.isFinite
+/-- Componentwise sum. -/
 instance : Add Vec2 := ⟨add⟩
+/-- Componentwise difference. -/
 instance : Sub Vec2 := ⟨sub⟩
+/-- Negation. -/
 instance : Neg Vec2 := ⟨neg⟩
+/-- Scalar multiplication. -/
 instance : HMul Float Vec2 Vec2 := ⟨smul⟩
 end Vec2
 
@@ -112,9 +116,13 @@ def normalize (a : Vec3) : Vec3 :=
 @[inline] def lerp (a b : Vec3) (t : Float) : Vec3 := ⟨Num.lerp a.x b.x t, Num.lerp a.y b.y t, Num.lerp a.z b.z t⟩
 /-- All coordinates finite. -/
 @[inline] def isFinite (a : Vec3) : Bool := a.x.isFinite && a.y.isFinite && a.z.isFinite
+/-- Componentwise sum. -/
 instance : Add Vec3 := ⟨add⟩
+/-- Componentwise difference. -/
 instance : Sub Vec3 := ⟨sub⟩
+/-- Negation. -/
 instance : Neg Vec3 := ⟨neg⟩
+/-- Scalar multiplication. -/
 instance : HMul Float Vec3 Vec3 := ⟨smul⟩
 end Vec3
 
@@ -182,6 +190,7 @@ def mul (a b : Mat4) : Mat4 :=
    e a.m00 a.m01 a.m02 a.m03 b.m03 b.m13 b.m23 b.m33, e a.m10 a.m11 a.m12 a.m13 b.m03 b.m13 b.m23 b.m33,
    e a.m20 a.m21 a.m22 a.m23 b.m03 b.m13 b.m23 b.m33, e a.m30 a.m31 a.m32 a.m33 b.m03 b.m13 b.m23 b.m33⟩
 
+/-- Matrix product. -/
 instance : Mul Mat4 := ⟨mul⟩
 
 /-- Matrix–vector product. -/

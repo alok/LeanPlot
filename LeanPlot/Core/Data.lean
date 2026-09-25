@@ -30,6 +30,7 @@ structure Pts2 where
 
 namespace Pts2
 
+/-- The empty point set. -/
 instance : Inhabited Pts2 := ⟨⟨.empty, .empty, rfl⟩⟩
 
 /-- No points. -/
@@ -111,6 +112,7 @@ structure Pts3 where
 
 namespace Pts3
 
+/-- The empty point set. -/
 instance : Inhabited Pts3 := ⟨⟨.empty, .empty, .empty, rfl, rfl⟩⟩
 
 /-- No points. -/
@@ -183,6 +185,7 @@ variable {nx ny : Nat}
 def fill (nx ny : Nat) (v : Float) : Grid2 nx ny :=
   ⟨⟨Array.replicate (nx * ny) v⟩, by simp [FloatArray.size]⟩
 
+/-- The zero grid. -/
 instance : Inhabited (Grid2 nx ny) := ⟨fill nx ny 0⟩
 
 /-- Wrap a buffer of the right size. -/
@@ -311,22 +314,34 @@ export ToPts2 (toPts2)
 export ToPts3 (toPts3)
 export ToGrid2 (toGrid2)
 
+/-- Identity. -/
 instance : ToPts2 Pts2 := ⟨id⟩
+/-- Coordinate arrays (truncated to the shorter). -/
 instance : ToPts2 (FloatArray × FloatArray) := ⟨fun (xs, ys) => Pts2.ofArrays xs ys⟩
+/-- Coordinate arrays (truncated to the shorter). -/
 instance : ToPts2 (Array Float × Array Float) := ⟨fun (xs, ys) => Pts2.ofArrays ⟨xs⟩ ⟨ys⟩⟩
+/-- An array of points. -/
 instance : ToPts2 (Array Vec2) := ⟨fun ps => Pts2.ofArrays ⟨ps.map (·.x)⟩ ⟨ps.map (·.y)⟩⟩
+/-- An array of `(x, y)` pairs. -/
 instance : ToPts2 (Array (Float × Float)) := ⟨fun ps => Pts2.ofArrays ⟨ps.map (·.1)⟩ ⟨ps.map (·.2)⟩⟩
 /-- A bare array of y values is plotted against `1, 2, …, n` (Makie `lines(ys)`). -/
 instance : ToPts2 FloatArray := ⟨fun ys => Pts2.ofArrays ⟨(Array.range ys.size).map fun i => Num.ofInt (i + 1 : Nat)⟩ ys⟩
+/-- Projection onto the xy-plane. -/
 instance : ToPts2 Pts3 := ⟨Pts3.xy⟩
 
+/-- Identity. -/
 instance : ToPts3 Pts3 := ⟨id⟩
+/-- Coordinate arrays (truncated to the shortest). -/
 instance : ToPts3 (FloatArray × FloatArray × FloatArray) := ⟨fun (xs, ys, zs) => Pts3.ofArrays xs ys zs⟩
+/-- An array of points. -/
 instance : ToPts3 (Array Vec3) := ⟨fun ps => Pts3.ofArrays ⟨ps.map (·.x)⟩ ⟨ps.map (·.y)⟩ ⟨ps.map (·.z)⟩⟩
+/-- An array of `(x, y, z)` triples. -/
 instance : ToPts3 (Array (Float × Float × Float)) :=
   ⟨fun ps => Pts3.ofArrays ⟨ps.map (·.1)⟩ ⟨ps.map (·.2.1)⟩ ⟨ps.map (·.2.2)⟩⟩
 
+/-- Identity. -/
 instance : ToGrid2 AnyGrid2 := ⟨id⟩
+/-- Forget the static dimensions. -/
 instance {nx ny : Nat} : ToGrid2 (Grid2 nx ny) := ⟨fun g => ⟨nx, ny, g⟩⟩
 /-- A nested array `m[i][j]` is read as the Julia matrix `z[i, j]` (outer index
 ↔ x); ragged rows are padded with NaN. -/
