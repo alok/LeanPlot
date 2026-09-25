@@ -3,7 +3,9 @@ version = "0.2.0"
 description = "Infoview widgets for LeanPlot: #figure and #plot show LeanPlot figures in the Lean infoview via ProofWidgets"
 keywords = ["plotting", "visualization", "widgets", "infoview"]
 license = "Apache-2.0"
-defaultTargets = ["LeanPlotWidgets"]
+defaultTargets = ["LeanPlotWidgets", "LeanPlotWidgetsTest"]
+# The tests are checked while `LeanPlotWidgetsTest` elaborates, so `lake test` just builds it.
+testDriver = "LeanPlotWidgetsTest"
 
 [leanOptions]
 autoImplicit = false
@@ -24,3 +26,6 @@ options = { errorOnBuild = "ProofWidgets wants to rebuild its JavaScript with np
 
 [[lean_lib]]
 name = "LeanPlotWidgets"
+
+[[lean_lib]]
+name = "LeanPlotWidgetsTest"
