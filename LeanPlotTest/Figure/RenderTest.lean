@@ -27,7 +27,7 @@ def goldenDir : System.FilePath := "LeanPlotTest" / "Figure" / "golden"
 /-- Figures with a committed CairoMakie reference render. -/
 def parityNames : Array String :=
   #["basic", "empty", "limits", "heatmap_colorbar", "legend", "logy", "bandpoly", "axis3", "markers", "heatmap_image",
-    "label_log_reversed", "hvlines_aspect", "legend_horizontal"]
+    "label_log_reversed", "hvlines_aspect", "legend_horizontal", "streamplot"]
 
 /-- Figures with a committed SVG golden. -/
 def svgNames : Array String := #["basic", "legend", "heatmap_colorbar", "axis3"]
@@ -118,8 +118,11 @@ def checkStructure : TestM Unit := do
 /-- The render suite. -/
 def renderSuite : TestM Unit := do
   checkStructure
+  let all ← allSpecs
   for n in parityNames do
-    if let some (_, f) := specs.find? (·.1 == n) then checkParity n f
+    match all.find? (·.1 == n) with
+    | some (_, f) => checkParity n f
+    | none => check s!"parity {n}: spec" false
   for n in svgNames do
     if let some (_, f) := specs.find? (·.1 == n) then checkSvg n f
 

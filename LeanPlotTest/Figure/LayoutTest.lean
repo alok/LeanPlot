@@ -26,6 +26,31 @@ def loadFigureOracle : TestM (Option J) := do
     check "oracle figure.json" false (fun _ => toString e)
     return none
 
+/-- Floats read back with `Float32` rounding (the oracle writes `Float32` data in shortest form). -/
+def floats32 (j : J) : FloatArray :=
+  ⟨j.arrD.map fun x => let v := x.float; if v.isNaN then v else v.toFloat32.toFloat⟩
+
+/-- Figure 21: a streamplot drawn from Makie's own computed streamlines and arrowheads
+(`streamplot.json`), through `Axis2.streamplot`. -/
+def streamplotSpec : TestM (Option Figure) := do
+  let p := oracleDir / "streamplot.json"
+  if !(← p.pathExists) then
+    check "oracle streamplot.json" false (fun _ => s!"missing {p}")
+    return none
+  let j ← readJson p
+  let lines := Pts2.ofArrays (floats32 (j.get "line_x")) (floats32 (j.get "line_y"))
+  let arrows := Pts2.ofArrays (floats32 (j.get "arrow_x")) (floats32 (j.get "arrow_y"))
+  let dirs := Pts2.ofArrays (floats32 (j.get "arrow_u")) (floats32 (j.get "arrow_v"))
+  let ax := Axis2.new |>.streamplot lines (floats32 (j.get "line_c")) arrows dirs (floats32 (j.get "arrow_c"))
+  return some (Figure.new |>.axis 1 1 ax)
+
+/-- All specs: the pure ones and those built from oracle data. -/
+def allSpecs : TestM (Array (String × Figure)) := do
+  let sp ← streamplotSpec
+  return match sp with
+    | some f => specs.push ("streamplot", f)
+    | none => specs
+
 /-- `[x, y, w, h]` of a box. -/
 def rectOf (b : BBox) : Array Float := #[b.left, b.bottom, b.width, b.height]
 
@@ -37,9 +62,10 @@ def checkFloats (name : String) (tol : Float) (got want : Array Float) : TestM U
 def ticksClose (a b : Array Float) : Bool :=
   a.size == b.size && (Array.range a.size).all fun i => (a[i]! - b[i]!).abs ≤ 1e-7 * (1 + b[i]!.abs)
 
-/-- Relative comparison of limits. -/
+/-- Relative comparison of limits. `Float32` data (e.g. Makie's `Point2f` streamlines) get
+bounding boxes with `Float32` widths in Makie, so allow `Float32`-level differences. -/
 def limitsClose (a b : Array Float) : Bool :=
-  a.size == b.size && (Array.range a.size).all fun i => (a[i]! - b[i]!).abs ≤ 1e-9 * (1 + b[i]!.abs)
+  a.size == b.size && (Array.range a.size).all fun i => (a[i]! - b[i]!).abs ≤ 1e-7 * (1 + b[i]!.abs)
 
 /-- A tick label as the oracle spells it (`base^exp` for superscripts). -/
 def labelString : Num.TickLabel → String
@@ -155,7 +181,7 @@ def checkAxis3 (fname : String) (k : Nat) (ax : Axis3) (sb : SolvedBlock) (p : A
   | none => pure ()
 
 /-- Compare one oracle figure. -/
-def checkFigure (j : J) : TestM Unit := do
+def checkFigure (specs : Array (String × Figure)) (j : J) : TestM Unit := do
   let name := (j.get "name").string
   match specs.find? (·.1 == name) with
   | none => check s!"spec {name}" false (fun _ => "no Lean spec for this oracle figure")
@@ -216,7 +242,8 @@ def checkFigure (j : J) : TestM Unit := do
 def layoutSuite : TestM Unit := do
   let some j ← loadFigureOracle | return
   let figs := (j.get "figures").arrD
-  check "oracle figure count" (figs.size == specs.size) fun _ => s!"{figs.size} oracle figures, {specs.size} specs"
-  for fj in figs do checkFigure fj
+  let all ← allSpecs
+  check "oracle figure count" (figs.size == all.size) fun _ => s!"{figs.size} oracle figures, {all.size} specs"
+  for fj in figs do checkFigure all fj
 
 end LeanPlotTest.Figure

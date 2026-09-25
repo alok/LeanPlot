@@ -335,6 +335,24 @@ let f = Figure()
     push!(figs, figure_json("hvlines_aspect", f))
 end
 
+# 21. a streamplot (its computed lines and arrowheads are dumped to streamplot.json so the
+#     Lean test draws exactly the same data)
+let f = Figure()
+    ax = Axis(f[1, 1])
+    sp = streamplot!(ax, p -> Point2f(-p[2], p[1]), -1 .. 1, -1 .. 1, gridsize = (12, 12))
+    Mk.update_state_before_display!(f)
+    # Float32 values in their shortest form (read back with Float32 rounding)
+    arr(v) = "[" * join((isfinite(x) ? string(Float32(x)) : "\"NaN\"" for x in v), ",") * "]"
+    open(joinpath(OUT, "streamplot.json"), "w") do io
+        print(io, "{\"line_x\":", arr(first.(sp.line_points[])), ",\"line_y\":", arr(last.(sp.line_points[])),
+              ",\"line_c\":", arr(sp.line_colors[]),
+              ",\"arrow_x\":", arr(first.(sp.arrow_positions[])), ",\"arrow_y\":", arr(last.(sp.arrow_positions[])),
+              ",\"arrow_u\":", arr(first.(sp.arrow_directions[])), ",\"arrow_v\":", arr(last.(sp.arrow_directions[])),
+              ",\"arrow_c\":", arr(sp.arrow_colors[]), "}")
+    end
+    push!(figs, figure_json("streamplot", f))
+end
+
 open(joinpath(OUT, "figure.json"), "w") do io
     JSON.print(io, Dict("figures" => figs), 1)
 end
