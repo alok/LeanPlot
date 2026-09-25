@@ -27,12 +27,32 @@ The only deviation: a point exactly on the upper box face makes Julia index the
 mask out of bounds (`BoundsError`); here it is counted in the last cell.
 
 Loops are tail-recursive with `Float` accumulators; outputs are SoA buffers.
+
+The tracer takes the field in continuation-passing form (`FieldK`: `f x y z k = k u v w`), so an
+Euler step builds no `Vec3` for the argument or the value: with a field whose evaluation is
+inlined (`@[specialize]` on the continuation-passing entry points `runK`, `streamplot2K`,
+`streamplot3K`), the whole step is straight-line `Float` code. `run`, `streamplot2` and
+`streamplot3` keep the `Vec3 → Vec3` / `Vec2 → Vec2` signatures and wrap the function.
 -/
 
 namespace LeanPlot.Recipes.Algo.Stream
 
 open LeanPlot.Num
 open LeanPlot.Recipes.Algo.F32
+
+/-- A vector field in continuation-passing form: `f x y z k` evaluates the field at `(x, y, z)`
+and passes the value's components to `k` (`k u v w`; `w` is ignored in 2D). Neither the point
+nor the value is materialised as a structure, which keeps the Euler step allocation-free (Makie's
+loop keeps `Point` values in registers). -/
+abbrev FieldK := {β : Type} → Float → Float → Float → (Float → Float → Float → β) → β
+
+/-- A `Vec3 → Vec3` function as a `FieldK`. -/
+@[inline] def FieldK.ofVec3 (f : Vec3 → Vec3) : FieldK :=
+  fun x y z k => let q := f ⟨x, y, z⟩; k q.x q.y q.z
+
+/-- A `Vec2 → Vec2` function as a `FieldK` (z ignored, value `z` component `0`). -/
+@[inline] def FieldK.ofVec2 (f : Vec2 → Vec2) : FieldK :=
+  fun x y _ k => let q := f ⟨x, y⟩; k q.x q.y 0
 
 /-- Streamplot parameters (Makie attribute defaults). -/
 structure Options where
@@ -231,12 +251,11 @@ structure Ctx where
   /-- Custom colour function (`none`: norm). -/
   colorFn : Option (Vec3 → Float)
 
-/-- Evaluate the field at a binary64 point, rounding to binary32 for a `Point2f`
-field (and dropping z in 2D). -/
-@[inline] def Ctx.eval (c : Ctx) (field : Vec3 → Vec3) (x y z : Float) : Vec3 :=
-  let q := field ⟨x, y, z⟩
-  let w := if c.dim == 3 then q.z else 0
-  if c.fieldF32 then ⟨r32 q.x, r32 q.y, r32 w⟩ else if c.dim == 3 then q else ⟨q.x, q.y, 0⟩
+/-- Evaluate the field at a binary64 point and pass the value to `k`, rounded to binary32 for a
+`Point2f` field (and with z dropped in 2D). -/
+@[inline] def Ctx.evalK {β : Type} (c : Ctx) (field : FieldK) (x y z : Float) (k : Float → Float → Float → β) : β :=
+  field x y z fun u v w =>
+    k (rnd c.fieldF32 u) (rnd c.fieldF32 v) (if c.dim == 3 then rnd c.fieldF32 w else 0)
 
 /-- Colour value of a field vector (Makie `to_color(color(f(x)))`, binary32).
 Takes components so the field value need not be materialised. -/
@@ -244,6 +263,13 @@ Takes components so the field value need not be materialised. -/
   match c.colorFn with
   | some g => r32 (g ⟨u, v, w⟩)
   | none => r32 (jnorm c.fieldF32 c.dim u v w)
+
+/-- Colour value of a field vector whose norm `pn = jnorm c.fieldF32 c.dim u v w` is already
+known: Makie's default colour `norm(f(x))` is that same value, so it is not recomputed. -/
+@[inline] def Ctx.colorN (c : Ctx) (u v w pn : Float) : Float :=
+  match c.colorFn with
+  | some g => r32 (g ⟨u, v, w⟩)
+  | none => r32 pn
 
 /-- The point lies in the (closed) box. -/
 @[inline] def Ctx.inBox (c : Ctx) (x y z : Float) : Bool :=
@@ -270,24 +296,25 @@ structure TraceOut where
   lines : Lines
 
 /-- Trace one half streamline from the current point (tail-recursive, with the
-line buffers as separate arguments so a step allocates only the field value).
-Specialised on the field, so a known field function is inlined. -/
-@[specialize] def trace (c : Ctx) (field : Vec3 → Vec3) (dd : Float) (fuel : Nat) (x y z : Float) (ci cj ck nlp : Nat)
+line buffers as separate arguments). The field is continuation-passing and the
+function is specialised on it, so with an inlinable field a step allocates nothing
+but the pushed floats. -/
+@[specialize] def trace (c : Ctx) (field : FieldK) (dd : Float) (fuel : Nat) (x y z : Float) (ci cj ck nlp : Nat)
     (mask : ByteArray) (np : Nat) (lx ly lz lc : FloatArray) : TraceOut :=
   match fuel with
   | 0 => ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩
   | fuel + 1 =>
     if !(c.inBox x y z && nlp < c.maxsteps) then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
-    let q := c.eval field x y z
-    let pn := jnorm c.fieldF32 c.dim q.x q.y q.z
-    let x' := c.stepCoord dd x q.x pn
-    let y' := c.stepCoord dd y q.y pn
-    let z' := if c.dim == 3 then c.stepCoord dd z q.z pn else z
+    c.evalK field x y z fun qx qy qz =>
+    let pn := jnorm c.fieldF32 c.dim qx qy qz
+    let x' := c.stepCoord dd x qx pn
+    let y' := c.stepCoord dd y qy pn
+    let z' := if c.dim == 3 then c.stepCoord dd z qz pn else z
     if !c.inBox x' y' z' then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
     let i := c.ax.cell c.limitsF32 x'
     let j := c.ay.cell c.limitsF32 y'
     let k := if c.dim == 3 then c.az.cell c.limitsF32 z' else 1
-    let col := c.color q.x q.y q.z
+    let col := c.colorN qx qy qz pn
     if i != ci || j != cj || k != ck then
       let idx := c.maskIdx i j k
       if mask.get! idx == 0 then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
@@ -298,7 +325,7 @@ Specialised on the field, so a known field function is inlined. -/
         (lx.push (r32 x')) (ly.push (r32 y')) (lz.push (r32 z')) (lc.push col)
 
 /-- The seeding loop of `streamplot_impl`. -/
-@[specialize] def seedLoop (c : Ctx) (field : Vec3 → Vec3) (target : Float) (fuel : Nat) (ind np : Nat) (mask : ByteArray) (b : Buf) : Buf :=
+@[specialize] def seedLoop (c : Ctx) (field : FieldK) (target : Float) (fuel : Nat) (ind np : Nat) (mask : ByteArray) (b : Buf) : Buf :=
   match fuel with
   | 0 => b
   | fuel + 1 =>
@@ -311,16 +338,16 @@ Specialised on the field, so a known field function is inlined. -/
     let x0 := c.ax.center i
     let y0 := c.ay.center j
     let z0 := if c.dim == 3 then c.az.center k else 0
-    let q := c.eval field x0 y0 z0
-    let pn := jnorm c.fieldF32 c.dim q.x q.y q.z
-    let col := c.color q.x q.y q.z
+    c.evalK field x0 y0 z0 fun qx qy qz =>
+    let pn := jnorm c.fieldF32 c.dim qx qy qz
+    let col := c.colorN qx qy qz pn
     let ⟨apx, apy, apz, adx, ady, adz, acol, lines⟩ := b
     let apx := apx.push (r32 x0)
     let apy := apy.push (r32 y0)
     let apz := apz.push (r32 z0)
-    let adx := adx.push (r32 (rnd c.fieldF32 (q.x / pn)))
-    let ady := ady.push (r32 (rnd c.fieldF32 (q.y / pn)))
-    let adz := adz.push (r32 (rnd c.fieldF32 (q.z / pn)))
+    let adx := adx.push (r32 (rnd c.fieldF32 (qx / pn)))
+    let ady := ady.push (r32 (rnd c.fieldF32 (qy / pn)))
+    let adz := adz.push (r32 (rnd c.fieldF32 (qz / pn)))
     let acol := acol.push col
     let mask := mask.set! idx 0
     let np := np + 1
@@ -338,9 +365,9 @@ def resolution (gs : Array Nat) (n : Nat) : Array Nat :=
   let last := gs.back?.getD 1
   (Array.range n).map fun i => gs.getD i last
 
-/-- Run `streamplot_impl` for a field `f` on the box `origin + [0, widths]`
-(dimension `dim ∈ {2, 3}`; for `dim = 2` the z components are ignored). -/
-@[specialize] def run (dim : Nat) (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options) : Result :=
+/-- Run `streamplot_impl` for a continuation-passing field `f` on the box
+`origin + [0, widths]` (dimension `dim ∈ {2, 3}`; for `dim = 2` the z components are ignored). -/
+@[specialize] def runK (dim : Nat) (f : FieldK) (origin widths : Vec3) (o : Options) : Result :=
   let res := resolution o.gridsize dim
   let a := phi dim
   let ax := mkAxis o.limitsF32 origin.x widths.x (res.getD 0 1) (powInt a (-1))
@@ -359,14 +386,27 @@ def resolution (gs : Array Nat) (n : Nat) : Array Nat :=
     arrowColors := b.acol
     lineColors := b.lines.lcol }
 
+/-- Run `streamplot_impl` for a field `f` on the box `origin + [0, widths]`
+(dimension `dim ∈ {2, 3}`; for `dim = 2` the z components are ignored). -/
+@[specialize] def run (dim : Nat) (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options) : Result :=
+  runK dim (FieldK.ofVec3 f) origin widths o
+
+/-- 2D streamplot of a continuation-passing field over `[x0, x0 + w] × [y0, y0 + h]`. -/
+@[specialize] def streamplot2K (f : FieldK) (x0 y0 w h : Float) (o : Options := {}) : Result :=
+  runK 2 f ⟨x0, y0, 0⟩ ⟨w, h, 0⟩ o
+
 /-- 2D streamplot of `f` over the box `[x0, x0 + w] × [y0, y0 + h]` (Makie
 `streamplot(f, x0..x0+w, y0..y0+h)`; for a `Rect2f` box set `limitsF32`). -/
 @[specialize] def streamplot2 (f : Vec2 → Vec2) (x0 y0 w h : Float) (o : Options := {}) : Result :=
-  run 2 (fun p => let q := f ⟨p.x, p.y⟩; ⟨q.x, q.y, 0⟩) ⟨x0, y0, 0⟩ ⟨w, h, 0⟩ o
+  runK 2 (FieldK.ofVec2 f) ⟨x0, y0, 0⟩ ⟨w, h, 0⟩ o
+
+/-- 3D streamplot of a continuation-passing field over the box `origin + [0, widths]`. -/
+@[specialize] def streamplot3K (f : FieldK) (origin widths : Vec3) (o : Options := {}) : Result :=
+  runK 3 f origin widths o
 
 /-- 3D streamplot of `f` over the box `origin + [0, widths]`. -/
 @[specialize] def streamplot3 (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options := {}) : Result :=
-  run 3 f origin widths o
+  runK 3 (FieldK.ofVec3 f) origin widths o
 
 /-- Makie's automatic 3D arrow (cone) size `0.2·min(widths)/min(gridsize)`. -/
 def arrowSize3 (widths : Vec3) (gridsize : Array Nat) : Float :=
