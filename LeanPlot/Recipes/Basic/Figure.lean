@@ -54,6 +54,15 @@ def label (f : Figure) (r c : Nat) (text : String) (fontsize : Float := 14) (bol
 def labelSpan (f : Figure) (r c0 c1 : Nat) (text : String) (fontsize : Float := 14) (bold : Bool := false) : Figure :=
   f.placeSpan r r c0 c1 (.label { text, size := fontsize, bold })
 
+/-- Write frames `0, …, n-1` of an animation (a figure per frame index) as
+`dir/frame_0001.ext`, … (Makie's `record` without a video encoder). -/
+def saveFrames (frame : Nat → Figure) (n : Nat) (dir : System.FilePath) (ext : String := "png") : IO Unit := do
+  IO.FS.createDirAll dir
+  for i in [0:n] do
+    let num := toString (i + 1)
+    let name := "frame_" ++ "".pushn '0' (4 - min 4 num.length) ++ num ++ "." ++ ext
+    (frame i).save (dir / name)
+
 end Figure
 
 namespace Quick

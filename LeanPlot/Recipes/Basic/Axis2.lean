@@ -264,6 +264,21 @@ def axislegend (ax : Axis2) (position : LegendPos := .rt) (title : Option String
     | .ct => (0.5, 1) | .cb => (0.5, 0) | .cc => (0.5, 0.5)
   { ax with legend := some { title, halign := h, valign := v } }
 
+/-- Update the axis style. -/
+def mapStyle (ax : Axis2) (f : AxisStyle → AxisStyle) : Axis2 := { ax with style := f ax.style }
+
+/-- Update the x-axis style (`ax.xaxis fun s => { s with ticklabelrotation := π/4 }`). -/
+def xaxis (ax : Axis2) (f : LineAxisStyle → LineAxisStyle) : Axis2 := ax.mapStyle fun s => { s with x := f s.x }
+
+/-- Update the y-axis style. -/
+def yaxis (ax : Axis2) (f : LineAxisStyle → LineAxisStyle) : Axis2 := ax.mapStyle fun s => { s with y := f s.y }
+
+/-- Show minor ticks and minor grid lines (Makie `xminorticksvisible`, `xminorgridvisible`, …). -/
+def minorGrid (ax : Axis2) (x : Bool := true) (y : Bool := true) : Axis2 :=
+  let on (s : LineAxisStyle) : LineAxisStyle := { s with minorticksvisible := true, minorgridvisible := true }
+  let ax := if x then ax.xaxis on else ax
+  if y then ax.yaxis on else ax
+
 /-- `hidedecorations!(ax)`: hide labels, tick labels, ticks and grids. -/
 def hidedecorations (ax : Axis2) : Axis2 :=
   let hide (s : LineAxisStyle) : LineAxisStyle :=
