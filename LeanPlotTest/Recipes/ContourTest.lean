@@ -66,6 +66,18 @@ def suite : TestM Unit := do
     -- flat layout round trip
     let (flat, fsegs) := ls.flatten
     check s!"{name} flatten" (flat.size == (floatArr (c.get "px")).size && fsegs.size == segs.size)
+    -- colour range and per-level colours (viridis)
+    let (zlo, zhi) := Levels.dataRange (Contour.roundGrid g).z
+    let (clo, chi) := Contour.colorRange zlo zhi
+    let wcr := floatArr (c.get "colorrange")
+    check s!"{name} colorrange" (bitEq clo (wcr.get! 0) && bitEq chi (wcr.get! 1))
+      (fun _ => s!"got {clo} {chi} want {showFA wcr}")
+    let f32Levels := match spec with | .count _ => true | .values _ => false
+    let lcs := Contour.levelColors LeanPlot.Colormap.viridis zl clo chi f32Levels
+    let wlc := (c.get "level_colors").arrD.map (·.floats)
+    let lcOk := lcs.size == wlc.size && (Array.range lcs.size).all fun k =>
+      floatsBitEq #[lcs[k]!.r, lcs[k]!.g, lcs[k]!.b, lcs[k]!.a] wlc[k]!
+    check s!"{name} level colours" lcOk (fun _ => s!"got {repr lcs} want {wlc}")
     -- binary64 Contour.jl
     let raw := (c.get "raw64").arrD
     let ls64 := Contour.contourLines coords g zl false

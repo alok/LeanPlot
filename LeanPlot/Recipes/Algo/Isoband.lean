@@ -1,5 +1,6 @@
 import Std.Data.HashMap
 import LeanPlot.Core.Data
+import LeanPlot.Core.Colormap
 import LeanPlot.Recipes.Algo.Levels
 
 /-!
@@ -455,5 +456,81 @@ def makieContourf {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) (spec : L
       (groupPolys rings).foldl (init := (ps, cs, bs)) fun (ps, cs, bs) p =>
         (ps.push p, cs.push (centers.get! b), bs.push b)
   ⟨levels, lows, highs, polys, colors, bands⟩
+
+/-! ## Contourf colours (Makie's banded colormap) -/
+
+/-- ColorSchemes `get(cs, x)` on a colormap's entries: `x ∈ [0, 1]` is mapped to
+`1 … n` and the two neighbouring entries are blended (`w·c₁ + (1-w)·c₂`,
+binary64). -/
+def schemeGet (cm : Colormap) (x : Float) : RGBA :=
+  let n := cm.size
+  let xc := clamp x 0 1
+  let bfp := xc * Num.ofInt ((n : Int) - 1) + 1
+  let before := bfp.floor
+  let bi := before.toUInt64.toNat
+  let ai := min (bi + 1) n
+  let cpt := bfp - before
+  let w := 1 - cpt
+  let c1 := cm.get (bi - 1)
+  let c2 := cm.get (ai - 1)
+  ⟨w * c1.r + (1 - w) * c2.r, w * c1.g + (1 - w) * c2.g, w * c1.b + (1 - w) * c2.b, w * c1.a + (1 - w) * c2.a⟩
+
+/-- PlotUtils `cgrad(colors, n; categorical = true)` colours: `n` samples of the
+scheme at `range(0, 1; length = n)`. -/
+def schemeSamples (cm : Colormap) (n : Nat) : Array RGBA :=
+  (Num.range 0 1 n).toList.toArray.map (schemeGet cm)
+
+/-- Makie's contourf colouring: the banded colormap (`cgrad(base, edges_scaled;
+categorical = true)`, sampled at 256 points like `to_colormap(::ColorGradient)`),
+the colour range `extrema(levels)`, and the low/high clip colours (transparent
+unless the band is extended with `:auto`, then the colormap's first/last
+colour). `edges` are the binary32 `computed_levels`. -/
+structure BandColoring where
+  /-- 256-entry banded colormap. -/
+  colormap : Colormap
+  /-- Colour range. -/
+  lo : Float
+  hi : Float
+  /-- Colour of values below `lo` (extended low band). -/
+  lowclip : RGBA
+  /-- Colour of values above `hi` (extended high band). -/
+  highclip : RGBA
+
+/-- Build Makie's contourf colouring from a base colormap. -/
+def bandColoring (cm : Colormap) (edges : FloatArray) (extendLow extendHigh : Bool := false) : BandColoring :=
+  let nb := edges.size - 1
+  -- base colours (`base_colormap`): the colormap itself, or `n + 1`/`n + 2`
+  -- categorical samples with the extension colours cut off
+  let base : Colormap :=
+    if extendLow && !extendHigh then Colormap.ofColors ((schemeSamples cm (nb + 1)).extract 1 (nb + 1))
+    else if extendHigh && !extendLow then Colormap.ofColors ((schemeSamples cm (nb + 1)).extract 0 nb)
+    else if extendHigh && extendLow then Colormap.ofColors ((schemeSamples cm (nb + 2)).extract 1 (nb + 1))
+    else cm
+  -- `edges_scaled` (binary32), then `prepare_categorical_cgrad_colors`
+  let (mn, mx) := (extremaNaN edges).getD (0, 1)
+  let den := F32.r32 (mx - mn)
+  let scaled := (edges.toList.map fun e => F32.r32 (F32.r32 (e - mn) / den)).map (clamp · 0 1)
+  let vals := scaled.toArray.qsort (· < ·)
+  let vals := vals.foldl (fun acc v => if acc.back? == some v then acc else acc.push v) #[]
+  let vals := if vals.contains 0 then vals else #[0] ++ vals
+  let vals := if vals.contains 1 then vals else vals.push 1
+  let colors := schemeSamples base (vals.size - 1)
+  -- `to_colormap(cg)`: 256 samples `cg[x]`, `x ∈ LinRange(0, 1, 256)`
+  let samples := (Num.linRange 0 1 256).toList.toArray.map fun x =>
+    -- `findlast(<(x), values)` (1-based) is the colour index
+    let k := if x == 0 then 0 else (vals.foldl (fun (acc : Nat × Nat) v => (acc.1 + 1, if v < x then acc.1 else acc.2)) (0, 0)).2
+    RGBA.toF32 (colors.getD k (colors.getD 0 RGBA.black))
+  let first := RGBA.toF32 cm.first
+  let last := RGBA.toF32 cm.last
+  { colormap := Colormap.ofColors samples
+    lo := mn, hi := mx
+    lowclip := if extendLow then first else RGBA.transparent
+    highclip := if extendHigh then last else RGBA.transparent }
+
+/-- The colour of each contourf polygon (Makie `numbers_to_colors` of the band
+centres through the banded colormap, with low/high clipping). -/
+def polygonColors (bc : BandColoring) (cf : Contourf) : Array RGBA :=
+  cf.colors.toList.toArray.map fun v =>
+    bc.colormap.mapValue bc.lo bc.hi { lowclip := some bc.lowclip, highclip := some bc.highclip } v
 
 end LeanPlot.Recipes.Algo.Isoband

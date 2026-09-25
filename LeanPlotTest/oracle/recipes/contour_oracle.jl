@@ -45,6 +45,8 @@ for (name, x, y, z, levels) in cases
     zl = collect(c.zlevels[])
     pts = c.contour_points[]
     eps = c.elements_per_segment[]
+    cr = c.computed_colorrange[]
+    lc = c.level_colors[]
     raw = Ct.contours(x, y, z, Float64.(zl))
     rawlines = Any[]
     for (k, lvl) in enumerate(Ct.levels(raw)), l in Ct.lines(lvl)
@@ -54,7 +56,8 @@ for (name, x, y, z, levels) in cases
     d = Dict{String,Any}("name" => name, "curvilinear" => x isa Matrix, "nx" => size(z, 1), "ny" => size(z, 2),
         "x" => jfv(vec(x)), "y" => jfv(vec(y)), "z" => jfv(vec(z)), "spec" => levels isa Int ? levels : jfv(levels),
         "zlevels" => jfv(zl), "px" => jfv(first.(pts)), "py" => jfv(last.(pts)),
-        "segs" => [[Int(first(e)) - 1, Int(last(e))] for e in eps], "raw64" => rawlines)
+        "segs" => [[Int(first(e)) - 1, Int(last(e))] for e in eps], "raw64" => rawlines,
+        "colorrange" => jfv(collect(cr)), "level_colors" => [jfv([q.r, q.g, q.b, q.alpha]) for q in lc])
     push!(out, d)
     println(name, ": ", length(zl), " levels, ", length(eps), " lines, ", length(pts), " points")
 end

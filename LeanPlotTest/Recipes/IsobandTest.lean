@@ -98,5 +98,14 @@ def suite : TestM Unit := do
       let p := cf.polys[k]!
       polyKey p.outer p.holes (cf.colors.get! k)
     sameKeys s!"{name} polygons" got want
+    -- final polygon colours (banded viridis), matched through the polygon keys
+    let bc := Isoband.bandColoring LeanPlot.Colormap.viridis cf.levels (c.get "extendlow").boolean (c.get "extendhigh").boolean
+    let mine := Isoband.polygonColors bc cf
+    let rgbaKey (c : LeanPlot.RGBA) : String := s!"{c.r.toBits}/{c.g.toBits}/{c.b.toBits}/{c.a.toBits}"
+    let wantC := (Array.range (c.get "polys").arrD.size).map fun k =>
+      let q := (c.get "rgba").arrD[k]!.floats
+      want[k]! ++ "@" ++ rgbaKey ⟨q[0]!, q[1]!, q[2]!, q[3]!⟩
+    let gotC := (Array.range cf.polys.size).map fun k => got[k]! ++ "@" ++ rgbaKey mine[k]!
+    sameKeys s!"{name} polygon colours" gotC wantC
 
 end LeanPlotTest.Recipes.IsobandTest

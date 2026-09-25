@@ -54,10 +54,14 @@ for (name, x, y, z, levels, elow, ehigh) in cases
     polys = cf.polys[]
     pj = [Dict("outer" => [jfv(first.(p.exterior)), jfv(last.(p.exterior))],
                "holes" => [[jfv(first.(h)), jfv(last.(h))] for h in p.interiors]) for p in polys]
+    Mk.update_state_before_display!(fig)
+    rgba = Mk.numbers_to_colors(cf.computed_colors[], Mk.to_colormap(cf.computed_colormap[]), identity,
+        Mk.Vec2f(cf.computed_colorrange[]...), cf.computed_lowcolor[], cf.computed_highcolor[], Mk.RGBAf(0, 0, 0, 0), true)
     d = Dict{String,Any}("name" => name, "nx" => size(z, 1), "ny" => size(z, 2), "x" => jfv(x), "y" => jfv(y),
         "z" => jfv(vec(z)), "spec" => levels isa Int ? levels : jfv(levels), "extendlow" => elow, "extendhigh" => ehigh,
         "levels" => jfv(lv), "lows" => jfv(lows), "highs" => jfv(highs), "raw" => rawj,
-        "polys" => pj, "colors" => jfv(cf.computed_colors[]))
+        "polys" => pj, "colors" => jfv(cf.computed_colors[]),
+        "rgba" => [jfv([c.r, c.g, c.b, c.alpha]) for c in rgba])
     push!(out, d)
     println(name, ": ", length(lv), " levels, ", sum(r -> length(unique(r.id)), raw), " rings, ", length(polys), " polygons")
 end

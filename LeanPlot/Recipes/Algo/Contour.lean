@@ -1,4 +1,5 @@
 import LeanPlot.Core.Data
+import LeanPlot.Core.Colormap
 import LeanPlot.Recipes.Algo.Levels
 
 /-!
@@ -369,6 +370,41 @@ def makieContour {nx ny : Nat} (coords : Coords) (g : Grid2 nx ny) (spec : Level
   match coords with
   | .rect .. => contourLines coords.round32 g32 levels true
   | .curvilinear .. => roundLines (contourLines coords g32 levels false)
+
+/-- Makie's contour `computed_colorrange` for data range `(zmin, zmax)`
+(binary32): the range itself, widened by `max(1, |zmin|)` on both sides when
+degenerate (`isapprox`). -/
+def colorRange (zmin zmax : Float) : Float × Float :=
+  if !F32.isApprox32 zmin zmax then (zmin, zmax) else
+  let delta := jmax 1 zmin.abs
+  (F32.r32 (zmin - delta), F32.r32 (zmax + delta))
+
+/-- Makie `interpolated_getindex(cmap, v, (lo, hi))` for binary32 `v`, `lo`, `hi`:
+the normalisation, index and blend are all binary32 (Julia keeps `Float32`
+arithmetic for a `Float32` value). -/
+def lookup32 (cm : Colormap) (v lo hi : Float) : RGBA :=
+  let i01 := clamp (r32 (r32 (v - lo) / r32 (hi - lo))) 0 1
+  let n := cm.size
+  let i1len := r32 (r32 (i01 * Num.ofInt ((n : Int) - 1)) + 1)
+  let down := i1len.floor
+  let up := i1len.ceil
+  let dn := down.toUInt64.toNat - 1
+  if down == up then cm.get dn else
+  let t := r32 (i1len - down)
+  let d := cm.get dn
+  let u := cm.get (up.toUInt64.toNat - 1)
+  let mix (a b : Float) : Float := r32 (r32 (a * r32 (1 - t)) + r32 (b * t))
+  ⟨mix d.r u.r, mix d.g u.g, mix d.b u.b, mix d.a u.a⟩
+
+/-- Makie `color_per_level(nothing, colormap, identity, colorrange, alpha, zlevels)`:
+each level's colour, `interpolated_getindex(cmap, level, colorrange)`, with the
+alpha multiplied by `alpha`. Automatic levels are binary32 (`f32Levels`, looked
+up in binary32); explicit levels stay binary64 (looked up in binary64). -/
+def levelColors (cm : Colormap) (levels : FloatArray) (lo hi : Float) (f32Levels : Bool := true)
+    (alpha : Float := 1) : Array RGBA :=
+  levels.toList.toArray.map fun l =>
+    let c := if f32Levels then lookup32 cm l lo hi else cm.lookup l lo hi
+    { c with a := r32 (c.a * alpha) }
 
 /-- Makie `label_info`: the three points around the middle vertex of a line
 (`mid = ceil(0.5·n)`, 1-based, clamped), used to place and orient a contour label. -/
