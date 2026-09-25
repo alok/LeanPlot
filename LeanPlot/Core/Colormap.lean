@@ -41,6 +41,7 @@ namespace Colormap
 /-- Number of entries. -/
 @[inline] def size (cm : Colormap) : Nat := cm.lut.size / 4
 
+/-- A colormap has at least one entry. -/
 theorem size_pos (cm : Colormap) : 0 < cm.size := by
   have := cm.valid; unfold size; omega
 

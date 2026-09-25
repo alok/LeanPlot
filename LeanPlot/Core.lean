@@ -11,6 +11,7 @@ import LeanPlot.Core.ColormapData
 import LeanPlot.Core.Colormap
 import LeanPlot.Core.Geometry
 import LeanPlot.Core.Camera
+import LeanPlot.Core.Data
 
 /-!
 # LeanPlot core
@@ -31,4 +32,6 @@ Pure, dependency-free building blocks shared by layout, recipes and backends:
   (Cohen–Sutherland, Liang–Barsky, polyline and polygon clipping).
 * `LeanPlot.Camera3`: Makie's `Axis3` camera (`calculate_matrices`) and
   projection of data points to device pixels plus depth.
+* `LeanPlot.Pts2/Pts3/Grid2 nx ny/TriMesh`: SoA plot data with erased size and
+  index-validity proofs; conversion classes `ToPts2`, `ToPts3`, `ToGrid2`.
 -/
