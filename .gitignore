@@ -13,3 +13,11 @@ node_modules/
 *.png
 *.svg
 !doc/img/*.svg
+
+# Test goldens and reference images are committed.
+!LeanPlotTest/**/*.png
+!LeanPlotTest/**/*.svg
+!docs/img/*.png
+!docs/img/*.svg
+!docs/gallery/*.png
+!docs/gallery/*.svg

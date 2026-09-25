@@ -10,7 +10,9 @@ structure Suite where
 def suites : List Suite := [
   ⟨"Font", LeanPlotTest.Font.run⟩,
   ⟨"Raster", LeanPlotTest.Raster.run⟩,
-  ⟨"Core", LeanPlotTest.Core.run⟩
+  ⟨"Core", LeanPlotTest.Core.run⟩,
+  ⟨"Figure", LeanPlotTest.Figure.run⟩,
+  ⟨"Recipes", LeanPlotTest.Recipes.run⟩
 ]
 
 /-- Golden test driver: `lake test` runs everything; `lake exe leanplottest A B` runs named suites. -/

@@ -1,148 +1,43 @@
 # LeanPlot
 
-<p align="center">
-  <img src="docs/img/line_y_equals_x.png" width="220" alt="Line y = x">
-  <img src="docs/img/quadratic_y_equals_x2.png" width="220" alt="Quadratic y = x²">
-  <img src="docs/img/overlay_yx_and_x2.png" width="220" alt="Overlay of y = x and y = x²">
-</p>
+Plotting for Lean 4, written entirely in Lean with no dependencies. A figure is laid out and
+rendered to deterministic **SVG** and anti-aliased **PNG** by Lean code alone: no node, no browser,
+no Cairo. Layout, ticks, colormaps, fonts and plot recipes follow [Makie](https://docs.makie.org)
+and are tested against it. On a suite of reference figures, the solved axis rectangles match
+CairoMakie's exactly, and the rendered pixels agree to within 1/255 on average.
 
-LeanPlot turns Lean 4 code into **interactive, React-powered charts that render right inside VS Code's infoview**. Built on top of [ProofWidgets4](https://github.com/leanprover-community/ProofWidgets4) and [Recharts](https://recharts.org), it lets you inspect functions and data visually while you prove.
+> v0.2 is a ground-up rewrite. The previous Recharts/infoview-widget implementation is preserved
+> on the [`archive/v0-recharts`](https://github.com/alok/LeanPlot/tree/archive/v0-recharts) branch.
 
-**[Documentation](https://alok.github.io/LeanPlot/)**
+## What's in the box
 
----
+* **Figures**: a Makie-style grid layout (GridLayoutBase port) with `Axis2`, `Axis3` (Makie's
+  camera, 3D frame and ticks), `Legend`, `Colorbar`, labels, and Makie's default theme values.
+* **Recipes**: lines (plain and colour-mapped), scatter with marker shapes, band, poly, text,
+  heatmap and image, mesh, surface and wireframe, arrows (2D/3D), streamplot, contour and contourf,
+  isosurfaces, voxels and volume slices. The algorithms are ports of Makie's, checked against the
+  Julia oracle, most of them bit for bit.
+* **Core**: exact Wilkinson ticks, scales (log, sqrt, symlog, …), colormaps (viridis, magma,
+  inferno, plasma, cividis, turbo, RdBu, …), colour parsing, and Julia `LinRange` semantics.
+* **Text**: the TeX Gyre Heros face Makie uses, plus a DejaVu Sans fallback, embedded as glyph
+  outlines. Both backends draw text as paths, so SVG and PNG agree and layout metrics are exact.
+  Unicode sub/superscripts and math symbols work (`v₁∧v₂ = v₁₂`, `∞ ∅ ∂ ∇`).
+* **Backends**: a byte-stable SVG writer, and an anti-aliased coverage rasterizer with a stroker,
+  Gouraud-shaded triangles and real DEFLATE PNG encoding.
 
-## Features
-
-* **Simple plotting** – `#plot (fun x => x^2)` just works with automatic axis labels and styling
-* **One-liner helpers** – `plot`, `plotMany`, `scatter`, `bar` for beautiful plots with zero config
-* **Composable graphics** – overlay or stack plots with the `+` operator
-* **Grammar of Graphics** – fluent builder pattern inspired by ggplot2
-* **Faceting** – multiple sub-plots in a grid layout
-* **Log/linear scales** – visualize exponential growth with logarithmic axes
-* **Data transformations** – apply scales, normalize, and smooth data
-
----
-
-## Installation
-
-Add LeanPlot to your project's `lakefile.toml`:
-
-```toml
-[[require]]
-name = "LeanPlot"
-git = "https://github.com/alok/LeanPlot"
-```
-
-Then fetch and build:
+## Build and test
 
 ```bash
-lake update
 lake build
+lake test          # 48k checks: fonts vs fontTools, rasterizer vs Cairo, core/figure/recipes vs Makie
 ```
 
-You'll need `node`/`npm` on your PATH – ProofWidgets handles the bundling automatically.
+Toolchain: `leanprover/lean4:v4.35.0-rc3`. Save a figure with `Scene.save "plot.svg"` or `"plot.png"`
+(the extension chooses the backend).
 
----
+## Design
 
-## Quick Start
-
-```lean
-import LeanPlot.API
-import LeanPlot.DSL
-
--- Simple function plot
-#plot (fun x => x^2)
-
--- With custom sample count
-#plot (fun t => Float.sin t) using 400
-
--- Doc comments become chart captions (a poor man's legend!)
-/-- The classic parabola y = x² -/
-#plot (fun x => x^2)
-
--- Multiple functions with automatic legend
-#html plotMany #[("sin", fun x => Float.sin x), ("cos", fun x => Float.cos x)]
-
--- Scatter plot
-#html scatter (fun x => x^2) (steps := 50)
-
--- Bar chart
-#html bar (fun i => i^2) (steps := 10)
-```
-
-Hover over `#plot` or `#html` in VS Code to see the interactive charts!
-
-### PNG Export
-
-```lean
-import LeanPlot.API
-import LeanPlot.Debug
-open LeanPlot.API LeanPlot.Debug
-
-#html withSavePNG (plot (fun x => x^2)) "my-plot" "quadratic.png"
-```
-
-### Advanced Composition
-
-```lean
-import LeanPlot.Algebra
-open LeanPlot.Algebra
-
-#plot (
-  line "y"  (fun x : Float => x) +
-  line "y²" (fun x => x*x)
-)
-```
-
-### Grammar of Graphics
-
-```lean
-import LeanPlot.GrammarOfGraphics
-import LeanPlot.Core
-open LeanPlot.GrammarOfGraphics
-
-#html (
-  plot (fun x => x * x)
-    |> fun p => PlotBuilder.withTitle p "Quadratic Function"
-    |> fun p => PlotBuilder.withSize p 500 400
-    |> PlotBuilder.build
-    |> Render.render
-)
-```
-
----
-
-## Demo Gallery
-
-* `LeanPlot.Demos.SmartPlottingDemo` – Zero-config beautiful plots (start here!)
-* `LeanPlot.Demos.LinearDemo`, `QuadraticDemo`, `CubicDemo` – Basic function plots
-* `LeanPlot.Demos.OverlayDemo` – Overlaying multiple functions
-* `LeanPlot.Demos.TrigDemo` – Trigonometric functions
-* `LeanPlot.Demos.LogScaleDemo` – Logarithmic scales
-* `LeanPlot.Demos.GrammarDemo` – Grammar of Graphics DSL
-* `LeanPlot.Demos.TransformDemo` – Data transformations
-* `LeanPlot.Demos.FacetDemo` – Grid layouts
-
-Open any demo and hover over `#plot` or `#html` to see the charts.
-
----
-
-## Documentation
-
-Full documentation is available at **https://alok.github.io/LeanPlot/**
-
-To build docs locally:
-
-```bash
-lake build leanplot-docs
-.lake/build/bin/leanplot-docs
-python3 -m http.server 8000 --directory _out/docs/html-multi
-```
-
----
-
-## License
-
-Apache License 2.0 – see `LICENSE` for details.
-
+See [`docs/DESIGN.md`](docs/DESIGN.md) for the pipeline (Figure → layout → device-space `DrawOp`
+scene → backends) and [`docs/AUDIT.md`](docs/AUDIT.md) for the plan and performance rules.
+LeanPlot is co-developed with [Grassmann.lean](https://github.com/alok/Grassmann.jl), a Lean port
+of Michael Reed's Grassmann.jl ecosystem, whose Makie plots it reproduces.

@@ -4,3 +4,6 @@ import LeanPlot.Font
 import LeanPlot.Backend.SVG
 import LeanPlot.Backend.Raster
 import LeanPlot.IO
+import LeanPlot.Figure
+import LeanPlot.Recipes.Basic
+import LeanPlot.Recipes.Algo
