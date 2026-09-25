@@ -123,8 +123,9 @@ def targetLimits (ax : Axis3) : Rect3 :=
   let (z0, z1) := dim ax.zlimits bz
   ⟨⟨f32 x0, f32 y0, f32 z0⟩, ⟨f32 (x1 - x0), f32 (y1 - y0), f32 (z1 - z0)⟩⟩
 
-/-- `origin + width` in `Float32` (Makie's `maximum(::Rect3f)`). -/
-@[inline] private def hi32 (o w : Float) : Float := (o.toFloat32 + w.toFloat32).toFloat
+/-- The upper limit `origin + width`: Makie stores the `Rect3f` target limits in a `Rect3d`
+(`finallimits`), so the sum of the Float32-rounded origin and width is taken in `Float64`. -/
+@[inline] private def hi32 (o w : Float) : Float := o + w
 
 /-- Ticks of one dimension (`get_ticks` with Wilkinson ticks, no filtering). -/
 def ticksFor (spec : TickSpec) (lo hi : Float) : AxisTicks :=
@@ -253,26 +254,113 @@ def shadeColors (cam : Camera3) (m : MeshData) : ByteArray := Id.run do
     out := RGBA.pushRGBA8 out ⟨k * c.r + s, k * c.g + s, k * c.b + s, c.a⟩
   return out
 
-/-- Draw ops (z-ordered as CairoMakie paints an `Axis3`) for the computed box `box`. -/
-def lower (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Array (Float × DrawOp) := Id.run do
+/-- Decorations of one dimension in figure pixels (y up): tick segments, tick label anchors
+and alignment, and the axis label anchor, rotation and vertical alignment. -/
+structure DimDecor where
+  ticks : Array (Float × Float × Float × Float) := #[]
+  tickLabels : Array (Float × Float) := #[]
+  tickAlign : HAlign × VAlign := (.left, .bottom)
+  label : Option ((Float × Float) × Float × VAlign) := none
+  deriving Inhabited
+
+/-- The visible-face flags `(mi1, mi2, mi3)` of Makie's `Axis3` for the view. -/
+def faceFlags (v : Axis3View) : Bool × Bool × Bool :=
+  let a := mod1F v.azimuth (2 * Num.pi)
+  (!(Num.pi / 2 ≤ a && a < 3 * Num.pi / 2), 0 ≤ a && a < Num.pi, v.elevation > 0)
+
+/-- The camera of the axis for its computed box. -/
+def camera (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Camera3 :=
   let area := ax.sceneArea box
-  let devVp : Rect := ⟨area.left, figH - area.top, area.width, area.height⟩
-  let cam := Camera3.ofLimits ax.view p.limits devVp
-  -- device point → Makie pixel (y up) and back
+  Camera3.ofLimits ax.view p.limits ⟨area.left, figH - area.top, area.width, area.height⟩
+
+/-- Makie's tick, tick label and axis label geometry for dimension `d` (0 = x). -/
+def dimDecor (ax : Axis3) (p : Axis3Prep) (cam : Camera3) (figH : Float) (d : Nat) : DimDecor :=
   let proj (q : Vec3) : Float × Float := let r := cam.project q; (r.x, figH - r.y)
   let lo := p.limits.origin
   let w := p.limits.widths
   let mi : Vec3 := lo
   let ma : Vec3 := ⟨hi32 lo.x w.x, hi32 lo.y w.y, hi32 lo.z w.z⟩
-  let az := ax.view.azimuth
-  let mi1 := !(Num.pi / 2 ≤ mod1F az (2 * Num.pi) && mod1F az (2 * Num.pi) < 3 * Num.pi / 2)
-  let mi2 := 0 ≤ mod1F az (2 * Num.pi) && mod1F az (2 * Num.pi) < Num.pi
-  let mi3 := ax.view.elevation > 0
+  let (mi1, mi2, mi3) := faceFlags ax.view
+  let revs := #[ax.view.xreversed, ax.view.yreversed, ax.view.zreversed]
+  let st := match d with | 0 => ax.style.x | 1 => ax.style.y | _ => ax.style.z
+  let t := match d with | 0 => p.xt | 1 => p.yt | _ => p.zt
+  let lbl := match d with | 0 => ax.xlabel | 1 => ax.ylabel | _ => ax.zlabel
+  let (miv, min1, min2) : Bool × Bool × Bool := match d with
+    | 0 => (mi1, mi2, mi3) | 1 => (mi2, mi1, mi3) | _ => (mi3, mi1, mi2)
+  let (d1, d2) := otherDims d
+  let rev1 := revs[d1]!
+  let rev2 := revs[d2]!
+  let revd := revs[d]!
+  let f1 := if !(min1 != rev1) then comp mi d1 else comp ma d1
+  let f2 := if min2 != rev2 then comp mi d2 else comp ma d2
+  let f1o := if min1 != rev1 then comp mi d1 else comp ma d1
+  let f2o := if !(min2 != rev2) then comp mi d2 else comp ma d2
+  let df1 := f1 - f1o
+  let df2 := f2 - f2o
+  let zAlongD1 := let a := mod1F (ax.view.azimuth * 180 / Num.pi) 180; 45 ≤ a && a ≤ 135
+  -- tick segments, Float32 like `Point2f`
+  let segs : Array (Float × Float × Float × Float) := t.values.map fun v =>
+    let p1 := dimpoint d v f1 f2
+    let p2 := if d == 2 then (if zAlongD1 then dimpoint d v (f1 + df1) f2 else dimpoint d v f1 (f2 + df2))
+              else dimpoint d v (f1 + df1) f2
+    let (x1, y1) := proj p1
+    let (x2, y2) := proj p2
+    let (ux, uy) := norm2 (f32 x2 - f32 x1) (f32 y2 - f32 y1)
+    (f32 x1, f32 y1, f32 (f32 x1 + st.ticksize * ux), f32 (f32 y1 + st.ticksize * uy))
+  let labelsAt := segs.map fun (a, b, c, e) =>
+    let (ux, uy) := norm2 (c - a) (e - b)
+    (f32 (c + st.ticklabelpad * ux), f32 (e + st.ticklabelpad * uy))
+  let tickAlign : HAlign × VAlign := match d with
+    | 0 => (if miv != min1 then .right else .left, if min2 then .top else .bottom)
+    | 1 => (if miv != min1 then .left else .right, if min2 then .top else .bottom)
+    | _ => (if min1 != min2 then .left else .right, .middle)
+  let label : Option ((Float × Float) × Float × VAlign) :=
+    if FigText.isBlank lbl then none else
+    let minr1 := min1 != rev1
+    let minr2 := min2 != rev2
+    let g1 := if !minr1 then comp mi d1 else comp ma d1
+    let g2 := if minr2 then comp mi d2 else comp ma d2
+    let (x1, y1) := proj (dimpoint d (comp mi d) g1 g2)
+    let (x2, y2) := proj (dimpoint d (comp ma d) g1 g2)
+    let (x1, y1, x2, y2) := (f32 x1, f32 y1, f32 x2, f32 y2)
+    let mx := (x1 + x2) / 2
+    let my := (y1 + y2) / 2
+    let diffsign : Float :=
+      if d == 0 || d == 2 then (if !((min1 != min2) != revd) then 1 else -1)
+      else (if (min1 != min2) != revd then 1 else -1)
+    let (nx, ny) := norm2 (diffsign * (x2 - x1)) (diffsign * (y2 - y1))
+    -- rotate by +90°
+    let ovx := f32 (-ny)
+    let ovy := f32 nx
+    let px := f32 (mx + st.labeloffset * ovx)
+    let py := f32 (my + st.labeloffset * ovy)
+    let ang := Float.atan2 ovy ovx
+    let r0 := ang + Num.pi / 2 + Num.pi / 2
+    let up0 := (r0 - Num.pi * (r0 / Num.pi).toInt64.toFloat) - Num.pi / 2
+    let flip := up0 < -(88 * Num.pi / 180)
+    let up := if flip then up0 + Num.pi else up0
+    some ((px, py), f32 up, if ovy > 0 || flip then .bottom else .top)
+  { ticks := segs, tickLabels := labelsAt, tickAlign, label }
+
+/-- The title anchor (figure pixels, y up). -/
+def titleAnchor (ax : Axis3) (box : BBox) : Float × Float :=
+  (f32 (box.left + ax.style.titlealign * box.width), f32 (box.top + ax.style.titlegap))
+
+/-- Draw ops (z-ordered as CairoMakie paints an `Axis3`: ticks, panels, grid and frame
+lines, plots, axis labels and title, tick labels) for the computed box `box`. -/
+def lower (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Array (Float × DrawOp) := Id.run do
+  let area := ax.sceneArea box
+  let devVp : Rect := ⟨area.left, figH - area.top, area.width, area.height⟩
+  let cam := ax.camera p box figH
+  let lo := p.limits.origin
+  let w := p.limits.widths
+  let mi : Vec3 := lo
+  let ma : Vec3 := ⟨hi32 lo.x w.x, hi32 lo.y w.y, hi32 lo.z w.z⟩
+  let (mi1, mi2, mi3) := faceFlags ax.view
   let revs := #[ax.view.xreversed, ax.view.yreversed, ax.view.zreversed]
   let dstyle (d : Nat) : Axis3DimStyle := match d with | 0 => ax.style.x | 1 => ax.style.y | _ => ax.style.z
   let dticks (d : Nat) : AxisTicks := match d with | 0 => p.xt | 1 => p.yt | _ => p.zt
   let dlabel (d : Nat) : String := match d with | 0 => ax.xlabel | 1 => ax.ylabel | _ => ax.zlabel
-  -- (miv, min1, min2) per dimension, as Makie passes them
   let flags (d : Nat) : Bool × Bool × Bool := match d with
     | 0 => (mi1, mi2, mi3) | 1 => (mi2, mi1, mi3) | _ => (mi3, mi1, mi2)
   let segs3 (pts : Array (Vec3 × Vec3)) (c : RGBA) (width : Float) : Option DrawOp :=
@@ -324,79 +412,28 @@ def lower (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Array (Floa
   -- ticks, tick labels and axis labels per dimension
   for d in [0:3] do
     let st := dstyle d
-    let (miv, min1, min2) := flags d
-    let (d1, d2) := otherDims d
-    let rev1 := revs[d1]!
-    let rev2 := revs[d2]!
-    let revd := revs[d]!
-    let t := dticks d
-    let f1 := if !(min1 != rev1) then comp mi d1 else comp ma d1
-    let f2 := if min2 != rev2 then comp mi d2 else comp ma d2
-    let f1o := if min1 != rev1 then comp mi d1 else comp ma d1
-    let f2o := if !(min2 != rev2) then comp mi d2 else comp ma d2
-    let df1 := f1 - f1o
-    let df2 := f2 - f2o
-    let zAlongD1 := let a := mod1F (az * 180 / Num.pi) 180; 45 ≤ a && a ≤ 135
-    -- tick segments in Makie pixels (y up), Float32 like `Point2f`
-    let segs : Array (Float × Float × Float × Float) := t.values.map fun v =>
-      let p1 := dimpoint d v f1 f2
-      let p2 := if d == 2 then (if zAlongD1 then dimpoint d v (f1 + df1) f2 else dimpoint d v f1 (f2 + df2))
-                else dimpoint d v (f1 + df1) f2
-      let (x1, y1) := proj p1
-      let (x2, y2) := proj p2
-      let (ux, uy) := norm2 (f32 x2 - f32 x1) (f32 y2 - f32 y1)
-      (f32 x1, f32 y1, f32 (x1 + st.ticksize * ux), f32 (y1 + st.ticksize * uy))
+    let dd := ax.dimDecor p cam figH d
     if st.ticksvisible then
-      if let some o := Axis2.segOp (segs.map fun (a, b, c, e) => (a, figH - b, c, figH - e)) st.tickcolor st.tickwidth then
+      if let some o := Axis2.segOp (dd.ticks.map fun (a, b, c, e) => (a, figH - b, c, figH - e)) st.tickcolor st.tickwidth then
         ticksOps := ticksOps.push (0, o)
     if st.ticklabelsvisible then
-      let (ha, va) : HAlign × VAlign := match d with
-        | 0 => (if miv != min1 then .right else .left, if min2 then .top else .bottom)
-        | 1 => (if miv != min1 then .left else .right, if min2 then .top else .bottom)
-        | _ => (if min1 != min2 then .left else .right, .middle)
-      let style : TextStyle := { size := st.ticklabelsize, color := st.ticklabelcolor, halign := ha, valign := va }
-      for i in [0:min segs.size t.labels.size] do
-        let (a, b, c, e) := segs[i]!
-        let (ux, uy) := norm2 (c - a) (e - b)
-        let x := f32 (c + st.ticklabelpad * ux)
-        let y := f32 (e + st.ticklabelpad * uy)
+      let style : TextStyle := { size := st.ticklabelsize, color := st.ticklabelcolor
+                                 halign := dd.tickAlign.1, valign := dd.tickAlign.2 }
+      let t := dticks d
+      for i in [0:min dd.tickLabels.size t.labels.size] do
+        let (x, y) := dd.tickLabels[i]!
         tickLabelOps := tickLabelOps.push (0, FigText.labelOp style t.labels[i]! x (figH - y))
-    if st.labelvisible && !FigText.isBlank (dlabel d) then
-      let minr1 := min1 != rev1
-      let minr2 := min2 != rev2
-      let g1 := if !minr1 then comp mi d1 else comp ma d1
-      let g2 := if minr2 then comp mi d2 else comp ma d2
-      let (x1, y1) := proj (dimpoint d (comp mi d) g1 g2)
-      let (x2, y2) := proj (dimpoint d (comp ma d) g1 g2)
-      let (x1, y1, x2, y2) := (f32 x1, f32 y1, f32 x2, f32 y2)
-      let mx := (x1 + x2) / 2
-      let my := (y1 + y2) / 2
-      let diffsign : Float :=
-        if d == 0 || d == 2 then (if !((min1 != min2) != revd) then 1 else -1)
-        else (if (min1 != min2) != revd then 1 else -1)
-      let (nx, ny) := norm2 (diffsign * (x2 - x1)) (diffsign * (y2 - y1))
-      -- rotate by +90°
-      let ovx := f32 (-ny)
-      let ovy := f32 nx
-      let px := mx + st.labeloffset * ovx
-      let py := my + st.labeloffset * ovy
-      let ang := Float.atan2 ovy ovx
-      let r0 := ang + Num.pi / 2 + Num.pi / 2
-      let up0 := (r0 - Num.pi * (r0 / Num.pi).toInt64.toFloat) - Num.pi / 2
-      let flip := up0 < -(88 * Num.pi / 180)
-      let up := if flip then up0 + Num.pi else up0
-      let va : VAlign := if ovy > 0 || flip then .bottom else .top
-      let style : TextStyle := { size := st.labelsize, color := st.labelcolor, halign := .center, valign := va
-                                 rotation := f32 up }
-      labelOps := labelOps.push (0, .text (f32 px) (figH - f32 py) (dlabel d) style none)
+    if st.labelvisible then
+      if let some ((x, y), rot, va) := dd.label then
+        let style : TextStyle := { size := st.labelsize, color := st.labelcolor, halign := .center, valign := va, rotation := rot }
+        labelOps := labelOps.push (0, .text x (figH - y) (dlabel d) style none)
   -- title
   if !FigText.isBlank ax.title then
     let style : TextStyle := { size := ax.style.titlesize, color := ax.style.titlecolor, bold := true
                                halign := if ax.style.titlealign == 0 then .left else if ax.style.titlealign == 1 then .right else .center
                                valign := .bottom }
-    let x := box.left + ax.style.titlealign * box.width
-    let y := box.top + ax.style.titlegap
-    labelOps := labelOps.push (0, .text (f32 x) (figH - f32 y) ax.title style none)
+    let (x, y) := ax.titleAnchor box
+    labelOps := labelOps.push (0, .text x (figH - y) ax.title style none)
   -- plots
   let pr : Lower.Projector := { project := cam.project, clip := some devVp, depthSort := true }
   let mut plotOps : Array (Float × DrawOp) := #[]
@@ -405,7 +442,7 @@ def lower (ax : Axis3) (p : Axis3Prep) (box : BBox) (figH : Float) : Array (Floa
       | .mesh m => if m.shading then Lower.mesh pr m (some (shadeColors cam m)) else Lower.mesh pr m
       | other => Lower.mark pr other
     for op in ops do plotOps := plotOps.push (0, op)
-  return ticksOps ++ backOps ++ labelOps ++ plotOps ++ tickLabelOps
+  return ticksOps ++ backOps ++ plotOps ++ labelOps ++ tickLabelOps
 
 end Axis3
 

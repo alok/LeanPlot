@@ -148,48 +148,61 @@ def autosize (s : LegendStyle) (title : Option String) (entries : Array LegendEn
 /-- Device point of a figure point. -/
 @[inline] def dev (figH x y : Float) : Float × Float := (x, figH - y)
 
-/-- Draw ops (z-tagged, Makie's legend scene order) for a legend whose computed box is
-`box` (figure pixels, y up). -/
-def lower (s : LegendStyle) (title : Option String) (entries : Array LegendEntry) (box : BBox) (figH : Float) :
-    Array (Float × DrawOp) := Id.run do
+/-- Solved legend geometry (figure pixels, y up): the frame, the title box and per entry
+the patch box and the label box. -/
+structure Geometry where
+  frame : BBox
+  title : Option BBox
+  patches : Array BBox
+  labels : Array BBox
+  deriving Inhabited
+
+/-- Solve the legend's internal layout for its computed box `box`. -/
+def geometry (s : LegendStyle) (title : Option String) (entries : Array LegendEntry) (box : BBox) : Geometry :=
   let area := box.roundInt
   let rect := area.shrink s.margin.left s.margin.right s.margin.bottom s.margin.top
   let (og, oitems) := outer s title entries
   let osol := og.solve oitems rect
+  let titleBox := title.map fun _ =>
+    let it := oitems[0]!
+    place (osol.cell it.span) .auto .auto it.width it.height it.width it.height 0.5 0.5
+  let si := if title.isSome then 1 else 0
+  let (sg, sitems) := subgrid s entries
+  let sit := oitems[si]!
+  let sbox := place (osol.cell sit.span) .auto .auto sit.width sit.height sit.width sit.height 0.5 0.5
+  let ssol := sg.solve sitems sbox
+  let patches := (Array.range entries.size).map fun k =>
+    let it := sitems[2 * k]!
+    place (ssol.cell it.span) (.fixed s.patchsize.1) (.fixed s.patchsize.2) none none it.width it.height 0.5 0.5
+  let labels := (Array.range entries.size).map fun k =>
+    let it := sitems[2 * k + 1]!
+    place (ssol.cell it.span) .auto .auto it.width it.height it.width it.height 0 0.5
+  { frame := rect, title := titleBox, patches, labels }
+
+/-- Draw ops (z-tagged, Makie's legend scene order) for a legend whose computed box is
+`box` (figure pixels, y up). Labels are centred in their boxes like Makie's `Label`. -/
+def lower (s : LegendStyle) (title : Option String) (entries : Array LegendEntry) (box : BBox) (figH : Float) :
+    Array (Float × DrawOp) := Id.run do
+  let g := geometry s title entries box
+  let rect := g.frame
   let mut ops : Array (Float × DrawOp) := #[]
   -- frame / background (z = 10 - 7)
   if s.framevisible then
     let r : Rect := ⟨rect.left, figH - rect.top, rect.width, rect.height⟩
     ops := ops.push (3, .path (Path.rect r) (some { color := s.backgroundcolor })
       (if s.framewidth > 0 then some { color := s.framecolor, width := s.framewidth, miterLimit := 2.0 } else none) none)
-  -- title
-  let subItemIdx := if title.isSome then 1 else 0
+  let centred (st : TextStyle) : TextStyle := { st with halign := .center, valign := .middle }
   let mut labelOps : Array (Float × DrawOp) := #[]
-  if let some t := title then
-    let it := oitems[0]!
-    let cell := osol.cell it.span
-    let b := place cell .auto .auto it.width it.height it.width it.height 0.5 0.5
-    let (x, y) := dev figH (b.left + 0.5 * b.width) (b.bottom + 0.5 * b.height)
-    labelOps := labelOps.push (10, .text x y t (titleStyle s) none)
-  -- entries
-  let (sg, sitems) := subgrid s entries
-  let scell := osol.cell oitems[subItemIdx]!.span
-  let sw := oitems[subItemIdx]!.width
-  let sh := oitems[subItemIdx]!.height
-  let sbox := place scell .auto .auto sw sh sw sh 0.5 0.5
-  -- the subgrid fills its computed box, aligned centrally (`gridshalign`/`gridsvalign`)
-  let ssol := sg.solve sitems sbox
+  if let (some t, some b) := (title, g.title) then
+    let (x, y) := dev figH (f32 (b.left + 0.5 * b.width)) (f32 (b.bottom + 0.5 * b.height))
+    labelOps := labelOps.push (10, .text x y t (centred (titleStyle s)) none)
   let mut elemOps : Array (Float × DrawOp) := #[]
   for k in [0:entries.size] do
     let e := entries[k]!
-    let pit := sitems[2 * k]!
-    let lit := sitems[2 * k + 1]!
-    let pcell := ssol.cell pit.span
-    let pb := place pcell (.fixed s.patchsize.1) (.fixed s.patchsize.2) none none pit.width pit.height 0.5 0.5
-    let lcell := ssol.cell lit.span
-    let lb := place lcell .auto .auto lit.width lit.height lit.width lit.height 0 0.5
-    let (lx, ly) := dev figH lb.left (lb.bottom + 0.5 * lb.height)
-    labelOps := labelOps.push (10, .text lx ly e.label (labelStyle s) none)
+    let pb := g.patches[k]!
+    let lb := g.labels[k]!
+    let (lx, ly) := dev figH (f32 (lb.left + 0.5 * lb.width)) (f32 (lb.bottom + 0.5 * lb.height))
+    labelOps := labelOps.push (10, .text lx ly e.label (centred (labelStyle s)) none)
     for el in e.elements do
       match el with
       | .line c w st =>
@@ -206,8 +219,8 @@ def lower (s : LegendStyle) (title : Option String) (entries : Array LegendEntry
         let r : Rect := ⟨pb.left, figH - pb.top, pb.width, pb.height⟩
         elemOps := elemOps.push (10, .path (Path.rect r) (some { color := c })
           (if sw' > 0 then some { color := sc, width := sw', miterLimit := 2.0 } else none) none)
-  -- Makie creates each entry's label before its symbol plots; titles and labels live in
-  -- their own block scenes, drawn after the legend scene's element plots
+  -- entry symbols live in the legend scene; titles and labels in child block scenes,
+  -- which CairoMakie paints after the scene's own plots
   return ops ++ elemOps ++ labelOps
 
 end Legend

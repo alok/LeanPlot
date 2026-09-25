@@ -115,6 +115,18 @@ def computedBox (cb : Colorbar) (cell : BBox) : BBox :=
   let (aw, ah) : Option Float × Option Float := if cb.vertical then (some cb.size, none) else (none, some cb.size)
   place cell cb.width cb.height aw ah (reportedSize cb.width aw true) (reportedSize cb.height ah true) cb.halign cb.valign
 
+/-- The axis line of the bar `(start, end, position across)` in figure pixels: along the
+right (vertical, `flipaxis`) or top edge of the rounded frame box. -/
+def axisLine (cb : Colorbar) (box : BBox) : Float × Float × Float :=
+  let fb := box.roundInt
+  if cb.vertical then (fb.bottom, fb.top, if cb.flipaxis then fb.right else fb.left)
+  else (fb.left, fb.right, if cb.flipaxis then fb.top else fb.bottom)
+
+/-- Tick positions along the bar (figure pixels). -/
+def tickPositions (cb : Colorbar) (p : ColorbarPrep) (box : BBox) : Array Float :=
+  let (a, b, _) := cb.axisLine box
+  Axis2.tickPositions p.mapping.colorscale p.lo p.hi a b false p.ticks.values
+
 /-- Draw ops (z-tagged) for a colorbar with computed box `box`. -/
 def lower (cb : Colorbar) (p : ColorbarPrep) (box : BBox) (figH : Float) : Array (Float × DrawOp) := Id.run do
   let st := cb.axisStyle
@@ -143,10 +155,8 @@ def lower (cb : Colorbar) (p : ColorbarPrep) (box : BBox) (figH : Float) : Array
       fb.left (dy fb.bottom)).lineTo fb.right (dy fb.bottom)).close
     ops := ops.push (0, .path path none (some { color := cb.spinecolor, width := cb.spinewidth, miterLimit := 2.0 }) none)
   -- the LineAxis along the flipped side
-  let (a, b, pos) : Float × Float × Float :=
-    if cb.vertical then (fb.bottom, fb.top, if cb.flipaxis then fb.right else fb.left)
-    else (fb.left, fb.right, if cb.flipaxis then fb.top else fb.bottom)
-  let positions := Axis2.tickPositions p.mapping.colorscale p.lo p.hi a b false p.ticks.values
+  let (a, b, pos) := cb.axisLine box
+  let positions := cb.tickPositions p box
   let sgn : Float := if cb.flipaxis then 1 else -1
   let tickspace := if st.ticksvisible then max 0 (st.ticksize * (1 - st.tickalign)) else 0
   if st.ticksvisible then

@@ -318,33 +318,66 @@ def segOp (pts : Array (Float × Float × Float × Float)) (color : RGBA) (width
   let p := pts.foldl (init := ({} : Path)) fun p (x0, y0, x1, y1) => (p.moveTo x0 y0).lineTo x1 y1
   some (.path p none (some { color, width, cap := .butt, miterLimit := 1.1547005383792517, dash }) none)
 
+/-- The box of an axis legend inside the viewport (`axislegend`: `bbox = viewport`). -/
+def legendBox (_ax : Axis2) (lg : AxisLegend) (entries : Array LegendEntry) (vp : BBox) : BBox :=
+  let (w, h) := Legend.autosize lg.style lg.title entries
+  place vp .auto .auto (some w) (some h) (some w) (some h) lg.halign lg.valign
+
+/-- Positions of an axis's decorations in figure pixels (y up), as Makie computes them. -/
+structure Anchors where
+  /-- Major tick positions along x (pixels) and along y. -/
+  xticks : Array Float
+  yticks : Array Float
+  xminor : Array Float
+  yminor : Array Float
+  /-- y of the x tick label anchors; x of the y tick label anchors. -/
+  xTickLabelY : Float
+  yTickLabelX : Float
+  xlabel : Float × Float
+  ylabel : Float × Float
+  title : Float × Float
+  deriving Inhabited
+
+/-- The decoration anchors for a prepared axis with viewport `vp`. -/
+def anchors (ax : Axis2) (p : Axis2Prep) (vp : BBox) : Anchors :=
+  let st := ax.style
+  let sw := st.spinewidth
+  let tickspace (ls : LineAxisStyle) : Float := if ls.ticksvisible then max 0 (ls.ticksize * (1 - ls.tickalign)) else 0
+  let labelgap (ls : LineAxisStyle) (space : Float) : Float :=
+    sw + tickspace ls + (if ls.ticklabelsvisible then space + ls.ticklabelpad else 0) + ls.labelpadding
+  { xticks := tickPositions ax.xscale p.xlims.1 p.xlims.2 vp.left vp.right ax.xreversed p.xt.values
+    yticks := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.values
+    xminor := tickPositions ax.xscale p.xlims.1 p.xlims.2 vp.left vp.right ax.xreversed p.xt.minor
+    yminor := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.minor
+    xTickLabelY := f32 (vp.bottom - (sw + tickspace st.x + st.x.ticklabelpad))
+    yTickLabelX := f32 (vp.left - (sw + tickspace st.y + st.y.ticklabelpad))
+    xlabel := (f32 (vp.left + 0.5 * vp.width), f32 (vp.bottom - labelgap st.x p.xTickSpace))
+    ylabel := (f32 (vp.left - labelgap st.y p.yTickSpace), f32 (vp.bottom + 0.5 * vp.height))
+    title := (f32 (vp.left + st.titlealign * vp.width), f32 (vp.top + st.titlegap)) }
+
 /-- Draw ops of the axis (decorations, marks, axis legend), each tagged with Makie's
 z-value, for viewport `vp` (figure pixels, y up) in a figure of height `figH`. -/
 def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float × DrawOp) := Id.run do
   let st := ax.style
   let sw := st.spinewidth
   let dy (y : Float) : Float := figH - y
+  let an := ax.anchors p vp
   let mut ops : Array (Float × DrawOp) := #[]
   -- background
   if st.backgroundcolor.a > 0 then
     ops := ops.push (-100, .path (Path.rect ⟨vp.left, dy vp.top, vp.width, vp.height⟩) (some { color := st.backgroundcolor }) none none)
-  let xpos := tickPositions ax.xscale p.xlims.1 p.xlims.2 vp.left vp.right ax.xreversed p.xt.values
-  let ypos := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.values
-  let xminor := tickPositions ax.xscale p.xlims.1 p.xlims.2 vp.left vp.right ax.xreversed p.xt.minor
-  let yminor := tickPositions ax.yscale p.ylims.1 p.ylims.2 vp.bottom vp.top ax.yreversed p.yt.minor
   -- grid (z = -10): x grid, x minor grid, y grid, y minor grid
   let gridOps : Array (Option DrawOp) := #[
-    if st.x.gridvisible then segOp (xpos.map fun x => (x, dy vp.bottom, x, dy vp.top)) st.x.gridcolor st.x.gridwidth (st.x.gridstyle.dashArray st.x.gridwidth) else none,
-    if st.x.minorgridvisible then segOp (xminor.map fun x => (x, dy vp.bottom, x, dy vp.top)) st.x.minorgridcolor st.x.minorgridwidth else none,
-    if st.y.gridvisible then segOp (ypos.map fun y => (vp.left, dy y, vp.right, dy y)) st.y.gridcolor st.y.gridwidth (st.y.gridstyle.dashArray st.y.gridwidth) else none,
-    if st.y.minorgridvisible then segOp (yminor.map fun y => (vp.left, dy y, vp.right, dy y)) st.y.minorgridcolor st.y.minorgridwidth else none]
+    if st.x.gridvisible then segOp (an.xticks.map fun x => (x, dy vp.bottom, x, dy vp.top)) st.x.gridcolor st.x.gridwidth (st.x.gridstyle.dashArray st.x.gridwidth) else none,
+    if st.x.minorgridvisible then segOp (an.xminor.map fun x => (x, dy vp.bottom, x, dy vp.top)) st.x.minorgridcolor st.x.minorgridwidth else none,
+    if st.y.gridvisible then segOp (an.yticks.map fun y => (vp.left, dy y, vp.right, dy y)) st.y.gridcolor st.y.gridwidth (st.y.gridstyle.dashArray st.y.gridwidth) else none,
+    if st.y.minorgridvisible then segOp (an.yminor.map fun y => (vp.left, dy y, vp.right, dy y)) st.y.minorgridcolor st.y.minorgridwidth else none]
   for g in gridOps do
     if let some op := g then ops := ops.push (-10, op)
   -- one LineAxis: ticks (10), minor ticks (10), label (0), spine (20), tick labels (0)
-  let lineAxis (horizontal : Bool) (ls : LineAxisStyle) (pos minor : Array Float) (t : AxisTicks) (space : Float)
-      (label : String) (spineVisible : Bool) : Array (Float × DrawOp) := Id.run do
+  let lineAxis (horizontal : Bool) (ls : LineAxisStyle) (pos minor : Array Float) (t : AxisTicks)
+      (label : String) (labelPos : Float × Float) (tickLabelAt : Float) (spineVisible : Bool) : Array (Float × DrawOp) := Id.run do
     let mut out : Array (Float × DrawOp) := #[]
-    let tickspace := if ls.ticksvisible then max 0 (ls.ticksize * (1 - ls.tickalign)) else 0
     -- tick marks: start = pos + (align·size − ½ spinewidth) outward sign, length `size`
     let tickSegs (ps : Array Float) (size align : Float) : Array (Float × Float × Float × Float) :=
       ps.map fun q =>
@@ -358,11 +391,7 @@ def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float
       if let some op := segOp (tickSegs minor ls.minorticksize ls.minortickalign) ls.minortickcolor ls.minortickwidth then out := out.push (10, op)
     -- axis label
     if ls.labelvisible && !FigText.isBlank label then
-      let gap := sw + tickspace + (if ls.ticklabelsvisible then space + ls.ticklabelpad else 0) + ls.labelpadding
-      let style := labelStyle ls horizontal
-      let (x, y) := if horizontal then (vp.left + 0.5 * vp.width, vp.bottom - gap)
-                    else (vp.left - gap, vp.bottom + 0.5 * vp.height)
-      out := out.push (0, .text (f32 x) (dy (f32 y)) label style none)
+      out := out.push (0, .text labelPos.1 (dy labelPos.2) label (labelStyle ls horizontal) none)
     -- spine
     if spineVisible && sw > 0 then
       let seg := if horizontal then (vp.left - 0.5 * sw, dy vp.bottom, vp.right + 0.5 * sw, dy vp.bottom)
@@ -370,15 +399,14 @@ def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float
       if let some op := segOp #[seg] st.spinecolor sw then out := out.push (20, op)
     -- tick labels
     if ls.ticklabelsvisible then
-      let shift := sw + tickspace + ls.ticklabelpad
       let style := tickLabelStyle ls horizontal
       for i in [0:min pos.size t.labels.size] do
         let q := pos[i]!
-        let (x, y) := if horizontal then (q, f32 (vp.bottom - shift)) else (f32 (vp.left - shift), q)
+        let (x, y) := if horizontal then (q, tickLabelAt) else (tickLabelAt, q)
         out := out.push (0, FigText.labelOp style t.labels[i]! x (dy y))
     return out
-  ops := ops ++ lineAxis true st.x xpos xminor p.xt p.xTickSpace ax.xlabel st.bottomspinevisible
-  ops := ops ++ lineAxis false st.y ypos yminor p.yt p.yTickSpace ax.ylabel st.leftspinevisible
+  ops := ops ++ lineAxis true st.x an.xticks an.xminor p.xt ax.xlabel an.xlabel an.xTickLabelY st.bottomspinevisible
+  ops := ops ++ lineAxis false st.y an.yticks an.yminor p.yt ax.ylabel an.ylabel an.yTickLabelX st.leftspinevisible
   -- opposite spines
   if st.topspinevisible then
     if let some op := segOp #[(vp.left - 0.5 * sw, dy vp.top, vp.right + 0.5 * sw, dy vp.top)] st.spinecolor sw then
@@ -388,9 +416,7 @@ def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float
       ops := ops.push (20, op)
   -- title
   if st.titlevisible && !FigText.isBlank ax.title then
-    let x := vp.left + st.titlealign * vp.width
-    let y := vp.top + st.titlegap
-    ops := ops.push (0, .text (f32 x) (dy (f32 y)) ax.title ax.titleStyle none)
+    ops := ops.push (0, .text an.title.1 (dy an.title.2) ax.title ax.titleStyle none)
   -- plots
   let pr := ax.projector vp p.xlims p.ylims figH
   for it in ax.items do
@@ -406,9 +432,7 @@ def lower (ax : Axis2) (p : Axis2Prep) (vp : BBox) (figH : Float) : Array (Float
   if let some lg := ax.legend then
     let entries := LegendEntry.ofItems ax.items
     if !entries.isEmpty then
-      let (w, h) := Legend.autosize lg.style lg.title entries
-      let box := place vp .auto .auto (some w) (some h) (some w) (some h) lg.halign lg.valign
-      ops := ops ++ Legend.lower lg.style lg.title entries box figH
+      ops := ops ++ Legend.lower lg.style lg.title entries (ax.legendBox lg entries vp) figH
   return ops
 
 end Axis2
