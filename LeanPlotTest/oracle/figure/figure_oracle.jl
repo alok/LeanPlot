@@ -373,6 +373,16 @@ let f = Figure()
     push!(figs, figure_json("flipped_axes", f))
 end
 
+# 26. a two-bank legend with a title, and dashed/dotted legend lines
+let f = Figure()
+    ax = Axis(f[1, 1])
+    for (k, st) in enumerate([:solid, :dash, :dot, :dashdot])
+        lines!(ax, xs, sin.(xs .+ k), linestyle = st, label = "phase $k")
+    end
+    Legend(f[1, 2], ax, "Phases", nbanks = 2)
+    push!(figs, figure_json("legend_banks", f))
+end
+
 # 21. a streamplot (its computed lines and arrowheads are dumped to streamplot.json so the
 #     Lean test draws exactly the same data)
 let f = Figure()

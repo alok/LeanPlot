@@ -225,6 +225,16 @@ def flippedAxes : Figure :=
     xaxistop := true, yaxisright := true }
   Figure.new |>.axis 1 1 ax
 
+/-- 26. a two-bank legend with a title and styled lines. -/
+def legendBanks : Figure := Id.run do
+  let mut ax := Axis2.new
+  let styles := #[LineStyle.solid, .dash, .dot, .dashdot]
+  for k in [0:4] do
+    let ph := Num.ofInt (k + 1 : Nat)
+    ax := ax.linesFn (fun x => Float.sin (x + ph)) xs (linestyle := styles[k]!) (label := s!"phase {k + 1}")
+  return Figure.new |>.axis 1 1 ax
+    |>.place 1 2 (.legend { source := .axisAt 1 1, title := some "Phases", style := { nbanks := 2 } })
+
 /-- All oracle figures by name. -/
 def specs : Array (String × Figure) := #[
   ("basic", basic), ("empty", empty), ("twoaxes", twoaxes), ("grid22", grid22), ("limits", limits),
@@ -233,6 +243,7 @@ def specs : Array (String × Figure) := #[
   ("markers", markers), ("colormapped", colormapped), ("heatmap_image", heatmapImage),
   ("legend_horizontal", legendHorizontal), ("label_log_reversed", labelLogReversed), ("axis3_wire", axis3Wire),
   ("hvlines_aspect", hvlinesAspect), ("rotated_clip", rotatedClip), ("mesh_poly_text", meshPolyText),
-  ("fixed_ticks", fixedTicks), ("flipped_axes", flippedAxes)]
+  ("fixed_ticks", fixedTicks), ("flipped_axes", flippedAxes),
+  ("legend_banks", legendBanks)]
 
 end LeanPlotTest.Figure

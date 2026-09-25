@@ -27,7 +27,7 @@ def goldenDir : System.FilePath := "LeanPlotTest" / "Figure" / "golden"
 /-- Figures with a committed CairoMakie reference render. -/
 def parityNames : Array String :=
   #["basic", "empty", "limits", "heatmap_colorbar", "legend", "logy", "bandpoly", "axis3", "markers", "heatmap_image",
-    "label_log_reversed", "hvlines_aspect", "legend_horizontal", "streamplot", "rotated_clip", "mesh_poly_text", "fixed_ticks", "flipped_axes"]
+    "label_log_reversed", "hvlines_aspect", "legend_horizontal", "streamplot", "rotated_clip", "mesh_poly_text", "fixed_ticks", "flipped_axes", "legend_banks"]
 
 /-- Figures with a committed SVG golden. -/
 def svgNames : Array String := #["basic", "legend", "heatmap_colorbar", "axis3"]
