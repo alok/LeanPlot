@@ -345,18 +345,33 @@ def inPolygon (xp yp : Float) (ring : Pts2) : Int :=
   termination_by n - i
   go 0 0
 
+/-- Bounding box `(xmin, xmax, ymin, ymax)` of a ring. -/
+def ringBox (p : Pts2) : Float × Float × Float × Float :=
+  match extremaNaN p.xs, extremaNaN p.ys with
+  | some (x0, x1), some (y0, y1) => (x0, x1, y0, y1)
+  | _, _ => (nan, nan, nan, nan)
+
+/-- `inPolygon … == 1`, skipping points outside the ring's bounding box. Outside
+the box every Hao–Sun edge test is decided by exact signs (binary32 subtraction
+never flips a sign), so such points are always "out": the shortcut changes no
+result (short of coordinate differences whose products underflow binary32). -/
+@[inline] def strictlyInside (xp yp : Float) (ring : Pts2) (box : Float × Float × Float × Float) : Bool :=
+  let (x0, x1, y0, y1) := box
+  if xp < x0 || xp > x1 || yp < y0 || yp > y1 then false else inPolygon xp yp ring == 1
+
 /-- Makie `_is_ring_contained(inner, outer)`: some vertex of `inner`, or some
-midpoint of an `inner` edge, lies strictly inside `outer` (closed binary32 rings). -/
-def ringContained (inner outer : Pts2) : Bool :=
+midpoint of an `inner` edge, lies strictly inside `outer` (closed binary32 rings;
+`box` is `outer`'s bounding box). -/
+def ringContained (inner outer : Pts2) (box : Float × Float × Float × Float := ringBox outer) : Bool :=
   let n := inner.size
   let rec anyVertex (i : Nat) : Bool :=
-    if i < n then inPolygon (inner.xs.get! i) (inner.ys.get! i) outer == 1 || anyVertex (i + 1) else false
+    if i < n then strictlyInside (inner.xs.get! i) (inner.ys.get! i) outer box || anyVertex (i + 1) else false
   termination_by n - i
   let rec anyMid (i : Nat) : Bool :=
     if i + 1 < n then
       let mx := r32 (r32 (inner.xs.get! i + inner.xs.get! (i + 1)) / 2)
       let my := r32 (r32 (inner.ys.get! i + inner.ys.get! (i + 1)) / 2)
-      inPolygon mx my outer == 1 || anyMid (i + 1)
+      strictlyInside mx my outer box || anyMid (i + 1)
     else false
   termination_by n - i
   anyVertex 0 || anyMid 0
@@ -370,9 +385,10 @@ remaining ring (outer) and rings contained in exactly one (its hole). -/
 def groupPolys (rings : Array Pts2) : Array Polygon := Id.run do
   let polys := rings.map closeRing
   let n := polys.size
+  let boxes := polys.map ringBox
   -- containment[i][j]: ring i lies inside ring j
   let cont : Array (Array Bool) := (Array.range n).map fun i =>
-    (Array.range n).map fun j => i != j && ringContained polys[i]! polys[j]!
+    (Array.range n).map fun j => i != j && ringContained polys[i]! polys[j]! boxes[j]!
   let mut unclassified : Array Nat := Array.range n
   let mut groups : Array Polygon := #[]
   let mut groupOf : Array (Option Nat) := Array.replicate n none

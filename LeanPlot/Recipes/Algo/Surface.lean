@@ -52,54 +52,128 @@ structure NMesh where
   mesh : TriMesh
   normals : Pts3
 
+/-- Accumulated (un-normalised) vertex normals, three coordinate buffers. -/
+structure NAcc where
+  x : FloatArray
+  y : FloatArray
+  z : FloatArray
+
+/-- Add a normal to vertex `k`. -/
+@[inline] def NAcc.add (f32 : Bool) (acc : NAcc) (k : Nat) (nx ny nz : Float) : NAcc :=
+  ⟨acc.x.set! k (rnd f32 (acc.x.get! k + nx)), acc.y.set! k (rnd f32 (acc.y.get! k + ny)),
+   acc.z.set! k (rnd f32 (acc.z.get! k + nz))⟩
+
+/-- Add the face normal `cross(b - a, c - a)` of vertices `a b c` to the
+vertices `a b c` and, for a quad (`d? = some d`), `d`
+(`nan_aware_orthogonal_vector`: zero if a vertex has a `NaN`). -/
+@[inline] def addFaceNormal (f32 : Bool) (pos : Pts3) (a b c : Nat) (d? : Option Nat) (acc : NAcc) : NAcc :=
+  let ax := pos.xs.get! a
+  let ay := pos.ys.get! a
+  let az := pos.zs.get! a
+  let bx := pos.xs.get! b
+  let by' := pos.ys.get! b
+  let bz := pos.zs.get! b
+  let cx := pos.xs.get! c
+  let cy := pos.ys.get! c
+  let cz := pos.zs.get! c
+  if ax.isNaN || ay.isNaN || az.isNaN || bx.isNaN || by'.isNaN || bz.isNaN || cx.isNaN || cy.isNaN || cz.isNaN then acc
+  else
+    let ux := rnd f32 (bx - ax)
+    let uy := rnd f32 (by' - ay)
+    let uz := rnd f32 (bz - az)
+    let vx := rnd f32 (cx - ax)
+    let vy := rnd f32 (cy - ay)
+    let vz := rnd f32 (cz - az)
+    let nx := rnd f32 (rnd f32 (uy * vz) - rnd f32 (uz * vy))
+    let ny := rnd f32 (rnd f32 (uz * vx) - rnd f32 (ux * vz))
+    let nz := rnd f32 (rnd f32 (ux * vy) - rnd f32 (uy * vx))
+    let acc := ((acc.add f32 a nx ny nz).add f32 b nx ny nz).add f32 c nx ny nz
+    match d? with
+    | some d => acc.add f32 d nx ny nz
+    | none => acc
+
+/-- Normalise accumulated normals and round them to `Vec3f` (`normalize(0)` is `NaN`). -/
+def finishNormals (f32 : Bool) (acc : NAcc) : Pts3 :=
+  let n := acc.x.size
+  let rec go (k : Nat) (ox oy oz : FloatArray) : Pts3 :=
+    if k < n then
+      let w := normalize3 f32 ⟨acc.x.get! k, acc.y.get! k, acc.z.get! k⟩
+      go (k + 1) (ox.push (r32 w.x)) (oy.push (r32 w.y)) (oz.push (r32 w.z))
+    else Pts3.ofArrays ox oy oz
+  termination_by n - k
+  go 0 (FloatArray.emptyWithCapacity n) (FloatArray.emptyWithCapacity n) (FloatArray.emptyWithCapacity n)
+
+/-- Zeroed accumulators for `n` vertices. -/
+def NAcc.zeros (n : Nat) : NAcc :=
+  ⟨⟨Array.replicate n 0⟩, ⟨Array.replicate n 0⟩, ⟨Array.replicate n 0⟩⟩
+
 /-- Makie `nan_aware_normals` over quads (first three vertices of each quad), or
 GeometryBasics `normals` over triangles: face cross products summed per vertex,
 normalised, rounded to `Vec3f`. `f32` evaluates in binary32 (binary32 vertices). -/
-def vertexNormals (f32 : Bool) (pos : Pts3) (faces : Array (Array Nat)) : Pts3 := Id.run do
-  let n := pos.size
-  let mut nx : FloatArray := ⟨Array.replicate n 0⟩
-  let mut ny : FloatArray := ⟨Array.replicate n 0⟩
-  let mut nz : FloatArray := ⟨Array.replicate n 0⟩
-  let r := rnd f32
-  for f in faces do
-    let a := pos.get! f[0]!
-    let b := pos.get! f[1]!
-    let c := pos.get! f[2]!
-    let (cx, cy, cz) :=
-      if isNaN3 a || isNaN3 b || isNaN3 c then (0.0, 0.0, 0.0) else
-      let u : Vec3 := ⟨r (b.x - a.x), r (b.y - a.y), r (b.z - a.z)⟩
-      let v : Vec3 := ⟨r (c.x - a.x), r (c.y - a.y), r (c.z - a.z)⟩
-      (r (r (u.y * v.z) - r (u.z * v.y)), r (r (u.z * v.x) - r (u.x * v.z)), r (r (u.x * v.y) - r (u.y * v.x)))
-    for k in f do
-      nx := nx.set! k (r (nx.get! k + cx))
-      ny := ny.set! k (r (ny.get! k + cy))
-      nz := nz.set! k (r (nz.get! k + cz))
-  let mut ox : FloatArray := .empty
-  let mut oy : FloatArray := .empty
-  let mut oz : FloatArray := .empty
-  for k in [0:n] do
-    let w := normalize3 f32 ⟨nx.get! k, ny.get! k, nz.get! k⟩
-    ox := ox.push (r32 w.x); oy := oy.push (r32 w.y); oz := oz.push (r32 w.z)
-  return Pts3.ofArrays ox oy oz
+def vertexNormals (f32 : Bool) (pos : Pts3) (faces : Array (Array Nat)) : Pts3 :=
+  finishNormals f32 (faces.foldl (init := NAcc.zeros pos.size) fun acc f =>
+    addFaceNormal f32 pos f[0]! f[1]! f[2]! f[3]? acc)
 
 /-- Build a triangle mesh (quads split `(a, b, c), (a, c, d)`) from vertices and quads. -/
 def quadsToTriMesh (pos : Pts3) (quads : Array (Nat × Nat × Nat × Nat)) : Option TriMesh :=
   let tri : Array UInt32 := quads.foldl (init := #[]) fun acc (a, b, c, d) =>
-    acc ++ #[a.toUInt32, b.toUInt32, c.toUInt32, a.toUInt32, c.toUInt32, d.toUInt32]
+    ((((((acc.push a.toUInt32).push b.toUInt32).push c.toUInt32).push a.toUInt32).push c.toUInt32).push d.toUInt32)
   TriMesh.mk? pos tri
 
 /-- The empty mesh. -/
 def emptyNMesh : NMesh := ⟨⟨Pts3.empty, #[], rfl, fun _ hk => absurd hk (Nat.not_lt_zero _)⟩, Pts3.empty⟩
 
+/-- `arr[k] += v` (in the selected precision). -/
+@[inline] def addAt (f32 : Bool) (arr : FloatArray) (k : Nat) (v : Float) : FloatArray :=
+  arr.set! k (rnd f32 (arr.get! k + v))
+
+/-- The point `k` has a `NaN` coordinate. -/
+@[inline] def nanAt (pos : Pts3) (k : Nat) : Bool :=
+  (pos.xs.get! k).isNaN || (pos.ys.get! k).isNaN || (pos.zs.get! k).isNaN
+
 /-- A quad-grid surface from `nx × ny` column-major vertices (Makie
 `surface2mesh` after `matrix_grid`): drop quads with a `NaN` vertex, compute
 `nan_aware_normals` (binary64 arithmetic unless `f32`), triangulate. -/
 def gridMesh (nx ny : Nat) (pos : Pts3) (f32 : Bool := false) : NMesh :=
-  let quads := (gridQuads nx ny).filter fun (a, b, c, d) =>
-    !(isNaN3 (pos.get! a) || isNaN3 (pos.get! b) || isNaN3 (pos.get! c) || isNaN3 (pos.get! d))
-  match quadsToTriMesh pos quads with
-  -- `nan_aware_normals`: the normal of a quad's first three vertices is added to all four
-  | some m => ⟨m, vertexNormals f32 pos (quads.map fun (a, b, c, d) => #[a, b, c, d])⟩
+  if nx < 2 || ny < 2 then emptyNMesh else
+  let two := nx == 2 && ny == 2
+  let nq := if two then 1 else (nx - 1) * (ny - 1)
+  let px := pos.xs
+  let py := pos.ys
+  let pz := pos.zs
+  -- quad with lower-left vertex `a`: `(a, a+1, a+1+nx, a+nx)`; the 2×2 grid is `(0, 1, 2, 3)`.
+  -- Accumulators are separate arguments so a step allocates nothing.
+  let rec go (k i a : Nat) (tri : Array UInt32) (ax ay az : FloatArray) : Array UInt32 × NAcc :=
+    if k < nq then
+      let b := if two then 1 else a + 1
+      let c := if two then 2 else a + 1 + nx
+      let d := if two then 3 else a + nx
+      let i' := if i + 2 < nx then i + 1 else 0
+      let a' := if i + 2 < nx then a + 1 else a + 2
+      if nanAt pos a || nanAt pos b || nanAt pos c || nanAt pos d then go (k + 1) i' a' tri ax ay az
+      else
+        let tri := (((((tri.push a.toUInt32).push b.toUInt32).push c.toUInt32).push a.toUInt32).push
+          c.toUInt32).push d.toUInt32
+        -- `nan_aware_normals`: the normal of a quad's first three vertices is added to all four
+        let ux := rnd f32 (px.get! b - px.get! a)
+        let uy := rnd f32 (py.get! b - py.get! a)
+        let uz := rnd f32 (pz.get! b - pz.get! a)
+        let vx := rnd f32 (px.get! c - px.get! a)
+        let vy := rnd f32 (py.get! c - py.get! a)
+        let vz := rnd f32 (pz.get! c - pz.get! a)
+        let nx' := rnd f32 (rnd f32 (uy * vz) - rnd f32 (uz * vy))
+        let ny' := rnd f32 (rnd f32 (uz * vx) - rnd f32 (ux * vz))
+        let nz' := rnd f32 (rnd f32 (ux * vy) - rnd f32 (uy * vx))
+        let ax := addAt f32 (addAt f32 (addAt f32 (addAt f32 ax a nx') b nx') c nx') d nx'
+        let ay := addAt f32 (addAt f32 (addAt f32 (addAt f32 ay a ny') b ny') c ny') d ny'
+        let az := addAt f32 (addAt f32 (addAt f32 (addAt f32 az a nz') b nz') c nz') d nz'
+        go (k + 1) i' a' tri ax ay az
+    else (tri, ⟨ax, ay, az⟩)
+  termination_by nq - k
+  let z := NAcc.zeros pos.size
+  let (tri, acc) := go 0 0 0 (Array.mkEmpty (6 * nq)) z.x z.y z.z
+  match TriMesh.mk? pos tri with
+  | some m => ⟨m, finishNormals f32 acc⟩
   | none => emptyNMesh
 
 /-- Makie `matrix_grid(x, y, z)`: the vertices `(x[i], y[j], z[i, j])` in

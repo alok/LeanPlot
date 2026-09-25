@@ -166,10 +166,9 @@ def metrics2d (s : Style2D) (dx dy : Float) : Metrics :=
       let sub := if s.integerAttrs then r32 (r32 (target - s.taillength) - s.tiplength)
                  else target - s.taillength - s.tiplength
       (clamp sub s.minshaftlength s.maxshaftlength, s.integerAttrs && s.maxshaftlength.isFinite)
-  let rd := rnd f32
-  let k := rd (target / rd (rd (tsl + s.taillength) + s.tiplength))
-  ⟨rd (k * s.taillength), rd (k * s.tailwidth), rd (k * tsl), rd (k * s.shaftwidth), rd (k * s.tiplength),
-   rd (k * s.tipwidth)⟩
+  let k := rnd f32 (target / rnd f32 (rnd f32 (tsl + s.taillength) + s.tiplength))
+  ⟨rnd f32 (k * s.taillength), rnd f32 (k * s.tailwidth), rnd f32 (k * tsl), rnd f32 (k * s.shaftwidth), rnd f32 (k * s.tiplength),
+   rnd f32 (k * s.tipwidth)⟩
 
 /-- Pixel-space arrow polygons: vertices of all polygons concatenated
 (binary32), with per-polygon offsets, component (`0` tail, `1` shaft, `2` tip)

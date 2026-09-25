@@ -110,9 +110,8 @@ namespace Ctx
 
 /-- Linear interpolation along the edge from vertex `(i0, j0)` to `(i1, j1)`. -/
 @[inline] def lerpEdge (c : Ctx) (i0 j0 i1 j1 : Nat) : Float × Float :=
-  let r := rnd c.f32
   let z0 := c.zAt i0 j0
-  let frac (a b : Float) : Float := r (a + r (r (r (b - a) * r (c.h - z0)) / r (c.zAt i1 j1 - z0)))
+  let frac (a b : Float) : Float := rnd c.f32 (a + rnd c.f32 (rnd c.f32 (rnd c.f32 (b - a) * rnd c.f32 (c.h - z0)) / rnd c.f32 (c.zAt i1 j1 - z0)))
   match c.coords with
   | .rect xs ys =>
     if i0 == i1 then (xs.get! i0, frac (ys.get! j0) (ys.get! j1))
@@ -129,33 +128,34 @@ namespace Ctx
   else if edge == eN then c.lerpEdge i (j + 1) (i + 1) (j + 1)
   else c.lerpEdge i j (i + 1) j
 
-/-- `get_level_cells`: the marching-squares cell types (`0` = no crossing). -/
+/-- Marching-squares cell type of the cell with corner values `z1 … z4`
+(counter-clockwise from the lower left), Contour.jl `_get_case` + saddle rule. -/
+@[inline] def cellType (f32 : Bool) (h z1 z2 z3 z4 : Float) : UInt8 :=
+  let case : UInt8 := (if z1 > h then 1 else 0) ||| (if z2 > h then 2 else 0) |||
+    (if z3 > h then 4 else 0) ||| (if z4 > h then 8 else 0)
+  if case == 0 || case == 15 then 0
+  else if case == 5 || case == 10 then
+      let up := 0.25 * rnd f32 (rnd f32 (rnd f32 (z1 + z2) + z3) + z4) ≥ h
+    if case == 5 then (if up then cNWSE else cNESW) else (if up then cNESW else cNWSE)
+  else edgeLUT case
+
+/-- `get_level_cells`: the marching-squares cell types (`0` = no crossing), in
+column-major cell order. -/
 def levelCells (c : Ctx) : ByteArray :=
   let cx := c.nx - 1
-  let n := cx * (c.ny - 1)
-  let rec go (k : Nat) (acc : ByteArray) : ByteArray :=
-    if k < n then
-      let i := k % cx
-      let j := k / cx
-      let z1 := c.zAt i j
-      let z2 := c.zAt (i + 1) j
-      let z3 := c.zAt (i + 1) (j + 1)
-      let z4 := c.zAt i (j + 1)
-      let h := c.h
-      let case : UInt8 := (if z1 > h then 1 else 0) ||| (if z2 > h then 2 else 0) |||
-        (if z3 > h then 4 else 0) ||| (if z4 > h then 8 else 0)
-      let v : UInt8 :=
-        if case == 0 || case == 15 then 0
-        else if case == 5 || case == 10 then
-          let r := rnd c.f32
-          let s := r (r (r (z1 + z2) + z3) + z4)
-          let up := 0.25 * s ≥ h
-          if case == 5 then (if up then cNWSE else cNESW) else (if up then cNESW else cNWSE)
-        else edgeLUT case
-      go (k + 1) (acc.push v)
+  let cy := c.ny - 1
+  let z := c.z
+  -- cell (i, j) with running vertex index `v = i + nx*j`
+  let rec row (i v : Nat) (acc : ByteArray) : ByteArray :=
+    if i < cx then
+      let t := cellType c.f32 c.h (z.get! v) (z.get! (v + 1)) (z.get! (v + 1 + c.nx)) (z.get! (v + c.nx))
+      row (i + 1) (v + 1) (acc.push t)
     else acc
-  termination_by n - k
-  go 0 (ByteArray.emptyWithCapacity n)
+  termination_by cx - i
+  let rec rows (j : Nat) (acc : ByteArray) : ByteArray :=
+    if j < cy then rows (j + 1) (row 0 (c.nx * j) acc) else acc
+  termination_by cy - j
+  rows 0 (ByteArray.emptyWithCapacity (cx * cy))
 
 /-- Cell `(i, j)` lies in the cell range. -/
 @[inline] def inRange (c : Ctx) (i j : Int) : Bool :=

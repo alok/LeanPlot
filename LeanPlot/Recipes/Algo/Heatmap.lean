@@ -63,10 +63,9 @@ tolerance when `f32`), so the axis is the range `start, start + step, …`
 def regularGrid? (arr : FloatArray) (f32 : Bool := true) : Option (Float × Float) :=
   let n := arr.size
   if n < 2 then none else
-  let r := rnd f32
-  let diffs := ((List.range (n - 1)).map fun i => r (arr.get! (i + 1) - arr.get! i)).toArray.qsort (· < ·)
+  let diffs := ((List.range (n - 1)).map fun i => rnd f32 (arr.get! (i + 1) - arr.get! i)).toArray.qsort (· < ·)
   let uniq := diffs.foldl (fun acc d => if acc.back? == some d then acc else acc.push d) #[]
-  let step := r (uniq.foldl (fun s d => r (s + d)) 0 / Num.ofInt uniq.size)
+  let step := rnd f32 (uniq.foldl (fun s d => rnd f32 (s + d)) 0 / Num.ofInt uniq.size)
   let approx (x : Float) : Bool :=
     if f32 then isApprox32 x step else isApprox x step (Float.sqrt eps64)
   if uniq.all approx then

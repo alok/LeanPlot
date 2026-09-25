@@ -62,7 +62,7 @@ def suite : TestM Unit := do
       limitsF32 := (c.get "f32limits").boolean
       fieldF32 := name == "f32field" }
     let f := field name
-    let r := Stream.run dim (fun p => let q := f p; (q.x, q.y, q.z)) ⟨o[0]!, o[1]!, o.getD 2 0⟩ ⟨w[0]!, w[1]!, w.getD 2 0⟩ opts
+    let r := Stream.run dim f ⟨o[0]!, o[1]!, o.getD 2 0⟩ ⟨w[0]!, w[1]!, w.getD 2 0⟩ opts
     check s!"{name} narrows" (r.arrowPos.size == (c.get "narrows").nat)
       (fun _ => s!"got {r.arrowPos.size} want {(c.get "narrows").nat}")
     check s!"{name} npoints" (r.linePoints.size == (c.get "npoints").nat)

@@ -116,6 +116,8 @@ structure Axis where
   step : Float
   /-- Seed coefficient `φ^{-i}`. -/
   a : Float
+  /-- `res` as a float. -/
+  resF : Float
   deriving Inhabited
 
 /-- Build the range for one dimension. -/
@@ -123,18 +125,19 @@ def mkAxis (f32 : Bool) (origin width : Float) (res : Nat) (a : Float) : Axis :=
   let lo := rnd f32 origin
   let hi := rnd f32 (lo + rnd f32 width)
   let res := max res 1
-  ⟨lo, hi, res, rnd f32 (rnd f32 (hi - lo) / Num.ofInt res), a⟩
+  ⟨lo, hi, res, rnd f32 (rnd f32 (hi - lo) / Num.ofInt res), a, Num.ofInt res⟩
 
 /-- Julia `searchsortedlast(r::LinRange, x)` (1-based; `0` below, `res + 1` at or
-above the top). -/
+above the top). The index arithmetic is exact in binary64 (indices are small
+integers), so no `Int` is materialised. -/
 def Axis.searchLast (ax : Axis) (f32 : Bool) (x : Float) : Nat :=
   if x < ax.lo then 0
   else if ax.step == 0 || !(x < ax.hi) then ax.res + 1
   else
-    let n := roundInt ((x - ax.lo) / ax.step + 1)
-    let t := Num.ofInt (n - 1) / Num.ofInt ax.res
-    let an := rnd f32 ((1 - t) * ax.lo + t * ax.hi)
-    (if x < an then n - 1 else n).toNat
+    let n := roundEven ((x - ax.lo) / ax.step + fOne)
+    let t := (n - fOne) / ax.resF
+    let an := rnd f32 ((fOne - t) * ax.lo + t * ax.hi)
+    (if x < an then n - fOne else n).toUInt64.toNat
 
 /-- Cell index along one dimension for a traced point (clamped into `1..res`,
 see the module note). -/
@@ -144,16 +147,23 @@ see the module note). -/
 /-- Seed cell along one dimension for sequence index `ind`:
 `clamp(ceil(Int, ((0.5 + a·ind) % 1)·res), 1, res)`. -/
 @[inline] def Axis.seed (ax : Axis) (ind : Nat) : Nat :=
-  let v := fHalf + ax.a * Num.ofInt ind
+  let v := fHalf + ax.a * ind.toUInt64.toFloat
   let frac := v - v.floor
-  let j := ceilInt (frac * Num.ofInt ax.res)
-  (max 1 (min j ax.res)).toNat
+  let j := (frac * ax.resF).ceil
+  if j < fOne then 1 else if j > ax.resF then ax.res else j.toUInt64.toNat
 
 /-- Cell centre `first(r) + (c - 0.5)·step(r)` (binary64). -/
 @[inline] def Axis.center (ax : Axis) (c : Nat) : Float := ax.lo + (Num.ofInt c - fHalf) * ax.step
 
 /-- `lo ≤ x ≤ hi` (GeometryBasics `in(::Point, ::Rect)` per coordinate). -/
 @[inline] def Axis.contains (ax : Axis) (x : Float) : Bool := x ≤ ax.hi && x ≥ ax.lo
+
+/-- Line-point buffers (coordinates and colours), threaded linearly. -/
+structure Lines where
+  lx : FloatArray
+  ly : FloatArray
+  lz : FloatArray
+  lcol : FloatArray
 
 /-- Output buffers, threaded linearly. -/
 structure Buf where
@@ -163,18 +173,15 @@ structure Buf where
   adx : FloatArray
   ady : FloatArray
   adz : FloatArray
-  lx : FloatArray
-  ly : FloatArray
-  lz : FloatArray
   acol : FloatArray
-  lcol : FloatArray
+  lines : Lines
 
 /-- Empty buffers. -/
-def Buf.empty : Buf := ⟨.empty, .empty, .empty, .empty, .empty, .empty, .empty, .empty, .empty, .empty, .empty⟩
+def Buf.empty : Buf := ⟨.empty, .empty, .empty, .empty, .empty, .empty, .empty, ⟨.empty, .empty, .empty, .empty⟩⟩
 
 /-- Append a line point with its colour. -/
-@[inline] def Buf.pushLine (b : Buf) (x y z c : Float) : Buf :=
-  { b with lx := b.lx.push (r32 x), ly := b.ly.push (r32 y), lz := b.lz.push (r32 z), lcol := b.lcol.push c }
+@[inline] def Lines.push (b : Lines) (x y z c : Float) : Lines :=
+  ⟨b.lx.push (r32 x), b.ly.push (r32 y), b.lz.push (r32 z), b.lcol.push c⟩
 
 /-- Static data of one streamplot run. -/
 structure Ctx where
@@ -186,14 +193,21 @@ structure Ctx where
   fieldF32 : Bool
   dt : Float
   maxsteps : Nat
-  field : Vec3 → Float × Float × Float
-  color : Float → Float → Float → Float
+  colorFn : Option (Vec3 → Float)
 
-/-- Evaluate the field at a binary64 point, rounding to binary32 for a `Point2f` field. -/
-@[inline] def Ctx.eval (c : Ctx) (x y z : Float) : Float × Float × Float :=
-  let (u, v, w) := c.field ⟨x, y, z⟩
-  let w := if c.dim == 3 then w else 0
-  if c.fieldF32 then (r32 u, r32 v, r32 w) else (u, v, w)
+/-- Evaluate the field at a binary64 point, rounding to binary32 for a `Point2f`
+field (and dropping z in 2D). -/
+@[inline] def Ctx.eval (c : Ctx) (field : Vec3 → Vec3) (x y z : Float) : Vec3 :=
+  let q := field ⟨x, y, z⟩
+  let w := if c.dim == 3 then q.z else 0
+  if c.fieldF32 then ⟨r32 q.x, r32 q.y, r32 w⟩ else if c.dim == 3 then q else ⟨q.x, q.y, 0⟩
+
+/-- Colour value of a field vector (Makie `to_color(color(f(x)))`, binary32).
+Takes components so the field value need not be materialised. -/
+@[inline] def Ctx.color (c : Ctx) (u v w : Float) : Float :=
+  match c.colorFn with
+  | some g => r32 (g ⟨u, v, w⟩)
+  | none => r32 (jnorm c.fieldF32 c.dim u v w)
 
 /-- The point lies in the (closed) box. -/
 @[inline] def Ctx.inBox (c : Ctx) (x y z : Float) : Bool :=
@@ -210,61 +224,75 @@ def Ctx.cells (c : Ctx) : Nat := c.ax.res * c.ay.res * (if c.dim == 3 then c.az.
 @[inline] def Ctx.stepCoord (c : Ctx) (dd x p pn : Float) : Float :=
   x + rnd c.fieldF32 (rnd c.fieldF32 (dd * p) / pn)
 
-/-- Trace one half streamline from the current point. Returns the updated mask,
-visited-cell count and buffers. -/
-def trace (c : Ctx) (dd : Float) (fuel : Nat) (x y z : Float) (ci cj ck nlp : Nat)
-    (mask : ByteArray) (np : Nat) (b : Buf) : ByteArray × Nat × Buf :=
+/-- Result of one half-line trace. -/
+structure TraceOut where
+  mask : ByteArray
+  np : Nat
+  lines : Lines
+
+/-- Trace one half streamline from the current point (tail-recursive, with the
+line buffers as separate arguments so a step allocates only the field value).
+Specialised on the field, so a known field function is inlined. -/
+@[specialize] def trace (c : Ctx) (field : Vec3 → Vec3) (dd : Float) (fuel : Nat) (x y z : Float) (ci cj ck nlp : Nat)
+    (mask : ByteArray) (np : Nat) (lx ly lz lc : FloatArray) : TraceOut :=
   match fuel with
-  | 0 => (mask, np, b)
+  | 0 => ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩
   | fuel + 1 =>
-    if !(c.inBox x y z && nlp < c.maxsteps) then (mask, np, b) else
-    let (u, v, w) := c.eval x y z
-    let pn := jnorm c.fieldF32 c.dim u v w
-    let x' := c.stepCoord dd x u pn
-    let y' := c.stepCoord dd y v pn
-    let z' := if c.dim == 3 then c.stepCoord dd z w pn else z
-    if !c.inBox x' y' z' then (mask, np, b) else
+    if !(c.inBox x y z && nlp < c.maxsteps) then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
+    let q := c.eval field x y z
+    let pn := jnorm c.fieldF32 c.dim q.x q.y q.z
+    let x' := c.stepCoord dd x q.x pn
+    let y' := c.stepCoord dd y q.y pn
+    let z' := if c.dim == 3 then c.stepCoord dd z q.z pn else z
+    if !c.inBox x' y' z' then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
     let i := c.ax.cell c.limitsF32 x'
     let j := c.ay.cell c.limitsF32 y'
     let k := if c.dim == 3 then c.az.cell c.limitsF32 z' else 1
-    let col := r32 (c.color u v w)
+    let col := c.color q.x q.y q.z
     if i != ci || j != cj || k != ck then
       let idx := c.maskIdx i j k
-      if mask.get! idx == 0 then (mask, np, b) else
-      let mask := mask.set! idx 0
-      trace c dd fuel x' y' z' i j k (nlp + 1) mask (np + 1) (b.pushLine x' y' z' col)
+      if mask.get! idx == 0 then ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ else
+      trace c field dd fuel x' y' z' i j k (nlp + 1) (mask.set! idx 0) (np + 1)
+        (lx.push (r32 x')) (ly.push (r32 y')) (lz.push (r32 z')) (lc.push col)
     else
-      trace c dd fuel x' y' z' ci cj ck (nlp + 1) mask np (b.pushLine x' y' z' col)
+      trace c field dd fuel x' y' z' ci cj ck (nlp + 1) mask np
+        (lx.push (r32 x')) (ly.push (r32 y')) (lz.push (r32 z')) (lc.push col)
 
 /-- The seeding loop of `streamplot_impl`. -/
-def seedLoop (c : Ctx) (target : Float) (fuel : Nat) (ind np : Nat) (mask : ByteArray) (b : Buf) : Buf :=
+@[specialize] def seedLoop (c : Ctx) (field : Vec3 → Vec3) (target : Float) (fuel : Nat) (ind np : Nat) (mask : ByteArray) (b : Buf) : Buf :=
   match fuel with
   | 0 => b
   | fuel + 1 =>
-    if !(Num.ofInt np < target) then b else
+    if !(np.toUInt64.toFloat < target) then b else
     let i := c.ax.seed ind
     let j := c.ay.seed ind
     let k := if c.dim == 3 then c.az.seed ind else 1
     let idx := c.maskIdx i j k
-    if mask.get! idx == 0 then seedLoop c target fuel (ind + 1) np mask b else
+    if mask.get! idx == 0 then seedLoop c field target fuel (ind + 1) np mask b else
     let x0 := c.ax.center i
     let y0 := c.ay.center j
     let z0 := if c.dim == 3 then c.az.center k else 0
-    let (u, v, w) := c.eval x0 y0 z0
-    let pn := jnorm c.fieldF32 c.dim u v w
-    let col := r32 (c.color u v w)
-    let b := { b with
-      apx := b.apx.push (r32 x0), apy := b.apy.push (r32 y0), apz := b.apz.push (r32 z0),
-      adx := b.adx.push (r32 (rnd c.fieldF32 (u / pn))), ady := b.ady.push (r32 (rnd c.fieldF32 (v / pn))),
-      adz := b.adz.push (r32 (rnd c.fieldF32 (w / pn))), acol := b.acol.push col }
+    let q := c.eval field x0 y0 z0
+    let pn := jnorm c.fieldF32 c.dim q.x q.y q.z
+    let col := c.color q.x q.y q.z
+    let ⟨apx, apy, apz, adx, ady, adz, acol, lines⟩ := b
+    let apx := apx.push (r32 x0)
+    let apy := apy.push (r32 y0)
+    let apz := apz.push (r32 z0)
+    let adx := adx.push (r32 (rnd c.fieldF32 (q.x / pn)))
+    let ady := ady.push (r32 (rnd c.fieldF32 (q.y / pn)))
+    let adz := adz.push (r32 (rnd c.fieldF32 (q.z / pn)))
+    let acol := acol.push col
     let mask := mask.set! idx 0
     let np := np + 1
     let dt := c.dt
-    let b := (b.pushLine nan nan nan col).pushLine x0 y0 z0 col
-    let (mask, np, b) := trace c (-dt) (c.maxsteps + 1) x0 y0 z0 i j k 1 mask np b
-    let b := (b.pushLine nan nan nan col).pushLine x0 y0 z0 col
-    let (mask, np, b) := trace c dt (c.maxsteps + 1) x0 y0 z0 i j k 1 mask np b
-    seedLoop c target fuel (ind + 1) np mask b
+    let lines := (lines.push nan nan nan col).push x0 y0 z0 col
+    let ⟨mask, np, ⟨lx, ly, lz, lc⟩⟩ :=
+      trace c field (-dt) (c.maxsteps + 1) x0 y0 z0 i j k 1 mask np lines.lx lines.ly lines.lz lines.lcol
+    let lines : Lines := (Lines.push ⟨lx, ly, lz, lc⟩ nan nan nan col).push x0 y0 z0 col
+    let ⟨mask, np, lines⟩ :=
+      trace c field dt (c.maxsteps + 1) x0 y0 z0 i j k 1 mask np lines.lx lines.ly lines.lz lines.lcol
+    seedLoop c field target fuel (ind + 1) np mask ⟨apx, apy, apz, adx, ady, adz, acol, lines⟩
 
 /-- Makie `to_ndim(Vec{N, Int}, gridsize, last(gridsize))`. -/
 def resolution (gs : Array Nat) (n : Nat) : Array Nat :=
@@ -273,36 +301,33 @@ def resolution (gs : Array Nat) (n : Nat) : Array Nat :=
 
 /-- Run `streamplot_impl` for a field `f` on the box `origin + [0, widths]`
 (dimension `dim ∈ {2, 3}`; for `dim = 2` the z components are ignored). -/
-def run (dim : Nat) (f : Vec3 → Float × Float × Float) (origin widths : Vec3) (o : Options) : Result :=
+@[specialize] def run (dim : Nat) (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options) : Result :=
   let res := resolution o.gridsize dim
   let a := phi dim
   let ax := mkAxis o.limitsF32 origin.x widths.x (res.getD 0 1) (powInt a (-1))
   let ay := mkAxis o.limitsF32 origin.y widths.y (res.getD 1 1) (powInt a (-2))
   let az := mkAxis o.limitsF32 origin.z widths.z (res.getD 2 1) (powInt a (-3))
-  let colorF : Float → Float → Float → Float := match o.colorFn with
-    | some g => fun u v w => g ⟨u, v, w⟩
-    | none => fun u v w => jnorm o.fieldF32 dim u v w
-  let c : Ctx := ⟨dim, ax, ay, az, o.limitsF32, o.fieldF32, r32 o.stepsize, o.maxsteps, f, colorF⟩
+  let c : Ctx := ⟨dim, ax, ay, az, o.limitsF32, o.fieldF32, r32 o.stepsize, o.maxsteps, o.colorFn⟩
   let ncells := c.cells
   let target := Num.ofInt ncells * jmin 1 o.density
   let mask := ByteArray.mk (Array.replicate ncells 1)
   -- the Kronecker sequence visits every cell; the fuel only guards pathological inputs
-  let b := seedLoop c target (1024 * ncells + 1000000) 0 0 mask Buf.empty
+  let b := seedLoop c f target (1024 * ncells + 1000000) 0 0 mask Buf.empty
   { dim := dim
     arrowPos := Pts3.ofArrays b.apx b.apy b.apz
     arrowDir := Pts3.ofArrays b.adx b.ady b.adz
-    linePoints := Pts3.ofArrays b.lx b.ly b.lz
+    linePoints := Pts3.ofArrays b.lines.lx b.lines.ly b.lines.lz
     arrowColors := b.acol
-    lineColors := b.lcol }
+    lineColors := b.lines.lcol }
 
 /-- 2D streamplot of `f` over the box `[x0, x0 + w] × [y0, y0 + h]` (Makie
 `streamplot(f, x0..x0+w, y0..y0+h)`; for a `Rect2f` box set `limitsF32`). -/
-def streamplot2 (f : Vec2 → Vec2) (x0 y0 w h : Float) (o : Options := {}) : Result :=
-  run 2 (fun p => let q := f ⟨p.x, p.y⟩; (q.x, q.y, 0)) ⟨x0, y0, 0⟩ ⟨w, h, 0⟩ o
+@[specialize] def streamplot2 (f : Vec2 → Vec2) (x0 y0 w h : Float) (o : Options := {}) : Result :=
+  run 2 (fun p => let q := f ⟨p.x, p.y⟩; ⟨q.x, q.y, 0⟩) ⟨x0, y0, 0⟩ ⟨w, h, 0⟩ o
 
 /-- 3D streamplot of `f` over the box `origin + [0, widths]`. -/
-def streamplot3 (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options := {}) : Result :=
-  run 3 (fun p => let q := f p; (q.x, q.y, q.z)) origin widths o
+@[specialize] def streamplot3 (f : Vec3 → Vec3) (origin widths : Vec3) (o : Options := {}) : Result :=
+  run 3 f origin widths o
 
 /-- Makie's automatic 3D arrow (cone) size `0.2·min(widths)/min(gridsize)`. -/
 def arrowSize3 (widths : Vec3) (gridsize : Array Nat) : Float :=
