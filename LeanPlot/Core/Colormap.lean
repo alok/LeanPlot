@@ -87,7 +87,7 @@ def ofF32Hex (name : String) (hex : String) : Colormap :=
   let word (k : Nat) : Float :=
     let v := (List.range 8).foldl (fun acc i => acc * 16 + digit chars[8 * k + i]!) (0 : UInt32)
     (Float32.ofBits v).toFloat
-  let cs := (Array.range nEntries).map fun e => (⟨word (3 * e), word (3 * e + 1), word (3 * e + 2), 1.0⟩ : RGBA)
+  let cs := (Array.range nEntries).map fun e => (⟨word (3 * e), word (3 * e + 1), word (3 * e + 2), fOne⟩ : RGBA)
   ofColors cs name
 
 /-- Names of the built-in colormaps (`Makie.to_colormap` tables). -/
@@ -174,14 +174,79 @@ def mapValue (cm : Colormap) (lo hi : Float) (opts : MapOptions) (v : Float) : R
   else if opts.interpolate then cm.lookup s cmin cmax
   else cm.nearestGetIndex (normalize s cmin cmax)
 
+/-- Append the RGBA8 bytes of a colour. -/
+@[inline] private def pushBytes (acc : ByteArray) (b : UInt8 × UInt8 × UInt8 × UInt8) : ByteArray :=
+  (((acc.push b.1).push b.2.1).push b.2.2.1).push b.2.2.2
+
+/-- 8-bit channels of a colour (`RGBA.to8` per channel). -/
+@[inline] private def bytesOf (c : RGBA) : UInt8 × UInt8 × UInt8 × UInt8 :=
+  (RGBA.to8 c.r, RGBA.to8 c.g, RGBA.to8 c.b, RGBA.to8 c.a)
+
+/-- Append channel `c` of the Makie blend of entries `dn` and `up` at weight `t`
+(or of entry `dn` alone when `exact`), quantised to 8 bits. -/
+@[inline] private def pushMixed (lut : FloatArray) (exact : Bool) (dn up : Nat) (t : Float) (acc : ByteArray)
+    (c : Nat) : ByteArray :=
+  let d := lut[4 * dn + c]!
+  acc.push (RGBA.to8 (if exact then d else mix d lut[4 * up + c]! t))
+
+/-- The inner loop of `mapToRGBA8` (all per-call constants hoisted). -/
+private def mapLoop (lut : FloatArray) (nm1 : Float) (last : Nat) (scale : Scale) (cmin cmax : Float)
+    (low high : Option (UInt8 × UInt8 × UInt8 × UInt8)) (nanB : UInt8 × UInt8 × UInt8 × UInt8)
+    (interp : Bool) (vs : FloatArray) (i : Nat) (acc : ByteArray) : ByteArray :=
+  if h : i < vs.size then
+    let s := scale.forward vs[i]
+    let acc :=
+      if s.isNaN then pushBytes acc nanB else
+      match low with
+      | some lb => if s < cmin then pushBytes acc lb else highOrIn s acc
+      | none => highOrIn s acc
+    mapLoop lut nm1 last scale cmin cmax low high nanB interp vs (i + 1) acc
+  else acc
+termination_by vs.size - i
+where
+  /-- `highclip` test, then the colormap lookup. -/
+  highOrIn (s : Float) (acc : ByteArray) : ByteArray :=
+    match high with
+    | some hb => if s > cmax then pushBytes acc hb else inRange s acc
+    | none => inRange s acc
+  /-- `interpolated_getindex` / `nearest_getindex` of a value inside the clip
+  range, written directly from the LUT (no intermediate `RGBA`). -/
+  inRange (s : Float) (acc : ByteArray) : ByteArray :=
+    let t01 := normalize s cmin cmax
+    if !t01.isFinite then (((acc.push 0).push 0).push 0).push 0 else
+    if !interp then
+      let k := min (roundInt (t01 * nm1)).toNat last
+      pushMixed lut true k k fZero (pushMixed lut true k k fZero
+        (pushMixed lut true k k fZero (pushMixed lut true k k fZero acc 0) 1) 2) 3
+    else
+      let i1len := t01 * nm1 + fOne
+      let dF := i1len.floor
+      let uF := i1len.ceil
+      let dn := min (toIntExact dF - 1).toNat last
+      let up := min (toIntExact uF - 1).toNat last
+      let exact := dF == uF
+      let t := i1len - dF
+      pushMixed lut exact dn up t (pushMixed lut exact dn up t
+        (pushMixed lut exact dn up t (pushMixed lut exact dn up t acc 0) 1) 2) 3
+
 /-- Map every value through `mapValue`, appending RGBA8 bytes (4 per value) to a
-fresh buffer. Tail-recursive; one allocation for the output. -/
+fresh buffer, byte-identical to `RGBA.pushRGBA8 (cm.mapValue lo hi opts v)` but
+with the per-call work (scale of the limits, clip colours) hoisted and the
+colours read straight from the LUT. Tail-recursive; one allocation. -/
 def mapToRGBA8 (cm : Colormap) (lo hi : Float) (opts : MapOptions) (vs : FloatArray) : ByteArray :=
-  let rec go (i : Nat) (acc : ByteArray) : ByteArray :=
-    if h : i < vs.size then go (i + 1) (RGBA.pushRGBA8 acc (cm.mapValue lo hi opts vs[i]))
-    else acc
-  termination_by vs.size - i
-  go 0 (ByteArray.emptyWithCapacity (4 * vs.size))
+  let sLo := opts.scale.forward lo
+  let sHi := opts.scale.forward hi
+  let cmin := jmin sLo sHi
+  let cmax := jmax sLo sHi
+  mapLoop cm.lut (ofInt ((cm.size : Int) - 1)) (cm.size - 1) opts.scale cmin cmax
+    (opts.lowclip.map fun c => bytesOf c) (opts.highclip.map fun c => bytesOf c) (bytesOf opts.nanColor)
+    opts.interpolate vs 0 (ByteArray.emptyWithCapacity (4 * vs.size))
+
+/-- Reference implementation of `mapToRGBA8` (one `mapValue` per entry); used
+by the tests to pin the fast path. -/
+def mapToRGBA8Ref (cm : Colormap) (lo hi : Float) (opts : MapOptions) (vs : FloatArray) : ByteArray :=
+  vs.foldl (init := ByteArray.emptyWithCapacity (4 * vs.size)) fun acc v =>
+    RGBA.pushRGBA8 acc (cm.mapValue lo hi opts v)
 
 /-- Automatic colour range of some data (Makie `distinct_extrema_nan`: finite
 extrema, widened by `±0.5` when constant, `(0, 1)` if there is no finite value). -/

@@ -111,9 +111,36 @@ def colormaps : TestM Unit := do
     check s!"resample {n} {k}" (got.size == want.size && (Array.range got.size).all fun i => rgbaEq got[i]! want[i]!)
       fun _ => s!"sizes {got.size}/{want.size}"
 
+/-- The fast `mapToRGBA8` equals the per-value reference byte for byte over
+colormaps (built-in `Float32` tables, a user map with arbitrary `Float64`
+entries, a one-entry map), scales, clip colours, nearest lookup, NaN/±∞ data
+and degenerate or reversed limits. -/
+def mapFast : TestM Unit := do
+  -- deterministic pseudo-random values in [-0.5, 1.5] plus specials
+  let rand (k : Nat) : Float := ((k * 2654435761 + 12345) % 1000003).toFloat / 500001.5 - 0.5
+  let specials : Array Float := #[nan, inf, -inf, 0, 1, -0.0, 0.5, 1e-300, -1e300]
+  let vs : FloatArray := ⟨(Array.range 3000).map rand ++ specials⟩
+  let user := Colormap.ofColors #[⟨0.1, 0.2, 0.3, 1⟩, ⟨0.3333333333333, 0.9, 0.05, 0.5⟩, ⟨1, 1, 1, 0.25⟩] "user"
+  let one := Colormap.ofColors #[⟨0.2, 0.4, 0.6, 1⟩] "one"
+  let maps := #[Colormap.viridis, Colormap.named "RdBu", Colormap.named "turbo", user, one]
+  let optss : Array Colormap.MapOptions :=
+    #[{}, { interpolate := false }, { lowclip := some RGBA.black }, { highclip := some RGBA.white },
+      { lowclip := some ⟨1, 0, 0, 1⟩, highclip := some ⟨0, 0, 1, 0.5⟩, nanColor := ⟨0.5, 0.5, 0.5, 1⟩ },
+      { scale := .log10 }, { scale := .sqrt, interpolate := false, lowclip := some RGBA.white }]
+  let lims : Array (Float × Float) := #[(0, 1), (0.2, 0.8), (1, 0), (0.5, 0.5), (1e-3, 1)]
+  for cm in maps do
+    for opts in optss do
+      for (lo, hi) in lims do
+        let fast := cm.mapToRGBA8 lo hi opts vs
+        let ref := cm.mapToRGBA8Ref lo hi opts vs
+        check s!"mapToRGBA8 {cm.name} ({showFloat lo}, {showFloat hi})" (fast == ref) fun _ =>
+          let i := (List.range fast.size).find? (fun i => fast.get! i != ref.get! i) |>.getD fast.size
+          s!"sizes {fast.size}/{ref.size}, first differing byte {i}"
+
 /-- The colour suite. -/
 def suite : TestM Unit := do
   colors
   colormaps
+  mapFast
 
 end LeanPlotTest.Core.ColorTest
