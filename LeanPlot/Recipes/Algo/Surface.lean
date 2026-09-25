@@ -204,17 +204,25 @@ def surfaceMesh {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) : SurfaceMe
   let nm := gridMesh nx ny (matrixGrid xs ys g32)
   ⟨nm.mesh, nm.normals, g32.z⟩
 
+/-- Makie `surface(x, y, z)` with coordinate matrices `x(i,j)`, `y(i,j)`
+(curvilinear grids, `nx × ny` column-major): `z` is converted to binary32. -/
+def surfaceMeshCurvilinear {nx ny : Nat} (xg yg : FloatArray) (g : Grid2 nx ny) : SurfaceMesh :=
+  let g32 := g.map r32
+  let nm := gridMesh nx ny (Pts3.ofArrays xg yg g32.z)
+  ⟨nm.mesh, nm.normals, g32.z⟩
+
 /-- GeometryBasics `normals(vertices, faces)` of a triangle mesh (Makie's
 `mesh(vertices, faces)` conversion), binary32 result; `f32` for binary32 vertices. -/
 def meshNormals (m : TriMesh) (f32 : Bool := false) : Pts3 :=
   vertexNormals f32 m.pos ((Array.range m.numTriangles).map fun t =>
     #[(m.tri[3 * t]!).toNat, (m.tri[3 * t + 1]!).toNat, (m.tri[3 * t + 2]!).toNat])
 
-/-- Makie `wireframe(x, y, z)`: line segments (pairs of consecutive points) along
-the grid edges, from GeometryBasics' line faces of the grid quads; points are
-`Point3f`. -/
-def wireframe {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) : Pts3 := Id.run do
-  let pt (k : Nat) : Vec3 := ⟨r32 (xs.get! (k % nx)), r32 (ys.get! (k / nx)), r32 (g.z.get! k)⟩
+/-- Line segments along the edges of a grid of `nx × ny` points (column-major):
+per quad `(a, b), (b, c), (c, d), (d, a)`, points rounded to `Point3f`
+(Makie `wireframe` of a grid, as GeometryBasics decomposes the quads into line
+faces). -/
+def wireframeGrid (nx ny : Nat) (pos : Pts3) : Pts3 := Id.run do
+  let pt (k : Nat) : Vec3 := ⟨r32 (pos.xs.get! k), r32 (pos.ys.get! k), r32 (pos.zs.get! k)⟩
   let mut ax : FloatArray := .empty
   let mut ay : FloatArray := .empty
   let mut az : FloatArray := .empty
@@ -224,6 +232,12 @@ def wireframe {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) : Pts3 := Id.
       let q := pt v
       ax := (ax.push p.x).push q.x; ay := (ay.push p.y).push q.y; az := (az.push p.z).push q.z
   return Pts3.ofArrays ax ay az
+
+/-- Makie `wireframe(x, y, z)` for axis vectors `x`, `y` (points `(x[i], y[j], z[i, j])`). -/
+def wireframe {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) : Pts3 :=
+  let n := nx * ny
+  wireframeGrid nx ny (Pts3.ofArrays ⟨(Array.range n).map fun k => xs.get! (k % nx)⟩
+    ⟨(Array.range n).map fun k => ys.get! (k / nx)⟩ g.z)
 
 /-! ## Lighting (CairoMakie) -/
 

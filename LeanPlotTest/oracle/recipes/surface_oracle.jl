@@ -42,6 +42,17 @@ for (name, x, y, z) in grids
 end
 out["surfaces"] = sg
 
+# curvilinear surface (matrix x, y) and its wireframe
+rr = range(0.5, 1.5, length = 6); th = range(0, pi, length = 7)
+xm = [a * cos(t) for a in rr, t in th]; ym = [a * sin(t) for a in rr, t in th]; zm = [a^2 - cos(2t) for a in rr, t in th]
+fig = Figure(); ax = Axis3(fig[1, 1])
+s = surface!(ax, xm, ym, zm)
+m = Mk.surface2mesh(s.x[], s.y[], s.z[])
+wf = wireframe!(ax, xm, ym, zm)
+out["curvilinear"] = Dict("nx" => 6, "ny" => 7, "x" => jfv(vec(xm)), "y" => jfv(vec(ym)), "z" => jfv(vec(zm)),
+    "pos" => cols(GB.coordinates(m)), "faces" => tris(GB.decompose(GB.GLTriangleFace, m)), "normals" => cols(GB.normals(m)),
+    "wire" => cols(wf.plots[1].converted[][1]))
+
 # triangle mesh normals (Makie mesh(vertices, faces) conversion)
 ms = Any[]
 for T in (Float64, Float32)

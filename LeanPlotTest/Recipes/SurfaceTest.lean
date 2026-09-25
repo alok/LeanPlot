@@ -50,6 +50,19 @@ def suite : TestM Unit := do
       (fun _ => s!"diff {ptsDiff sm.normals (cols3 (c.get "normals"))}")
     let w := Surface.wireframe xs ys g
     check s!"wireframe {name}" (ptsEq w (cols3 (c.get "wire"))) (fun _ => s!"diff {ptsDiff w (cols3 (c.get "wire"))}")
+  -- curvilinear surface
+  let cv := j.get "curvilinear"
+  if let some g := Grid2.ofFloatArray? (cv.get "nx").nat (cv.get "ny").nat (floatArr (cv.get "z")) then
+    let sm := Surface.surfaceMeshCurvilinear (floatArr (cv.get "x")) (floatArr (cv.get "y")) g
+    check "curvilinear positions" (ptsEq sm.mesh.pos (cols3 (cv.get "pos")))
+    let wantF := (cv.get "faces").arrD.foldl (fun acc f => acc ++ f.arrD.map (·.nat.toUInt32)) #[]
+    check "curvilinear faces" (sm.mesh.tri == wantF)
+    check "curvilinear normals" (ptsEq sm.normals (cols3 (cv.get "normals")))
+      (fun _ => s!"diff {ptsDiff sm.normals (cols3 (cv.get "normals"))}")
+    let w := Surface.wireframeGrid (cv.get "nx").nat (cv.get "ny").nat
+      (Pts3.ofArrays (floatArr (cv.get "x")) (floatArr (cv.get "y")) (floatArr (cv.get "z")))
+    check "curvilinear wireframe" (ptsEq w (cols3 (cv.get "wire"))) (fun _ => s!"diff {ptsDiff w (cols3 (cv.get "wire"))}")
+  else check "curvilinear grid" false
   for c in (j.get "meshes").arrD do
     let f32 := (c.get "f32").boolean
     let pos := cols3 (c.get "pos")
