@@ -116,6 +116,45 @@ def typicalPlot : Scene := Id.run do
     (some { color := ⟨0.3, 0.3, 0.3, 1⟩, width := 1 }) none)
   return s
 
+/-- `n` circle markers of radius 3.5 with outlines, one `path` op each,
+scattered over a 1000×1000 canvas. -/
+def markers (n : Nat) : Array DrawOp := Id.run do
+  let mut ops := Array.emptyWithCapacity n
+  let mut s : UInt64 := 777
+  for _ in [0:n] do
+    s := s * 6364136223846793005 + 1442695040888963407
+    let x := 10.0 + 980.0 * ((s >>> 11).toFloat / 9007199254740992.0)
+    s := s * 6364136223846793005 + 1442695040888963407
+    let y := 10.0 + 980.0 * ((s >>> 11).toFloat / 9007199254740992.0)
+    ops := ops.push (.path (circlePath x y 3.5) (some { color := ⟨0.9, 0.4, 0.1, 0.8⟩ })
+      (some { color := .black, width := 0.75 }) none)
+  return ops
+
+/-- A `k × k`-vertex grid over a 1000×1000 canvas as one Gouraud `triangles`
+op (`2 (k−1)²` triangles), coloured by a smooth RGB field. -/
+def meshGrid (k : Nat) : DrawOp := Id.run do
+  let mut xs := FloatArray.emptyWithCapacity (k * k)
+  let mut ys := FloatArray.emptyWithCapacity (k * k)
+  let mut cs := ByteArray.emptyWithCapacity (4 * k * k)
+  let step := 1000.0 / (k - 1).toFloat
+  for j in [0:k] do
+    for i in [0:k] do
+      let x := i.toFloat * step; let y := j.toFloat * step
+      -- a gentle warp so edges are not axis-aligned
+      xs := xs.push (x + 2.0 * Float.sin (y / 37.0)); ys := ys.push (y + 2.0 * Float.cos (x / 41.0))
+      let u := i.toFloat / (k - 1).toFloat; let v := j.toFloat / (k - 1).toFloat
+      cs := (((cs.push (255.0 * u).toUInt8).push (255.0 * v).toUInt8).push
+        (127.0 + 127.0 * Float.sin (9.0 * u * v)).toUInt8).push 255
+  let mut idx := ByteArray.emptyWithCapacity (24 * (k - 1) * (k - 1))
+  let push32 (b : ByteArray) (v : Nat) : ByteArray :=
+    (((b.push v.toUInt8).push (v >>> 8).toUInt8).push (v >>> 16).toUInt8).push (v >>> 24).toUInt8
+  for j in [0:k-1] do
+    for i in [0:k-1] do
+      let a := j * k + i
+      idx := push32 (push32 (push32 idx a) (a + 1)) (a + k)
+      idx := push32 (push32 (push32 idx (a + 1)) (a + k + 1)) (a + k)
+  return .triangles xs ys cs idx none
+
 /-- The perf suite. -/
 def tests : T Unit := do
   let sweep := sineSweep 100000
@@ -129,6 +168,11 @@ def tests : T Unit := do
   let (tStar, _) ← bench 3 fun _ => paint 1000 1000 #[.path star (some { color := .black }) none none]
   let (tBand, _) ← bench 3 fun _ => paint 1000 1000 #[.path bnd (some { color := ⟨0.2, 0.4, 0.8, 0.5⟩ }) none none]
   let (tEmpty, _) ← bench 3 fun _ => paint 1000 1000 #[.path (Path.rect ⟨0, 0, 1, 1⟩) (some { color := .black }) none none]
+  let mk := markers 10000
+  let (tMarkers, _) ← bench 3 fun _ => paint 1000 1000 mk
+  let mesh := meshGrid 200
+  let nTri := match mesh with | .triangles _ _ _ idx _ => idx.size / 12 | _ => 0
+  let (tMesh, _) ← bench 3 fun _ => paint 1000 1000 #[mesh]
   let plot := typicalPlot
   let (tPlot, plotCv) ← bench 5 fun _ => plot.toCanvas
   let (png, tPng) ← timeMs (IO.lazyPure fun _ => plotCv.toPNG)
@@ -139,12 +183,16 @@ def tests : T Unit := do
   IO.println s!"  perf: 1000×1000, 10⁵-vertex star polygon fill         {tStar} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-vertex band fill (area plot)     {tBand} ms"
   IO.println s!"  perf: 1000×1000, canvas + accumulator setup           {tEmpty} ms"
+  IO.println s!"  perf: 1000×1000, 10⁴ markers (fill + outline)         {tMarkers} ms"
+  IO.println s!"  perf: 1000×1000, {nTri}-triangle Gouraud mesh        {tMesh} ms"
   IO.println s!"  perf: 800×600 typical plot ({plot.ops.size} ops)          {tPlot} ms"
   IO.println s!"  perf: 800×600 PNG encode default: {tPng} ms, {png.size} B; fast: {tPngFast} ms, {pngFast.size} B"
   check "10⁵-segment stroke < 5× target (200 ms)" (tSweep < 1000.0) s!"{tSweep} ms"
   check "10⁵-segment random walk < 5× target" (tWalk < 1000.0) s!"{tWalk} ms"
   check "10⁵-vertex star fill < 1 s" (tStar < 1000.0) s!"{tStar} ms"
   check "10⁵-vertex band fill < 5× 200 ms" (tBand < 1000.0) s!"{tBand} ms"
+  check "10⁴ markers < 1 s" (tMarkers < 1000.0) s!"{tMarkers} ms"
+  check "80k-triangle mesh < 1 s" (tMesh < 1000.0) s!"{tMesh} ms"
   check "typical plot < 5× target (30 ms)" (tPlot < 150.0) s!"{tPlot} ms"
   check "plot PNG < 1 s" (tPng < 1000.0) s!"{tPng} ms"
 
