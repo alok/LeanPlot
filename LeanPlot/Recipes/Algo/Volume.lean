@@ -1,6 +1,7 @@
 import LeanPlot.Core.Colormap
 import LeanPlot.Core.Geometry
 import LeanPlot.Recipes.Algo.Levels
+import LeanPlot.Recipes.Algo.Contour
 
 /-!
 # Volume ray marching (Makie `volume`)
@@ -370,24 +371,27 @@ def clipRay (o d : Vec3) : Option (Vec3 × Vec3) :=
 /-! ## Makie's 3-D `contour` of a volume -/
 
 /-- Makie `contour(x, y, z, volume; levels, isorange, alpha, colormap)`
-(`basic_recipes/contours.jl:131-205`): the level values, the colour range of the volume
-(`colorrange` padded by `2·isorange`) and the colormap that is opaque (`alpha`) only within
-`isorange` of a level: `N = clamp(⌈2.5·(max - min)/isorange⌉, 100, 4096)` entries over the padded
-range, each the colormap colour of its value over the tight range. Automatic `isorange` is a
-tenth of the smallest level gap (of the value range for one level). -/
+(`basic_recipes/contours.jl:131-205`) on Makie's binary32 data path (`volume` data are
+`Float32`): the level values (`to_levels(n, extrema)` in binary32), the colormap that is opaque
+(`alpha`) only within `isorange` of a level, and the padded colour range
+`(min - 2·isorange, max + 2·isorange)`. Automatic `isorange` is a tenth of the smallest level gap
+(of the value range for one level). The colormap has `N = clamp(⌈2.5·(max - min)/isorange⌉, 100,
+4096)` entries over the padded range, each the colormap colour of its value over the tight range
+(`interpolated_getindex`, binary32 range). -/
 def contourColormap (d : Data) (levels : Levels.LevelSpec) (cm : Colormap) (alpha : Float := 1)
     (isorange : Option Float := none) (colorrange : Option (Float × Float) := none) :
     FloatArray × Lut × Float × Float :=
   let (vmin, vmax) := d.extrema
+  let vmin := F32.r32 vmin
+  let vmax := F32.r32 vmax
   let lv : FloatArray := match levels with
-    | .count n =>
-      let dz := (vmax - vmin) / (n + 1).toUInt64.toFloat
-      ⟨(Array.range n).map fun i => vmin + dz * (i + 1).toUInt64.toFloat⟩
+    | .count n => Levels.contourLevels n vmin vmax true
     | .values v => v
   let iso := isorange.getD <|
     if lv.size > 1 then
-      0.1 * (List.range (lv.size - 1)).foldl (init := inf) fun m i => min m (lv.get! (i + 1) - lv.get! i)
-    else 0.1 * (vmax - vmin)
+      let gap := (List.range (lv.size - 1)).foldl (init := inf) fun m i => min m (F32.r32 (lv.get! (i + 1) - lv.get! i))
+      0.1 * gap
+    else 0.1 * F32.r32 (vmax - vmin)
   let (tlo, thi) := colorrange.getD (vmin, vmax)
   let plo := tlo - 2 * iso
   let phi := thi + 2 * iso
@@ -396,10 +400,10 @@ def contourColormap (d : Data) (levels : Levels.LevelSpec) (cm : Colormap) (alph
   let nE : Nat := if !(nRaw.isFinite) then 100 else max 100 (min 4096 nRaw.toUInt64.toNat)
   let colors := (Array.range nE).map fun i =>
     let isoval := plo + i.toUInt64.toFloat / (nE - 1).toUInt64.toFloat * (phi - plo)
-    let c := cm.interpolatedGetIndex (clamp ((isoval - tlo) / (thi - tlo)) 0 1)
+    let c := Contour.lookupMixed cm isoval tlo thi
     let inClip := tlo - iso ≤ isoval && isoval ≤ thi + iso
     let near := clamped.any fun l => l - iso < isoval && isoval < l + iso
-    { c with a := if inClip && near then alpha else 0 }
+    ({ r := F32.r32 c.r, g := F32.r32 c.g, b := F32.r32 c.b, a := if inClip && near then F32.r32 alpha else 0 } : RGBA)
   (lv, Lut.ofColors colors, plo, phi)
 
 end LeanPlot.Recipes.Algo.Volume
