@@ -84,6 +84,9 @@ end TickLabel
 def replaceLeadingHyphen (s : String) : String :=
   if s.startsWith "-" then minusSign ++ (s.drop 1).toString else s
 
+/-- `1e-16`: Makie treats smaller label values as zero. -/
+def tinyLabel : Float := 1.0e-16
+
 /-- Makie `_plain_label_precision` / Showoff `plain_precision_heuristic`:
 the smallest number of decimals that shows every value's shortest `Float32`
 digits. -/
@@ -92,7 +95,7 @@ def plainLabelPrecision (xs : Array Float) : Nat :=
   let step (acc : Option (Int × Int)) (y : Float) : Option (Int × Int) :=
     if !y.isFinite then acc else
     let e10 : Int :=
-      if y.abs ≤ 1.0e-16 then (match acc with | some (lo, _) => min lo 0 | none => 0)
+      if y.abs ≤ tinyLabel then (match acc with | some (lo, _) => min lo 0 | none => 0)
       else (shortest32 y.toFloat32).2
     match acc with
     | some (lo, hi) => some (min lo e10, max hi e10)
@@ -125,10 +128,10 @@ def roundSigDigits (x : Float) (n : Int) : Float :=
 def scientificLabelPrecision (xs : Array Float) : Nat :=
   let ys := xs.filterMap fun x =>
     if !x.isFinite then none
-    else if x == 0 then some 0.0
+    else if x == 0 then some fZero
     else
       let z := Float.log10 x.abs
-      some (roundSigDigits (powF 10.0 (z - z.floor)) 15)
+      some (roundSigDigits (powF fTen (z - z.floor)) 15)
   plainLabelPrecision ys
 
 /-- Makie `format_ticks_plain`: uniform-precision fixed notation with `−`. -/

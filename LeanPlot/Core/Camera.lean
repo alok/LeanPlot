@@ -78,13 +78,16 @@ structure Camera3 where
 
 namespace Camera3
 
+/-- Makie's far-plane factor `1 + 1e-3`. -/
+def farFactor : Float := 1 + 1.0e-3
+
 /-- Makie `projectionmatrix(viewmatrix, limits, radius, fov, width, height, protrusions,
 viewmode, near, axis_radius)`. Protrusion arithmetic is done in `Float32`, as in
 Makie (protrusions are `RectSides{Float32}`). -/
 def projection (viewmatrix : Mat4) (limits : Rect3) (radius fov width height : Float)
     (prot : Protrusions) (mode : ViewMode) (nearLimit axisRadius : Float) : Mat4 :=
   let near := jmax nearLimit (radius - axisRadius)
-  let far := jmax ((1 + 1.0e-3) * near) (radius + axisRadius)
+  let far := jmax (farFactor * near) (radius + axisRadius)
   let aspectRatio := width / height
   let fov := if height > width then fov / aspectRatio else fov
   let pm := Mat4.perspective fov aspectRatio near far
@@ -105,10 +108,10 @@ def projection (viewmatrix : Mat4) (limits : Rect3) (radius fov width height : F
     let wEff := (w / wF).toFloat
     let hEff := (h / hF).toFloat
     let pts := limits.corners.map fun p => pv.mulPoint p
-    let maxx := pts.foldl (init := 0.0) fun acc q => jmax acc (q.x / (wEff * q.w)).abs
-    let maxy := pts.foldl (init := 0.0) fun acc q => jmax acc (q.y / (hEff * q.w)).abs
-    let ratioX := 1.0 / maxx
-    let ratioY := 1.0 / maxy
+    let maxx := pts.foldl (init := fZero) fun acc q => jmax acc (q.x / (wEff * q.w)).abs
+    let maxy := pts.foldl (init := fZero) fun acc q => jmax acc (q.y / (hEff * q.w)).abs
+    let ratioX := fOne / maxx
+    let ratioY := fOne / maxy
     if mode == .fitzoom then
       let s := jmin ratioX ratioY
       Mat4.transformation ⟨dx, dy, 0⟩ ⟨s, s, 1⟩ * pm

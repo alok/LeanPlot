@@ -92,8 +92,7 @@ def juliaExpImpl (b : ExpBase) (x : Float) : Float :=
   let c := expConsts b
   let nFloat := Float.fma x c.inv256 magicRound
   -- `reinterpret(UInt64, N_float) % Int32`: the low 32 bits, as a signed integer
-  let low := (nFloat.toBits &&& 0xFFFFFFFF).toNat
-  let n : Int := if low ≥ 2 ^ 31 then (low : Int) - 2 ^ 32 else low
+  let n : Int := nFloat.toBits.toUInt32.toInt32.toInt
   let nFloat := nFloat - magicRound
   let r := Float.fma nFloat c.u x
   let r := Float.fma nFloat c.l r
@@ -111,7 +110,7 @@ def juliaExpImpl (b : ExpBase) (x : Float) : Float :=
   if !(x.abs ≤ c.subnormExp) then
     if x.isNaN then x
     else if x ≥ c.maxExp then inf
-    else if x ≤ c.minExp then 0.0
+    else if x ≤ c.minExp then fZero
     else if k ≤ -53 then assemble (k + 53) * twoPowMinus53
     else assemble k
   else assemble k

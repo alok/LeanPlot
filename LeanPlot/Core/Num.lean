@@ -56,6 +56,10 @@ def fHalf : Float := 0.5
 def fTen : Float := 10.0
 /-- `255.0` as a global. -/
 def f255 : Float := 255.0
+/-- `2^53 = 9007199254740992.0` (`maxintfloat(Float64)`) as a global. -/
+def fTwoPow53 : Float := 9007199254740992.0
+/-- `2^24 = 16777216.0` (`maxintfloat(Float32)`) as a global. -/
+def fTwoPow24 : Float := 16777216.0
 /-- `2^52` as a global `Nat`. -/
 @[noinline] def twoPow52Nat : Nat := 4503599627370496
 /-- `2^53` as a global `Nat`. -/
@@ -158,7 +162,7 @@ def shiftRoundEven (m s : Nat) : Nat :=
 with correct subnormal and overflow handling. -/
 def roundToFloat (neg : Bool) (m : Nat) (e : Int) : Float :=
   let signed (x : Float) : Float := if neg then -x else x
-  if m == 0 then signed 0.0 else
+  if m == 0 then signed fZero else
   -- exponent of the leading bit
   let top : Int := (m.log2 : Int) + e
   if top > 1023 then signed inf else
@@ -256,15 +260,33 @@ def powBody (x : Float) (n : Int) : Float :=
         if x.isFinite && err.isFinite then x * y + err else x * y
   loop 128 x xnlo 1.0 0.0 n
 
+/-- Offset of `pow10Table`: entry `k` holds `10.0 ^ (k - pow10TableOffset)`. -/
+def pow10TableOffset : Nat := 350
+
+/-- Julia's `10.0 ^ n` for `n ∈ [-350, 350]`, computed once with `powBody`
+(so it is bit-identical to it). Tick search evaluates thousands of these per
+axis; a lookup replaces a 10-step compensated power loop. -/
+def pow10Table : FloatArray :=
+  let n := 2 * pow10TableOffset + 1
+  let rec go (k : Nat) (acc : FloatArray) : FloatArray :=
+    if k < n then
+      let e : Int := (k : Int) - pow10TableOffset
+      go (k + 1) (acc.push (if e == 0 then fOne else powBody 10.0 e))
+    else acc
+  termination_by n - k
+  go 0 (FloatArray.emptyWithCapacity n)
+
 /-- Julia `x ^ n` for `x::Float64`, `n::Integer`. Exponents outside
-`[-2^12, 3·2^13]` fall back to the C `pow` (Julia uses its own `exp`/`log` there). -/
+`[-2^12, 3·2^13]` fall back to the C `pow` (Julia uses its own `exp`/`log` there).
+Powers of ten with `|n| ≤ 350` come from `pow10Table`. -/
 def powInt (x : Float) (n : Int) : Float :=
   if n == 0 then fOne
+  else if x == fTen && -350 ≤ n && n ≤ 350 then pow10Table.get! (n + 350).toNat
   else if -4096 ≤ n && n ≤ 24576 then powBody x n
   else Float.pow x (ofInt n)
 
 /-- Julia `10.0 ^ n` for an integer `n`. -/
-@[inline] def pow10 (n : Int) : Float := powInt 10.0 n
+@[inline] def pow10 (n : Int) : Float := powInt fTen n
 
 /-- Julia `x ^ y` for floats: integral `y` in the power-by-squaring range uses
 `powBody` (bit-exact); other exponents use the C `pow` (≤ 1 ulp from Julia). -/

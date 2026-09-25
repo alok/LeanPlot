@@ -118,7 +118,7 @@ def hpFloat (ref step : TP) (nb len : Nat) (offset : Int) : SRL :=
 /-- Julia `rat(x)`: a continued-fraction rational approximation `(num, den)`
 with `|num|, |den| ≤ 2^24` (`maxintfloat(Float32)`). -/
 def rat (x : Float) : Int × Int :=
-  let m : Float := 16777216.0
+  let m : Float := fTwoPow24
   let mi : Int := 16777216
   let rec go (fuel : Nat) (y : Float) (a b c d : Int) : Int × Int :=
     match fuel with
@@ -131,7 +131,7 @@ def rat (x : Float) : Int × Int :=
         let (b, d) := (f * b + d, b)
         if !(max a.natAbs b.natAbs ≤ mi.natAbs) then (c, d)
         else if Num.ofInt a / Num.ofInt b == x then (a, b)
-        else go fuel (1.0 / y) a b c d
+        else go fuel (fOne / y) a b c d
       else (a, b)
   go 200 x 1 0 0 1
 
@@ -155,7 +155,7 @@ def linspaceFloat (start stop : Float) (len : Nat) : SRL :=
   let lenF := Num.ofInt len
   let (Δ, Δfac) : Float × Float :=
     let Δ := stop - start
-    if !Δ.isFinite then (stop / lenF - start / lenF, lenF) else (Δ, 1.0)
+    if !Δ.isFinite then (stop / lenF - start / lenF, lenF) else (Δ, fOne)
   let tmin := -(start / Δ) / Δfac
   let lenn1 : Int := (len : Int) - 1
   let imin := roundInt (tmin * Num.ofInt lenn1 + 1)
@@ -195,7 +195,7 @@ def startStopLength (start stop : Float) (len : Nat) : SRL :=
     let exact : Option SRL :=
       if startD != 0 && stopD != 0 then
         let den := lcmUnchecked startD stopD
-        let m : Float := 9007199254740992.0
+        let m : Float := fTwoPow53
         let denF := Num.ofInt den
         if den != 0 && (denF * start).abs ≤ m && (denF * stop).abs ≤ m then
           let sn := roundInt (denF * start)
@@ -232,7 +232,7 @@ def colonSRL (start step stop : Float) : Option SRL :=
       if startD != 0 && stopD != 0 &&
           Num.ofInt startN / Num.ofInt startD == start && Num.ofInt stopN / Num.ofInt stopD == stop then
         let den := lcmUnchecked startD stepD
-        let m : Float := 9007199254740992.0
+        let m : Float := fTwoPow53
         let denF := Num.ofInt den
         if den != 0 && (start * denF).abs ≤ m && (step * denF).abs ≤ m &&
             Int.tmod den startD == 0 && Int.tmod den stepD == 0 then
@@ -269,7 +269,7 @@ def startStepLength (a st : Float) (len : Nat) : SRL :=
     if startD != 0 && stepD != 0 &&
         Num.ofInt startN / Num.ofInt startD == a && Num.ofInt stepN / Num.ofInt stepD == st then
       let den := lcmUnchecked startD stepD
-      let m : Float := 9007199254740992.0
+      let m : Float := fTwoPow53
       let denF := Num.ofInt den
       if (denF * a).abs ≤ m && (denF * st).abs ≤ m && Int.tmod den startD == 0 && Int.tmod den stepD == 0 then
         some (floatrange (roundInt (denF * a)) (roundInt (denF * st)) len den)
