@@ -24,6 +24,12 @@ device-space `DrawOp`s, following how CairoMakie draws the corresponding Makie p
   painted back to front (CairoMakie's `draw_mesh3D`).
 * `arrows`: Makie `arrows2d` geometry in pixel space (shaft rectangle, triangular tip,
   scaled down when the arrow is shorter than its parts, plus the `strokemask` outline).
+* `labeledLines`: Makie's labelled contour (`basic_recipes/contours.jl:292-386`): every label
+  is rotated along its line's projected direction (`register_projected_rotations_2d!`, made
+  upright by `to_upright_angle`), its string bounding box is taken in pixel space, and the line
+  points inside a box are dropped (the walk over the line segments pairs the `n`-th NaN-separated
+  line with the `n`-th label; no masking when NaNs make up more than a tenth of the points).
+  The texts are drawn before the lines, as Makie creates them first.
 -/
 
 namespace LeanPlot.Lower
@@ -546,6 +552,97 @@ def arrows (pr : Projector) (origins dirs : Pos) (s : ArrowSpec) : Array DrawOp 
   termination_by n - i
   go 0 #[]
 
+/-- Makie `to_upright_angle`: an angle in `[-π, π]` mapped to `[-π/2, π/2]` by adding or
+subtracting `π`. -/
+@[inline] def uprightAngle (a : Float) : Float :=
+  if a.abs > 0.5 * Num.pi then a - (if a < 0 then -Num.pi else Num.pi) else a
+
+/-- The screen rotations of contour labels (Makie `register_projected_rotations_2d!` with
+`rotation_transform = to_upright_angle`): the angle of the projected direction at each anchor,
+by a symmetric finite difference of `delta = 1e-3·‖widths(bbox(anchors))‖` along the unit
+direction (Makie's `apply_transform_to_direction`; exact for linear projections). -/
+def labelRotations (pr : Projector) (l : ContourLabels) : FloatArray :=
+  let n := l.pos.size
+  let delta := match l.pos.bounds? with
+    | some r => let d := 1.0e-3 * r.widths.norm; if d > 0 then d else 1.0e-3
+    | none => 1.0e-3
+  (Array.range n).foldl (init := FloatArray.emptyWithCapacity n) fun acc i =>
+    let q := l.pos.get3 i
+    let d := (l.dir.get3 i).normalize
+    let a := pr.project (q.sub (Vec3.smul delta d))
+    let b := pr.project (q.add (Vec3.smul delta d))
+    -- device y points down: the on-screen (y up) angle uses −dy
+    acc.push (uprightAngle (Float.atan2 (a.y - b.y) (b.x - a.x)))
+
+/-- Rectangle membership, boundary included (GeometryBasics `in(::Point, ::Rect)`). -/
+@[inline] def inRect (r : Rect) (x y : Float) : Bool :=
+  r.x ≤ x && x ≤ r.x + r.w && r.y ≤ y && y ≤ r.y + r.h
+
+/-- Makie's label masking (`contours.jl:358-386`): the points of the NaN-separated lines whose
+pixel positions `(px, py)` lie inside the current label box become NaN, together with the
+contiguous run of neighbours inside the same box; the `n`-th NaN advances to the `n+1`-th box.
+Returns the indices to drop as a byte mask. -/
+def labelMask (px py : FloatArray) (isNaNPt : Nat → Bool) (boxes : Array Rect) : ByteArray :=
+  let n := px.size
+  let nlab := boxes.size
+  let mask := ByteArray.mk (Array.replicate n 0)
+  let inBox (bb : Rect) (j : Nat) : Bool := inRect bb (px.get! j) (py.get! j)
+  let rec spread (bb : Rect) (j : Nat) (up : Bool) (fuel : Nat) (m : ByteArray) : ByteArray :=
+    match fuel with
+    | 0 => m
+    | fuel + 1 =>
+      if up then
+        if j < n && inBox bb j then spread bb (j + 1) up fuel (m.set! j 1) else m
+      else
+        if inBox bb j then (if j == 0 then m.set! 0 1 else spread bb (j - 1) up fuel (m.set! j 1)) else m
+  let rec go (i k : Nat) (m : ByteArray) : ByteArray :=
+    if i < n then
+      if isNaNPt i && k + 1 < nlab then go (i + 1) (k + 1) m
+      else
+        let bb := boxes[k]!
+        if !isNaNPt i && inBox bb i then
+          let m := m.set! i 1
+          let m := spread bb (i + 1) true n m
+          let m := if i == 0 then m else spread bb (i - 1) false n m
+          go (i + 1) k m
+        else go (i + 1) k m
+    else m
+  termination_by n - i
+  if nlab == 0 then mask else go 0 0 mask
+
+/-- `labeledLines`: label texts, then the lines with the points under the labels removed. -/
+def labeledLines (pr : Projector) (p : Pos) (s : LineSpec) (l : ContourLabels) : Array DrawOp :=
+  let rot := labelRotations pr l
+  let (lx, ly, _) := projectPos pr l.pos
+  let nl := min (min lx.size l.strings.size) rot.size
+  let rgba := l.colors.resolve nl
+  -- labels: centred, rotated, and their Makie string boxes in pixel space
+  let (ops, boxes) := (Array.range nl).foldl (init := ((#[] : Array DrawOp), (#[] : Array Rect))) fun (ops, bs) i =>
+    let x := lx[i]!
+    let y := ly[i]!
+    let style : TextStyle := { size := l.size, color := RGBA.ofRGBA8At rgba i, halign := .center, valign := .middle
+                               rotation := rot[i]!, bold := l.bold }
+    if x.isNaN || y.isNaN then (ops, bs.push { x, y, w := 0, h := 0 })
+    else
+      let str := l.strings[i]!
+      let ops := if FigText.isBlank str then ops else ops.push (.text x y str style pr.clip)
+      (ops, bs.push (Font.textBounds style str x y))
+  -- the lines, masked unless NaNs are more than a tenth of the points (Makie's heuristic)
+  let (px, py, _) := projectPos pr p
+  let n := p.size
+  let isNaNPt (i : Nat) : Bool := let v := p.get3 i; v.x.isNaN || v.y.isNaN || v.z.isNaN
+  let nnan := (List.range n).foldl (fun c i => if isNaNPt i then c + 1 else c) 0
+  let masked : Pos :=
+    if 10 * nnan > n || boxes.isEmpty then p else
+    let m := labelMask px py isNaNPt boxes
+    let drop (a : FloatArray) : FloatArray :=
+      (Array.range n).foldl (init := FloatArray.emptyWithCapacity n) fun acc i =>
+        acc.push (if m.get! i == 1 then Num.nan else a.get! i)
+    match p with
+    | .xy q => .xy (Pts2.ofArrays (drop q.xs) (drop q.ys))
+    | .xyz q => .xyz (Pts3.ofArrays (drop q.xs) (drop q.ys) (drop q.zs))
+  ops ++ lines pr masked s
+
 /-- Lower one mark. -/
 def mark (pr : Projector) : Mark → Array DrawOp
   | .lines p s => lines pr p s
@@ -558,6 +655,7 @@ def mark (pr : Projector) : Mark → Array DrawOp
   | .image x0 x1 y0 y1 w h rgba interp => image pr x0 x1 y0 y1 w h rgba interp
   | .mesh m => mesh pr m
   | .arrows o d s => arrows pr o d s
+  | .labeledLines p s l => labeledLines pr p s l
   | .hlines .. | .vlines .. => #[]
 
 end LeanPlot.Lower

@@ -214,6 +214,16 @@ def contourLines (ax : Axis2) (lines : Pts2) (levels : FloatArray) (colormap : C
     (colorrange : Option (Float × Float) := none) (linewidth : Float := 1) (label : Option String := none) : Axis2 :=
   ax.add (.lines (.xy lines) { color := .values levels { colormap, colorrange }, width := linewidth }) label
 
+/-- `contour!(…; labels = true)`: NaN-separated isolines coloured by `lineColor` (one colour
+or value per point), labelled with `labels` at `labelPos` (anchors) along `labelDir` (line
+directions there), each label in its entry of `labelColors`; lines are masked under the labels
+(Makie `contour` with `labels = true`, `labelsize = 10`). See `Contour.labelData`. -/
+def contourLabeled (ax : Axis2) (lines : Pts2) (lineColor : ColorSpec) (labelPos labelDir : Pts2)
+    (labels : Array String) (labelColors : ColorSpec) (linewidth : Float := 1) (labelsize : Float := 10)
+    (bold : Bool := false) (label : Option String := none) : Axis2 :=
+  ax.add (.labeledLines (.xy lines) { color := lineColor, width := linewidth }
+    { pos := .xy labelPos, dir := .xy labelDir, strings := labels, colors := labelColors, size := labelsize, bold }) label
+
 /-- `contour!` from isolines given one polyline per line with its level (e.g. traced by a
 marching-squares recipe): concatenated with NaN breaks and coloured per line through
 `colormap` over the level range. -/

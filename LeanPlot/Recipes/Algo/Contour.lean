@@ -476,4 +476,16 @@ def labelAnchors (p : Pts2) : Vec2 × Vec2 × Vec2 :=
   let at1 (k : Nat) : Vec2 := p.get! (k - 1)
   (at1 (max 1 (mid - 1)), at1 mid, at1 (min (mid + 1) n))
 
+/-- Makie's contour label data (`contourlines` with `labels = true`, then the
+`text_positions`/`raw_lbl_directions` map of `contours.jl:318-326`), one label per traced line:
+the anchor `p₂` (else `p₁`, else `p₃` when NaN) of `label_info`, the direction `p₃ - p₁`, the
+`labelformatter` text of the line's level (binary32 levels when `f32`), and the line's level
+index. -/
+def labelData (ls : Lines) (f32 : Bool := true) : Pts2 × Pts2 × Array String × Array Nat :=
+  ls.lines.foldl (init := (Pts2.empty, Pts2.empty, #[], #[])) fun (pos, dir, txt, lvl) (k, p) =>
+    let (p1, p2, p3) := labelAnchors p
+    let q := if p2.x.isNaN || p2.y.isNaN then p1 else p2
+    let q := if q.x.isNaN || q.y.isNaN then p3 else q
+    (pos.push q.x q.y, dir.push (p3.x - p1.x) (p3.y - p1.y), txt.push (labelText (ls.levels.get! k) f32), lvl.push k)
+
 end LeanPlot.Recipes.Algo.Contour

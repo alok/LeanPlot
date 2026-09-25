@@ -44,7 +44,7 @@ to Makie's legend defaults (black lines/markers, grey polygons). -/
 def elementsOf (m : Mark) : Array LegendElement :=
   let scalar (c : ColorSpec) (d : RGBA) : RGBA := match c with | .solid c => c | _ => d
   match m with
-  | .lines _ s | .segments _ s => #[.line (scalar s.color RGBA.black) s.width s.style]
+  | .lines _ s | .segments _ s | .labeledLines _ s _ => #[.line (scalar s.color RGBA.black) s.width s.style]
   | .scatter _ s => #[.marker s.shape s.size (scalar s.color RGBA.black) s.strokeColor s.strokeWidth]
   | .band _ _ c => #[.poly (scalar c RGBA.black) RGBA.transparent 0]
   | .poly _ s => #[.poly (scalar s.color (RGBA.gray 0.4)) s.strokeColor s.strokeWidth]

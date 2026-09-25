@@ -470,6 +470,25 @@ def toStyle (t : TextSpec) : TextStyle :=
     rotation := t.rotation, bold := t.bold }
 end TextSpec
 
+/-- The labels of a labelled contour plot (Makie `contour(...; labels = true)`,
+`basic_recipes/contours.jl:292-386`): one label per traced line, anchored at the line's middle
+vertex (`label_info`), rotated along the line in screen space and kept upright, centred, in its
+line's colour. `dir` holds the data-space directions `p₃ - p₁` of the vertices around the anchor. -/
+structure ContourLabels where
+  /-- Label anchors (Makie `text_positions`). -/
+  pos : Pos
+  /-- Line directions at the anchors (`p₃ - p₁`). -/
+  dir : Pos
+  /-- Label texts (`labelformatter` of the line levels). -/
+  strings : Array String
+  /-- One colour per label (`labelcolor`, else the level colour). -/
+  colors : ColorSpec
+  /-- Makie `labelsize` (10). -/
+  size : Float := 10
+  /-- Makie `labelfont = :bold`. -/
+  bold : Bool := false
+  deriving Inhabited
+
 /-- Arrow style (Makie `arrows2d`; pixel-space metrics, `markerspace = :pixel`).
 `align` is `0` (tail at the point), `0.5` (centre) or `1` (tip at the point). -/
 structure ArrowSpec where

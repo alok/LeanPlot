@@ -24,6 +24,7 @@ coordinates break lines (Makie convention).
 | `image` | `image` (an RGBA8 raster spanning a data rectangle) |
 | `mesh` | `mesh` (triangles; per-vertex colours or values; optional shading in 3D) |
 | `arrows` | `arrows2d` (origins + directions; pixel-space shafts and tips) |
+| `labeledLines` | `contour(...; labels = true)` (lines masked under their level labels) |
 
 `Mark.bounds?` is Makie's `data_limits` for autolimits and `Mark.tight` its
 `needs_tight_limits` (heatmaps and images remove the autolimit margins).
@@ -108,6 +109,9 @@ inductive Mark where
   | hlines (ys : FloatArray) (s : LineSpec)
   /-- Vertical lines at `xs` spanning the whole y range of a 2D axis (`vlines`). -/
   | vlines (xs : FloatArray) (s : LineSpec)
+  /-- NaN-separated contour lines with level labels: the labels are drawn at their anchors and
+  the line points under a label's box are dropped (Makie `contour(...; labels = true)`). -/
+  | labeledLines (p : Pos) (s : LineSpec) (labels : ContourLabels)
   deriving Inhabited
 
 namespace Mark
@@ -117,7 +121,7 @@ def kind : Mark → String
   | lines .. => "lines" | segments .. => "linesegments" | scatter .. => "scatter"
   | band .. => "band" | poly .. => "poly" | text .. => "text" | heatmap .. => "heatmap"
   | image .. => "image" | mesh .. => "mesh" | arrows .. => "arrows2d"
-  | hlines .. => "hlines" | vlines .. => "vlines"
+  | hlines .. => "hlines" | vlines .. => "vlines" | labeledLines .. => "contour"
 
 /-- Bounds of the polygons. -/
 private def ringsBounds (rs : Array Pts2) : Option Rect3 :=
@@ -129,7 +133,7 @@ private def edgeRange (e : FloatArray) : Option (Float × Float) := extremaFinit
 /-- Makie `data_limits`: the finite bounding box of the mark in data space (`none` when it
 has no finite point). -/
 def bounds? : Mark → Option Rect3
-  | lines p _ | segments p _ | scatter p _ | text p _ _ => p.bounds?
+  | lines p _ | segments p _ | scatter p _ | text p _ _ | labeledLines p _ _ => p.bounds?
   | band lo hi _ => Rect3.unionOpt lo.bounds? hi.bounds?
   | poly rs _ => ringsBounds rs
   | heatmap h =>
@@ -181,7 +185,7 @@ def tight : Mark → Bool
 /-- The colour mapping and range of a colour-mapped mark (for `Colorbar`s). -/
 def colorMapping? : Mark → Option (ColorMapping × Float × Float)
   | heatmap h => some (h.mapping, h.mapping.rangeFor h.z.grid.z)
-  | lines _ s | segments _ s | hlines _ s | vlines _ s => withRange s.color
+  | lines _ s | segments _ s | hlines _ s | vlines _ s | labeledLines _ s _ => withRange s.color
   | scatter _ s => withRange s.color
   | band _ _ c => withRange c
   | poly _ s => withRange s.color
@@ -196,7 +200,7 @@ where
 
 /-- `true` when every position is 2D (the mark lives in a plane). -/
 def is2D : Mark → Bool
-  | lines p _ | segments p _ | scatter p _ | text p _ _ => !p.is3D
+  | lines p _ | segments p _ | scatter p _ | text p _ _ | labeledLines p _ _ => !p.is3D
   | band lo hi _ => !lo.is3D && !hi.is3D
   | arrows o d _ => !o.is3D && !d.is3D
   | mesh _ => false
