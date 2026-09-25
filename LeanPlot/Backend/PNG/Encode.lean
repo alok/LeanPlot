@@ -105,7 +105,7 @@ def rgbaToRGB (rgba : ByteArray) : ByteArray :=
       go (i + 1) (((out.push (rgba.get! (4*i))).push (rgba.get! (4*i+1))).push (rgba.get! (4*i+2)))
     else out
   termination_by n - i
-  go 0 (ByteArray.emptyWithCapacity (3 * n))
+  go 0 (ByteArray.emptyWithCapacity (3 * n)).markLinear
 
 /-- Is every alpha byte of RGBA8 pixels `255`? -/
 def isOpaque (rgba : ByteArray) : Bool :=

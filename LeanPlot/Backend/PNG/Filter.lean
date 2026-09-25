@@ -102,7 +102,7 @@ def filterRows (raw : ByteArray) (rowLen bpp h : Nat) (strategy : Strategy := .a
       go (y + 1) (writeRow out raw base prevBase rowLen bpp first k)
     else out
   termination_by h - y
-  go 0 (ByteArray.emptyWithCapacity (h * (rowLen + 1)))
+  go 0 (ByteArray.emptyWithCapacity (h * (rowLen + 1))).markLinear
 
 /-! ### Layout -/
 

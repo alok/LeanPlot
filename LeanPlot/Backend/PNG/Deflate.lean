@@ -397,9 +397,9 @@ def lzLoop (data : ByteArray) (lv : Level) (fuel i prevLen prevDist : Nat)
 /-- Raw DEFLATE stream (no zlib header) of `data`. -/
 def deflate (data : ByteArray) (lv : Level := .default) : ByteArray :=
   let n := data.size
-  let w := lzLoop data lv (n + 2) 0 0 0 false (Array.replicate (hsize + wsize) 0)
+  let w := lzLoop data lv (n + 2) 0 0 0 false (Array.replicate (hsize + wsize) 0).markLinear
     (Array.emptyWithCapacity lv.blockTokens) (Array.replicate 286 0) (Array.replicate 30 0) 0
-    { out := ByteArray.emptyWithCapacity (n / 4 + 64) }
+    { out := (ByteArray.emptyWithCapacity (n / 4 + 64)).markLinear }
   w.align.out
 
 /-- zlib stream (RFC 1950): header `78 9C`, DEFLATE data, big-endian Adler-32. -/

@@ -169,8 +169,8 @@ def Polylines.normalize (p : Polylines) : Polylines := Id.run do
     let (a, b) := p.range k
     b ≤ a || (p.closed[k]! && b > a + 1 && p.xs[b-1]! == p.xs[a]! && p.ys[b-1]! == p.ys[a]!)
   if !needs then return p
-  let mut xs : FloatArray := .emptyWithCapacity p.xs.size
-  let mut ys : FloatArray := .emptyWithCapacity p.ys.size
+  let mut xs : FloatArray := (FloatArray.emptyWithCapacity p.xs.size).markLinear
+  let mut ys : FloatArray := (FloatArray.emptyWithCapacity p.ys.size).markLinear
   let mut starts : Array Nat := #[]
   let mut closed : Array Bool := #[]
   for k in [0:p.count] do
@@ -187,7 +187,11 @@ def Polylines.normalize (p : Polylines) : Polylines := Id.run do
         ys := ys.push p.ys[i]!
   return { xs, ys, starts, closed }
 
-/-- Flatten a path to polylines with tolerance `tol` pixels. -/
+/-- Flatten a path to polylines with tolerance `tol` pixels.
+
+The point buffers are built in place and marked linear, so running the tests
+with `LEAN_ABORT_ON_NONLINEAR=1` turns any accidental buffer copy (such as
+the one `FlatSt.begin` avoids) into a panic. -/
 def flatten (p : Path) (tol : Float := flattenTol) : Polylines :=
   let cs := p.coords
   let c (i : Nat) : Float := cs.get! i
@@ -217,7 +221,7 @@ def flatten (p : Path) (tol : Float := flattenTol) : Polylines :=
       go (vi + 1) (ci + v.arity) s
     else s
   termination_by p.verbs.size - vi
-  let s : FlatSt := { xs := .emptyWithCapacity (cs.size / 2 + 4), ys := .emptyWithCapacity (cs.size / 2 + 4),
+  let s : FlatSt := { xs := (FloatArray.emptyWithCapacity (cs.size / 2 + 4)).markLinear, ys := (FloatArray.emptyWithCapacity (cs.size / 2 + 4)).markLinear,
                       starts := #[], closed := #[], cx := K.zero, cy := K.zero, sx := K.zero, sy := K.zero, open_ := false }
   let s := go 0 0 s
   Polylines.normalize { xs := s.xs, ys := s.ys, starts := s.starts, closed := s.closed }
@@ -228,7 +232,7 @@ def Polylines.ofPoints (xs ys : FloatArray) (closed : Bool := false) : Polylines
   let rec go (i : Nat) (s : FlatSt) : FlatSt :=
     if i < n then go (i + 1) (s.lineTo (xs.get! i) (ys.get! i)) else s
   termination_by n - i
-  let s : FlatSt := { xs := .emptyWithCapacity n, ys := .emptyWithCapacity n, starts := #[], closed := #[],
+  let s : FlatSt := { xs := (FloatArray.emptyWithCapacity n).markLinear, ys := (FloatArray.emptyWithCapacity n).markLinear, starts := #[], closed := #[],
                       cx := Float.nan, cy := Float.nan, sx := K.zero, sy := K.zero, open_ := false }
   let s := go 0 s
   let s := if closed then s.close else s

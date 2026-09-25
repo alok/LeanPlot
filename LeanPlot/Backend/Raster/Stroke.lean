@@ -447,7 +447,8 @@ termination_by pl.count - k
 /-- Cut polylines into dashes. Every output subpath is open. Segment parts
 outside `box` (x0, y0, x1, y1), when given, only advance the pattern
 analytically; no dashes are produced there. The work is then bounded by the
-visible length, even for a far-off path with a fine pattern. -/
+visible length, even for a far-off path with a fine pattern. The output
+buffers are marked linear (see `flatten`). -/
 def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zero)
     (box : Option (Float × Float × Float × Float) := none) : Polylines :=
   match dashPattern? dash with
@@ -455,7 +456,7 @@ def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zer
   | some pat =>
     let total := pat.foldl (· + ·) K.zero
     let off0 := if offset.isFinite then offset - total * (offset / total).floor else K.zero
-    let s : DashSt := { xs := .emptyWithCapacity pl.xs.size, ys := .emptyWithCapacity pl.ys.size,
+    let s : DashSt := { xs := (FloatArray.emptyWithCapacity pl.xs.size).markLinear, ys := (FloatArray.emptyWithCapacity pl.ys.size).markLinear,
                         starts := #[], idx := 0, rem := pat[0]!, on := true, inDash := false }
     -- the phase at the start of every subpath (the offset consumed); built
     -- from its own empty state so that `s`'s buffers stay unshared
