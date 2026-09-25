@@ -94,6 +94,26 @@ def tests : T Unit := do
   -- stroke of a curve: a circle outline of radius 30, width 4 → area 2π·30·4
   let ring := darkArea (strokeBlack 100 100 (circlePath 50 50 30) { width := 4 })
   check "circle outline area" ((ring - 2.0 * pi * 30.0 * 4.0).abs ≤ 0.01 * 2.0 * pi * 30.0 * 4.0) s!"{ring}"
+  -- clip-aware dashing matches plain dashing inside the canvas
+  let far := polyline [(-100000.0, 50.25), (100000.0, 50.25)]
+  let st : Stroke := { color := .black, width := 3, dash := #[10, 5], dashOffset := 2.5 }
+  let culled := strokeBlack 200 100 far st
+  let plain := Id.run do
+    let cl := Clip.make 200 100 none
+    let pl := dashPolylines (flatten far) #[10, 5] 2.5
+    let acc := (Accum.new 200 100).strokePolylines cl pl (StrokeGeom.ofStroke st)
+    return (acc.sweepSolid (Canvas.fill 200 100 .white) cl .nonzero .black).2
+  let mut same := true
+  for i in [0:200*100] do
+    let a := (culled.data.get! (4*i)).toNat; let b := (plain.data.get! (4*i)).toNat
+    if a + 1 < b || b + 1 < a then same := false
+  check "culled dashes = plain dashes" same
+  -- a fine pattern on a path far larger than the canvas stays cheap
+  let huge := polyline [(-1.0e9, 20.0), (1.0e9, 80.0)]
+  let (cvHuge, ms) ← timeMs (IO.lazyPure fun _ => strokeBlack 200 100 huge { width := 2, dash := #[2, 2] })
+  check "huge dashed path bounded" (ms < 200.0 && darkArea cvHuge > 100.0) s!"{ms} ms, ink {darkArea cvHuge}"
+  -- sub-pixel dash periods become a solid stroke with alpha × on-fraction
+  checkNear "sub-pixel dashes ≈ half ink" (darkArea (strokeBlack 130 100 line { width := 2, dash := #[0.2, 0.2] })) 100.0 1.0
   -- clip applies to strokes
   let cvc := paint 100 100 #[.path line none (some { color := .black, width := 10 }) (some ⟨30, 0, 20, 100⟩)]
   checkNear "clipped stroke" (darkArea cvc) 200.0 1.0e-6

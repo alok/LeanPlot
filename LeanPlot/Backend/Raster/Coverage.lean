@@ -121,8 +121,14 @@ def new (w h : Nat) : Accum w h :=
     | k + 1 => spans k ((a.push spanNone).push (-K.one))
   let a := zeros cells (FloatArray.emptyWithCapacity (cells + 2 * h + 2))
   let a := spans h a
-  -- marked linear: with `LEAN_ABORT_ON_NONLINEAR=1` any accidental copy panics
-  ⟨((a.push spanNone).push (-K.one)).markLinear⟩
+  ⟨(a.push spanNone).push (-K.one)⟩
+
+/-- Make the buffer unique (copying it if shared, e.g. an accumulator hoisted
+to a closed term) and mark it linear. With `LEAN_ABORT_ON_NONLINEAR=1`, any
+later accidental copy then panics. `Canvas.drawOps` marks its accumulator
+this way; `new` itself does not, because a marked closed term would trip the
+check on its first legitimate copy. -/
+def markLinear {w h : Nat} (acc : Accum w h) : Accum w h := ⟨acc.buf.markLinear⟩
 
 /-- `a[i] += v`. -/
 @[inline] def addAt (a : FloatArray) (i : Nat) (v : Float) : FloatArray :=

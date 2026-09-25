@@ -30,7 +30,34 @@ structure StrokeGeom where
   miterLimit : Float
   /-- arc flattening tolerance (px) -/
   tol : Float := K.tenth
+  /-- culling box: pieces entirely outside `[bx0, bx1] × [by0, by1]` are not
+  emitted (each piece is closed, so an invisible one contributes nothing) -/
+  bx0 : Float := -K.huge
+  by0 : Float := -K.huge
+  bx1 : Float := K.huge
+  by1 : Float := K.huge
   deriving Repr, Inhabited
+
+namespace StrokeGeom
+
+/-- How far a stroke's geometry can reach from its centre line: miter tips,
+square caps and round joins all stay within this distance. -/
+def reach (g : StrokeGeom) : Float := g.hw * max g.miterLimit K.two + K.two
+
+/-- Cull everything more than `reach` outside the clip. -/
+def withClip (g : StrokeGeom) (cl : Clip) : StrokeGeom :=
+  let m := g.reach
+  { g with bx0 := cl.x0 - m, by0 := cl.y0 - m, bx1 := cl.x1 + m, by1 := cl.y1 + m }
+
+/-- Is the point inside the culling box? -/
+@[inline] def ptVis (g : StrokeGeom) (x y : Float) : Bool :=
+  x ≥ g.bx0 && x ≤ g.bx1 && y ≥ g.by0 && y ≤ g.by1
+
+/-- Does the segment's bounding box meet the culling box? -/
+@[inline] def segVis (g : StrokeGeom) (x0 y0 x1 y1 : Float) : Bool :=
+  !(max x0 x1 < g.bx0 || min x0 x1 > g.bx1 || max y0 y1 < g.by0 || min y0 y1 > g.by1)
+
+end StrokeGeom
 
 namespace Stroker
 
@@ -167,26 +194,27 @@ def walk (b : FloatArray) (w h : Nat) (cl : Clip) (g : StrokeGeom) (xs ys : Floa
     let len := (dx * dx + dy * dy).sqrt
     if len < minSeg then walk b w h cl g xs ys closed a (i + 1) e qx qy ux uy fx fy has else
     let vx := dx / len; let vy := dy / len
-    let b := if has then join b w h cl g qx qy ux uy vx vy
+    let b := if !g.ptVis qx qy then b
+      else if has then join b w h cl g qx qy ux uy vx vy
       else if closed then b else cap b w h cl g qx qy (-vx) (-vy)
-    let b := segQuad b w h cl g.hw qx qy x y vx vy
+    let b := if g.segVis qx qy x y then segQuad b w h cl g.hw qx qy x y vx vy else b
     let fx' := if has then fx else vx
     let fy' := if has then fy else vy
     walk b w h cl g xs ys closed a (i + 1) e x y vx vy fx' fy' true
   else
     let x0 := xs.get! a; let y0 := ys.get! a
-    if !has then dot b w h cl g x0 y0
-    else if !closed then cap b w h cl g qx qy ux uy
+    if !has then (if g.ptVis x0 y0 then dot b w h cl g x0 y0 else b)
+    else if !closed then (if g.ptVis qx qy then cap b w h cl g qx qy ux uy else b)
     else
       -- closing segment back to the first point, then the join there
       let dx := x0 - qx; let dy := y0 - qy
       let len := (dx * dx + dy * dy).sqrt
-      if len < minSeg then join b w h cl g x0 y0 ux uy fx fy
+      if len < minSeg then (if g.ptVis x0 y0 then join b w h cl g x0 y0 ux uy fx fy else b)
       else
         let vx := dx / len; let vy := dy / len
-        let b := join b w h cl g qx qy ux uy vx vy
-        let b := segQuad b w h cl g.hw qx qy x0 y0 vx vy
-        join b w h cl g x0 y0 vx vy fx fy
+        let b := if g.ptVis qx qy then join b w h cl g qx qy ux uy vx vy else b
+        let b := if g.segVis qx qy x0 y0 then segQuad b w h cl g.hw qx qy x0 y0 vx vy else b
+        if g.ptVis x0 y0 then join b w h cl g x0 y0 vx vy fx fy else b
 termination_by e - i
 
 /-- Deposit the stroke of every subpath of `pl`. -/
@@ -212,7 +240,7 @@ namespace Accum
 /-- Deposit the stroke outline of `pl` (already dashed, if dashing applies). -/
 def strokePolylines {w h : Nat} (acc : Accum w h) (cl : Clip) (pl : Polylines) (g : StrokeGeom) : Accum w h :=
   if g.hw ≤ K.zero then acc else
-  ⟨Stroker.strokeAll acc.buf w h cl g pl 0⟩
+  ⟨Stroker.strokeAll acc.buf w h cl (g.withClip cl) pl 0⟩
 
 end Accum
 
@@ -258,6 +286,21 @@ namespace DashSt
   let s := { s with idx, rem := pat[idx]!, on, inDash := false, pend := false }
   if on then s.startDash x y else s
 
+/-- Advance the pattern by arc length `d` without emitting anything
+(`pat` has even length, so whole periods can be skipped). -/
+def advance (s : DashSt) (pat : Array Float) (total d : Float) : DashSt := Id.run do
+  if d < s.rem then return { s with rem := s.rem - d }
+  let mut d := d - s.rem
+  let mut idx := (s.idx + 1) % pat.size
+  let mut on := !s.on
+  let mut rem := pat[idx]!
+  d := d - total * (d / total).floor
+  let mut guard := 0
+  while d ≥ rem && guard ≤ pat.size do
+    guard := guard + 1
+    d := d - rem; idx := (idx + 1) % pat.size; on := !on; rem := pat[idx]!
+  return { s with idx, on, rem := rem - d }
+
 /-- Walk the segment `(px, py) → (qx, qy)` of length `len` starting at arc
 position `pos`. -/
 def seg (s : DashSt) (pat : Array Float) (px py qx qy len pos : Float) (fuel : Nat) : DashSt :=
@@ -284,8 +327,25 @@ def dashPattern? (d : Array Float) : Option (Array Float) :=
   let p := if d.size % 2 == 1 then d ++ d else d
   if p.foldl (· + ·) K.zero ≤ K.zero then none else some p
 
-/-- Cut polylines into dashes. Every output subpath is open. -/
-def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zero) : Polylines := Id.run do
+/-- Parameter interval `[t0, t1] ⊆ [0, 1]` of the segment `P → Q` inside the
+box (Liang–Barsky); empty when `t0 > t1`. -/
+def clipParam (px py qx qy bx0 by0 bx1 by1 : Float) : Float × Float := Id.run do
+  let dx := qx - px; let dy := qy - py
+  let mut t0 := K.zero; let mut t1 := K.one
+  for (p, q) in [(-dx, px - bx0), (dx, bx1 - px), (-dy, py - by0), (dy, by1 - py)] do
+    if p == K.zero then
+      if q < K.zero then t0 := K.two
+    else
+      let r := q / p
+      if p < K.zero then t0 := max t0 r else t1 := min t1 r
+  return (t0, t1)
+
+/-- Cut polylines into dashes. Every output subpath is open. Segment parts
+outside `box` (x0, y0, x1, y1), when given, only advance the pattern
+analytically; no dashes are produced there. The work is then bounded by the
+visible length, even for a far-off path with a fine pattern. -/
+def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zero)
+    (box : Option (Float × Float × Float × Float) := none) : Polylines := Id.run do
   let some pat := dashPattern? dash | return pl
   let total := pat.foldl (· + ·) K.zero
   let off0 := if offset.isFinite then offset - total * (offset / total).floor else K.zero
@@ -319,9 +379,32 @@ def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zer
       let qx := pl.xs[i2]!; let qy := pl.ys[i2]!
       let len := ((qx - px) * (qx - px) + (qy - py) * (qy - py)).sqrt
       if len > K.zero then
-        -- bound the steps: every step either finishes the segment or an element
-        let fuel := ((len / total).ceil.toUInt64.toNat + 2) * pat.size + 4
-        s := s.seg pat px py qx qy len K.zero (min fuel 10000000)
+        let (t0, t1) := match box with
+          | none => (K.zero, K.one)
+          | some (bx0, by0, bx1, by1) => clipParam px py qx qy bx0 by0 bx1 by1
+        if t0 > t1 then
+          -- invisible: close any open dash and skip ahead
+          s := { s with inDash := false, pend := false }
+          s := s.advance pat total len
+          if s.on then s := s.startDash qx qy
+        else
+          -- invisible prefix
+          if t0 > K.zero then
+            s := { s with inDash := false, pend := false }
+            s := s.advance pat total (t0 * len)
+            if s.on then s := s.startDash (px + (qx - px) * t0) (py + (qy - py) * t0)
+          let ax := px + (qx - px) * t0; let ay := py + (qy - py) * t0
+          let cx := px + (qx - px) * t1; let cy := py + (qy - py) * t1
+          let vis := (t1 - t0) * len
+          if vis > K.zero then
+            -- bound the steps: every step either finishes the segment or an element
+            let fuel := ((vis / total).ceil.toUInt64.toNat + 2) * pat.size + 4
+            s := s.seg pat ax ay cx cy vis K.zero fuel
+          -- invisible suffix
+          if t1 < K.one then
+            s := { s with inDash := false, pend := false }
+            s := s.advance pat total ((K.one - t1) * len)
+            if s.on then s := s.startDash qx qy
     s := { s with inDash := false, pend := false }
   return { xs := s.xs, ys := s.ys, starts := s.starts, closed := Array.replicate s.starts.size false }
 

@@ -29,12 +29,27 @@ def fillPolys {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (pl : 
   if !(f.color.a > K.zero) then (acc, cv) else
   (acc.fillPolylines cl pl).sweepSolid cv cl f.rule f.color
 
+/-- Dash periods shorter than this are drawn as a solid stroke whose alpha is
+scaled by the "on" fraction: sub-pixel dashes are indistinguishable from
+that, and cutting them would cost one dash per fraction of a pixel. -/
+def minDashPeriod : Float := K.one
+
 /-- Stroke flattened subpaths (dashing first when a pattern is set). -/
 def strokePolys {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (pl : Polylines) (s : Stroke) :
     Accum w h × Canvas w h :=
   if !(s.width > K.zero) || !(s.color.a > K.zero) then (acc, cv) else
-  let pl := if s.dash.isEmpty then pl else dashPolylines pl s.dash s.dashOffset
-  (acc.strokePolylines cl pl (StrokeGeom.ofStroke s)).sweepSolid cv cl .nonzero s.color
+  let g := StrokeGeom.ofStroke s
+  let (pl, color) := match dashPattern? s.dash with
+    | none => (pl, s.color)
+    | some pat =>
+      let total := pat.foldl (· + ·) K.zero
+      if total < minDashPeriod then
+        let onLen := (pat.toList.zipIdx.filter (·.2 % 2 == 0)).foldl (fun a p => a + p.1) K.zero
+        (pl, s.color.withAlpha (s.color.a * onLen / total))
+      else
+        let gc := g.withClip cl
+        (dashPolylines pl pat s.dashOffset (some (gc.bx0, gc.by0, gc.bx1, gc.by1)), s.color)
+  (acc.strokePolylines cl pl g).sweepSolid cv cl .nonzero color
 
 /-- Paint one op. -/
 def renderOp {w h : Nat} (opts : RenderOptions) (acc : Accum w h) (cv : Canvas w h) (op : DrawOp) : Accum w h × Canvas w h :=
@@ -65,7 +80,7 @@ termination_by ops.size - i
 
 /-- Paint `ops` onto an existing canvas. -/
 def Canvas.drawOps {w h : Nat} (cv : Canvas w h) (ops : Array DrawOp) (opts : RenderOptions := {}) : Canvas w h :=
-  if ops.isEmpty then cv else renderOps opts ops 0 (Accum.new w h) cv.markLinear
+  if ops.isEmpty then cv else renderOps opts ops 0 (Accum.new w h).markLinear cv.markLinear
 
 /-- Paint one op onto an existing canvas (allocates a fresh accumulator; for
 many ops prefer `drawOps`). -/
