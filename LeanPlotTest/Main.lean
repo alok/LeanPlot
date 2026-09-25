@@ -8,7 +8,9 @@ structure Suite where
 
 /-- Every suite `lake test` runs (cwd must be the package root: suites read goldens by relative path). -/
 def suites : List Suite := [
-  ⟨"Font", LeanPlotTest.Font.run⟩
+  ⟨"Font", LeanPlotTest.Font.run⟩,
+  ⟨"Raster", LeanPlotTest.Raster.run⟩,
+  ⟨"Core", LeanPlotTest.Core.run⟩
 ]
 
 /-- Golden test driver: `lake test` runs everything; `lake exe leanplottest A B` runs named suites. -/

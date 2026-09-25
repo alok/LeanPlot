@@ -1,4 +1,5 @@
 import LeanPlot.Backend.Raster.Flatten
+import LeanPlot.Font.Layout
 
 /-
 Text hook for the raster backend.
@@ -28,7 +29,7 @@ def TextOutliner.none : TextOutliner := fun _ _ _ _ => {}
 
 /-- The outliner `Scene.toCanvas` uses by default.
 STUB: `TextOutliner.none` until the font module is wired in (integration request). -/
-def defaultTextOutliner : TextOutliner := TextOutliner.none
+def defaultTextOutliner : TextOutliner := LeanPlot.Font.textPath
 
 /-- Fill glyph outlines for `s` into the accumulator and resolve them with the
 text colour. -/
