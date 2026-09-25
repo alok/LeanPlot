@@ -84,10 +84,15 @@ structure FlatSt where
 
 namespace FlatSt
 
-/-- Begin a new subpath at `(x, y)`. -/
+/-- Begin a new subpath at `(x, y)`.
+
+The subpath start is recorded in a separate update *before* the points are
+pushed. In a single update the compiler reads `s.xs.size` after
+`s.xs.push x`, which keeps a second reference to `xs` alive across the push
+and copies the whole buffer: quadratic in the number of subpaths. -/
 @[inline] def begin (s : FlatSt) (x y : Float) : FlatSt :=
-  { s with xs := s.xs.push x, ys := s.ys.push y, starts := s.starts.push s.xs.size,
-           closed := s.closed.push false, cx := x, cy := y, sx := x, sy := y, open_ := true }
+  let s := { s with starts := s.starts.push s.xs.size, closed := s.closed.push false }
+  { s with xs := s.xs.push x, ys := s.ys.push y, cx := x, cy := y, sx := x, sy := y, open_ := true }
 
 /-- Append `(x, y)` to the current subpath (starting one at the current point
 if needed), dropping exact duplicates; non-finite points break the path. -/

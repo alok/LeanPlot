@@ -95,6 +95,17 @@ def tests : T Unit := do
   check "huge coords bounded" (ms < 500.0 && darkArea cvh ≤ 10000.0) s!"{ms} ms"
   let cvi := fillBlack 100 100 (polygon [(10, 10), (Float.inf, 20), (20, 80)])
   check "inf path no crash" (darkArea cvi ≤ 10000.0)
+  -- flattening is linear in the number of subpaths (a buffer copy per
+  -- `moveTo` would move ~50 GB here and take seconds)
+  let many : Path := Id.run do
+    let mut p : Path := {}
+    for i in [0:80000] do
+      let x := (i % 100).toFloat; let y := (i / 100).toFloat * 0.5
+      p := (p.moveTo x y).lineTo (x + 0.5) y
+    return p
+  let (plMany, msMany) ← timeMs (IO.lazyPure fun _ => flatten many)
+  check "8·10⁴ subpaths flatten in linear time" (plMany.count == 80000 && msMany < 250.0)
+    s!"{plMany.count} subpaths, {msMany} ms"
   checkNear "degenerate zero-area" (darkArea (fillBlack 100 100 (polygon [(10, 10), (50, 50), (90, 90)]))) 0.0 1.0e-9
   checkNear "empty path" (darkArea (fillBlack 100 100 {})) 0.0 1.0e-9
   -- quadratic Béziers: a parabolic segment's area (∫ of the hull triangle × 2/3)
