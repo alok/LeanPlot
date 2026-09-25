@@ -92,8 +92,10 @@ def checkAxis (fname : String) (k : Nat) (ax : Axis2) (sb : SolvedBlock) (p : Ax
     let labels := t.labels.map labelString
     let want := (jt.get "labels").arrD.map J.string
     check s!"{n} {dir} tick labels" (labels == want) fun _ => s!"got {labels}, want {want}"
-    check s!"{n} {dir} protrusion" (((if dir == "x" then pr.bottom else pr.left) - (jt.get "protrusion").float).abs ≤ 2e-3)
-      fun _ => s!"got {if dir == "x" then pr.bottom else pr.left}, want {(jt.get "protrusion").float}"
+    let side := if dir == "x" then (if ax.xaxistop then pr.top - ax.titleSpace else pr.bottom)
+                else (if ax.yaxisright then pr.right else pr.left)
+    check s!"{n} {dir} protrusion" ((side - (jt.get "protrusion").float).abs ≤ 2e-3)
+      fun _ => s!"got {side}, want {(jt.get "protrusion").float}"
   checkFloats s!"{n} title" 2e-3 #[an.title.1, an.title.2] (j.get "title").floats
   checkFloats s!"{n} xlabel" 2e-3 #[an.xlabel.1, an.xlabel.2] (j.get "xlabel").floats
   checkFloats s!"{n} ylabel" 2e-3 #[an.ylabel.1, an.ylabel.2] (j.get "ylabel").floats

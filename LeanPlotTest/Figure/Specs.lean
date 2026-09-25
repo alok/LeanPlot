@@ -219,6 +219,12 @@ def fixedTicks : Figure :=
   let a2 := Axis2.new (title := "gap") |>.scatter s (fmap (· ^ 2) s)
   Figure.new (size := (640, 400)) |>.axis 1 1 a1 |>.axis 1 2 a2 |>.colgap 40
 
+/-- 25. x axis on top, y axis on the right. -/
+def flippedAxes : Figure :=
+  let ax : Axis2 := { (Axis2.new (title := "flipped") (xlabel := "x") (ylabel := "y") |>.linesFn Float.cos xs) with
+    xaxistop := true, yaxisright := true }
+  Figure.new |>.axis 1 1 ax
+
 /-- All oracle figures by name. -/
 def specs : Array (String × Figure) := #[
   ("basic", basic), ("empty", empty), ("twoaxes", twoaxes), ("grid22", grid22), ("limits", limits),
@@ -227,6 +233,6 @@ def specs : Array (String × Figure) := #[
   ("markers", markers), ("colormapped", colormapped), ("heatmap_image", heatmapImage),
   ("legend_horizontal", legendHorizontal), ("label_log_reversed", labelLogReversed), ("axis3_wire", axis3Wire),
   ("hvlines_aspect", hvlinesAspect), ("rotated_clip", rotatedClip), ("mesh_poly_text", meshPolyText),
-  ("fixed_ticks", fixedTicks)]
+  ("fixed_ticks", fixedTicks), ("flipped_axes", flippedAxes)]
 
 end LeanPlotTest.Figure

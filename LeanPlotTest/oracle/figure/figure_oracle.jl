@@ -366,6 +366,13 @@ let f = Figure(size = (640, 400))
     push!(figs, figure_json("fixed_ticks", f))
 end
 
+# 25. x axis on top, y axis on the right
+let f = Figure()
+    ax = Axis(f[1, 1], xaxisposition = :top, yaxisposition = :right, title = "flipped", xlabel = "x", ylabel = "y")
+    lines!(ax, xs, cos.(xs))
+    push!(figs, figure_json("flipped_axes", f))
+end
+
 # 21. a streamplot (its computed lines and arrowheads are dumped to streamplot.json so the
 #     Lean test draws exactly the same data)
 let f = Figure()
