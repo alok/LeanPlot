@@ -35,7 +35,7 @@ inductive Scale where
   /-- Makie `Symlog10(lower, upper; linscale)`: linear on `[lower, upper]`,
   logarithmic outside (`lower < 0 < upper`, `linscale > 0`). -/
   | symlog10 (lower upper linscale : Float)
-  /-- `log(x / (1 - x))`, defined on `(0, 1)`. -/
+  /-- `log(x / (1 - x))`, defined on `(0, 1)` (LogExpFunctions' formula). -/
   | logit
   deriving Repr, Inhabited, BEq
 
@@ -86,7 +86,10 @@ def forward : Scale → Float → Float
       if lower < x && x < upper then ((x - lower) / (upper - lower) * 2 - 1) * linscale
       else sign x * (linscale + Float.log10 (x.abs / (if x > 0 then upper else lower.abs)))
     y - symShift lower upper linscale
-  | logit, x => if x < 0 || x > 1 then nan else Float.log (x / (1 - x))
+  | logit, x =>
+    -- LogExpFunctions.logit
+    if x < 0 || x > 1 then nan
+    else if 4 * x < 1 then -(Float.log (1 / x - 1)) else 2 * Float.atanh (2 * x - 1)
 
 /-- Inverse transform (scaled → data). -/
 def inverse : Scale → Float → Float
@@ -94,13 +97,17 @@ def inverse : Scale → Float → Float
   | log10, y => exp10 y
   | log2, y => exp2J y
   | ln, y => expJ y
-  | sqrt, y => y * y
+  | sqrt, y => if y < 0 then nan else y * y
   | pseudolog10, y => sign y * (exp10 y.abs - 1)
   | symlog10 lower upper linscale, y =>
     let y := y + symShift lower upper linscale
     if y.abs < linscale then (y / linscale + 1) / 2 * (upper - lower) + lower
     else sign y * exp10 (y.abs - linscale) * (if y > 0 then upper else lower.abs)
-  | logit, y => 1.0 / (expJ (-y) + 1.0)
+  | logit, y =>
+    -- LogExpFunctions.logistic (Float64 bounds)
+    if y < -744.4400719213812 then 0 else if y > 36.7368005696771 then 1 else
+    let e := expJ y
+    e / (1 + e)
 
 /-- Makie `defined_interval(scale)`. -/
 def definedInterval : Scale → Interval
