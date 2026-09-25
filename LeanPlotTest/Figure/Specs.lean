@@ -106,10 +106,91 @@ def surface3 : Figure :=
   Figure.new (size := (500, 400)) |>.axis3 1 1
     (Axis3.new (title := "surface") (azimuth := 0.3 * Num.pi) (elevation := 0.2 * Num.pi) |>.surface x3 y3 z)
 
+/-- 14. marker shapes, stroked markers and line styles. -/
+def markers : Figure := Id.run do
+  let mut ax := Axis2.new (title := "markers")
+  let shapes := #[MarkerShape.circle, .rect, .diamond, .utriangle, .dtriangle, .cross, .xcross, .star5]
+  for i in [0:shapes.size] do
+    ax := ax.scatter ⟨#[Num.ofInt (i + 1 : Nat)]⟩ ⟨#[1]⟩ (marker := shapes[i]!) (markersize := 15)
+  ax := ax.scatter ⟨#[1, 2, 3, 4, 5, 6, 7, 8]⟩ ⟨Array.replicate 8 2⟩ (markersize := 12) (color := RGBA.white)
+    (strokecolor := RGBA.black) (strokewidth := 1)
+  ax := ax.lines ⟨#[0.5, 8.5]⟩ ⟨#[3, 3]⟩ (linestyle := .dash) (color := RGBA.black)
+  ax := ax.lines ⟨#[0.5, 8.5]⟩ ⟨#[3.5, 3.5]⟩ (linestyle := .dot) (color := RGBA.black)
+  ax := ax.lines ⟨#[0.5, 8.5]⟩ ⟨#[4, 4]⟩ (linestyle := .dashdot) (color := RGBA.black) (linewidth := 2)
+  return Figure.new |>.axis 1 1 ax
+
+/-- The 5×5 grid `-1:0.5:1` with x varying fastest (`vec([… for x in g, y in g])`). -/
+def arrowGrid : Pts2 × Pts2 :=
+  let g : Array Float := #[-1, -0.5, 0, 0.5, 1]
+  let pts := (Array.range 25).map fun k => (g[k % 5]!, g[k / 5]!)
+  -- `Vec2f(-y, x) * 0.3` promotes to `Float64`
+  (Pts2.ofArrays ⟨pts.map (·.1)⟩ ⟨pts.map (·.2)⟩,
+   Pts2.ofArrays ⟨pts.map fun (_, y) => -y * 0.3⟩ ⟨pts.map fun (x, _) => x * 0.3⟩)
+
+/-- 15. colour-mapped lines, arrows and an explicit colorbar with a label. -/
+def colormapped : Figure :=
+  let ts := Num.range 0 (2 * Num.pi) 200
+  let (o, d) := arrowGrid
+  let ax := Axis2.new
+    |>.linesColored (Pts2.ofArrays (fmap Float.cos ts) (fmap Float.sin ts)) ts (linewidth := 4)
+    |>.arrows2d o d
+  Figure.new |>.axis 1 1 ax |>.colorbarExplicit 1 2 Colormap.viridis 0 (2 * Num.pi) (label := "angle")
+
+/-- 16. an irregular heatmap and an image. -/
+def heatmapImage : Figure :=
+  let z : Grid2 4 3 := Grid2.ofFn 4 3 fun i j => Num.ofInt (i + j + 2 : Nat)
+  let a1 := Axis2.new (title := "irregular") |>.heatmap ⟨#[0, 1, 3, 6, 10]⟩ ⟨#[0, 2, 3, 5]⟩ z (colormap := Colormap.named "inferno")
+  let img : ByteArray := (Array.range 12).foldl (init := .empty) fun acc k =>
+    RGBA.pushRGBA8 acc (RGBA.toF32 ⟨Num.ofInt (k % 4 + 1 : Nat) / 4, Num.ofInt (k / 4 + 1 : Nat) / 3, 0.5, 1⟩)
+  let a2 := Axis2.new (title := "image") (aspect := .data) |>.image 0 4 0 3 4 3 img
+  Figure.new (size := (700, 350)) |>.axis 1 1 a1 |>.axis 1 2 a2
+
+/-- 17. a titled horizontal legend below the axis. -/
+def legendHorizontal : Figure :=
+  let s := every 10 xs
+  let ax := Axis2.new
+    |>.linesFn Float.sin xs (label := "sin")
+    |>.scatter s (fmap Float.cos s) (marker := .rect) (label := "cos")
+    |>.band xs (fmap (fun x => Float.sin x - 0.2) xs) (fmap (fun x => Float.sin x + 0.2) xs) (label := "band")
+  Figure.new |>.axis 1 1 ax |>.legend 2 1 (1, 1) (title := some "Functions") (orientation := .horizontal)
+
+/-- 18. a spanning title label, log x with minor ticks, reversed x, a horizontal colorbar. -/
+def labelLogReversed : Figure :=
+  let x := (Array.range 100).foldl (init := FloatArray.empty) fun acc i => acc.push (Num.ofInt (i + 1 : Nat))
+  let a1 : Axis2 := Axis2.new (xscale := .log10) |>.lines x (fmap Float.sqrt x)
+  let a1 := { a1 with style := { a1.style with x := { a1.style.x with minorticksvisible := true, minorgridvisible := true } } }
+  let z : Grid2 10 8 := Grid2.ofFn 10 8 fun i j => Float.sin (Num.ofInt (i + 1 : Nat) / 3) + Float.cos (Num.ofInt (j + 1 : Nat) / 2)
+  let a2 : Axis2 := { (Axis2.new (ylabel := "y") |>.heatmap (Recipes.oneTo 10) (Recipes.oneTo 8) z) with xreversed := true }
+  Figure.new (size := (700, 450))
+    |>.labelSpan 1 1 2 "Super title" (fontsize := 20) (bold := true)
+    |>.axis 2 1 a1 |>.axis 2 2 a2
+    |>.colorbar 3 2 (2, 2) (label := "value") (vertical := false)
+
+/-- 19. Axis3 with perspective, a wireframe and scatter. -/
+def axis3Wire : Figure :=
+  let g3 := Num.range (-1) 1 9
+  let z := Grid2.ofFn 9 9 fun i j => g3[i]! * g3[j]!
+  let ax := Axis3.new (perspectiveness := 0.5)
+    |>.wireframe g3 g3 z
+    |>.scatter ⟨#[0.5, -0.5, 0]⟩ ⟨#[0.5, 0.5, -0.5]⟩ ⟨#[0.8, 0.2, 0.5]⟩ (markersize := 15)
+  Figure.new |>.axis3 1 1 ax
+
+/-- 20. hlines/vlines and `autolimitaspect`. -/
+def hvlinesAspect : Figure :=
+  let ts := Num.range 0 (2 * Num.pi) 101
+  let ax : Axis2 := { (Axis2.new
+    |>.lines (fmap Float.cos ts) (fmap (0.5 * Float.sin ·) ts)
+    |>.hlines #[0.25, -0.25] (color := ColorSpec.ofName "gray")
+    |>.vlines #[0] (color := ColorSpec.ofName "red") (linestyle := .dash)) with autolimitaspect := some 1 }
+  Figure.new |>.axis 1 1 ax
+
 /-- All oracle figures by name. -/
 def specs : Array (String × Figure) := #[
   ("basic", basic), ("empty", empty), ("twoaxes", twoaxes), ("grid22", grid22), ("limits", limits),
   ("heatmap_colorbar", heatmapColorbar), ("legend", legend), ("axislegend", axislegend), ("logy", logy),
-  ("dataaspect", dataaspect), ("bandpoly", bandpoly), ("axis3", axis3), ("surface3", surface3)]
+  ("dataaspect", dataaspect), ("bandpoly", bandpoly), ("axis3", axis3), ("surface3", surface3),
+  ("markers", markers), ("colormapped", colormapped), ("heatmap_image", heatmapImage),
+  ("legend_horizontal", legendHorizontal), ("label_log_reversed", labelLogReversed), ("axis3_wire", axis3Wire),
+  ("hvlines_aspect", hvlinesAspect)]
 
 end LeanPlotTest.Figure

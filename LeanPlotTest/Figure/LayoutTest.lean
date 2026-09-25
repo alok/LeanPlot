@@ -33,6 +33,10 @@ def rectOf (b : BBox) : Array Float := #[b.left, b.bottom, b.width, b.height]
 def checkFloats (name : String) (tol : Float) (got want : Array Float) : TestM Unit :=
   check name (floatsApprox tol got want) fun _ => s!"got {showFloats got}, want {showFloats want}"
 
+/-- Tick values agree to `Float32` precision (Makie's `LineAxis` stores them as `Float32`). -/
+def ticksClose (a b : Array Float) : Bool :=
+  a.size == b.size && (Array.range a.size).all fun i => (a[i]! - b[i]!).abs ≤ 1e-7 * (1 + b[i]!.abs)
+
 /-- Relative comparison of limits. -/
 def limitsClose (a b : Array Float) : Bool :=
   a.size == b.size && (Array.range a.size).all fun i => (a[i]! - b[i]!).abs ≤ 1e-9 * (1 + b[i]!.abs)
@@ -55,7 +59,8 @@ def checkAxis (fname : String) (k : Nat) (ax : Axis2) (sb : SolvedBlock) (p : Ax
   let an := ax.anchors p sb.viewport
   for (dir, t, pos) in [("x", p.xt, an.xticks), ("y", p.yt, an.yticks)] do
     let jt := j.get s!"{dir}ticks"
-    checkFloats s!"{n} {dir} tick values" 1e-12 t.values (jt.get "values").floats
+    check s!"{n} {dir} tick values" (ticksClose t.values (jt.get "values").floats) fun _ =>
+      s!"got {showFloats t.values}, want {showFloats (jt.get "values").floats}"
     let wantPos := (jt.get "positions").arrD.map fun q => if dir == "x" then q.arrD[0]!.float else q.arrD[1]!.float
     checkFloats s!"{n} {dir} tick positions" 2e-3 pos wantPos
     let labels := t.labels.map labelString
@@ -90,6 +95,10 @@ def checkLegend (fname : String) (k : Nat) (l : LegendBlock) (es : Array LegendE
   let wantL := (j.get "labels").arrD
   check s!"{n} entries" (g.patches.size == wantP.size && g.labels.size == wantL.size) fun _ =>
     s!"got {g.patches.size}/{g.labels.size}, want {wantP.size}/{wantL.size}"
+  let wantT := (j.get "titles").arrD
+  check s!"{n} title present" (g.title.isSome == !wantT.isEmpty)
+  if let (some tb, some jt) := (g.title, wantT[0]?) then
+    checkFloats s!"{n} title" 2e-3 (rectOf tb) (jt.get "bbox").floats
   for i in [0:min g.patches.size wantP.size] do
     checkFloats s!"{n} patch {i}" 2e-3 (rectOf g.patches[i]!) wantP[i]!.floats
   for i in [0:min g.labels.size wantL.size] do
@@ -159,6 +168,8 @@ def checkFigure (j : J) : TestM Unit := do
     let mut k3 := 0
     let mut kc := 0
     let mut kl := 0
+    let mut kb := 0
+    let jLabels := (j.get "labels").arrD
     let jAxes := (j.get "axes").arrD
     let jAxes3 := (j.get "axes3").arrD
     let jCbs := (j.get "colorbars").arrD
@@ -191,7 +202,13 @@ def checkFigure (j : J) : TestM Unit := do
         | some jl => checkLegend name kl l es sb.box jl
         | none => check s!"{name} legend {kl} in oracle" false
         kl := kl + 1
+      | .label _, .label _ _ =>
+        match jLabels[kb]? with
+        | some jb => checkFloats s!"{name}/label{kb} bbox" 2e-3 (rectOf sb.box) (jb.get "bbox").floats
+        | none => check s!"{name} label {kb} in oracle" false
+        kb := kb + 1
       | _, _ => pure ()
+    check s!"{name} label blocks" (kb == jLabels.size)
     check s!"{name} block counts" (k2 == jAxes.size && k3 == jAxes3.size && kc == jCbs.size && kl == jLegs.size)
       fun _ => s!"axes {k2}/{jAxes.size}, axes3 {k3}/{jAxes3.size}, colorbars {kc}/{jCbs.size}, legends {kl}/{jLegs.size}"
 

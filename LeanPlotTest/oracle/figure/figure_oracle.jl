@@ -77,24 +77,28 @@ end
 function legend_json(leg::Legend)
     boxes = Any[]
     labels = Any[]
-    function walk(g)
-        for c in g.content
-            x = c.content
-            if x isa GridLayout
-                walk(x)
-            elseif x isa Box && c.span.cols.start == c.span.cols.stop
-                push!(boxes, rect(x.layoutobservables.computedbbox[]))
-            elseif x isa Label
-                push!(labels, Dict("text" => string(x.text[]), "bbox" => rect(x.layoutobservables.computedbbox[])))
+    titles = Any[]
+    for c in leg.grid.content
+        x = c.content
+        if x isa Label
+            push!(titles, Dict("text" => string(x.text[]), "bbox" => rect(x.layoutobservables.computedbbox[])))
+        elseif x isa GridLayout
+            for cc in x.content
+                y = cc.content
+                if y isa Box && cc.span.cols.start == cc.span.cols.stop
+                    push!(boxes, rect(y.layoutobservables.computedbbox[]))
+                elseif y isa Label
+                    push!(labels, Dict("text" => string(y.text[]), "bbox" => rect(y.layoutobservables.computedbbox[])))
+                end
             end
         end
     end
-    walk(leg.grid)
     Dict(
         "bbox" => rect(leg.layoutobservables.computedbbox[]),
         "autosize" => [f64(leg.layoutobservables.autosize[][1]), f64(leg.layoutobservables.autosize[][2])],
         "patches" => boxes,
         "labels" => labels,
+        "titles" => titles,
     )
 end
 
@@ -139,6 +143,7 @@ function figure_json(name, f)
         "colorbars" => [colorbar_json(b) for b in blocks if b isa Colorbar],
         "legends" => [legend_json(b) for b in blocks if b isa Legend],
         "axes3" => [axis3_json(b) for b in blocks if b isa Axis3],
+        "labels" => [Dict("bbox" => rect(b.layoutobservables.computedbbox[])) for b in blocks if b isa Label],
     )
     if REF !== nothing
         save(joinpath(REF, name * ".png"), f; px_per_unit = 1)
@@ -255,6 +260,79 @@ let f = Figure(size = (500, 400))
     xs3 = collect(range(-2, 2, length = 21)); ys3 = collect(range(-1, 1, length = 11))
     surface!(ax, xs3, ys3, [exp(-(x^2 + y^2)) for x in xs3, y in ys3])
     push!(figs, figure_json("surface3", f))
+end
+
+# 14. marker shapes, stroked markers and line styles
+let f = Figure()
+    ax = Axis(f[1, 1], title = "markers")
+    for (i, m) in enumerate([:circle, :rect, :diamond, :utriangle, :dtriangle, :cross, :xcross, :star5])
+        scatter!(ax, [Float64(i)], [1.0], marker = m, markersize = 15)
+    end
+    scatter!(ax, collect(1.0:8.0), fill(2.0, 8), markersize = 12, color = :white, strokecolor = :black, strokewidth = 1)
+    lines!(ax, [0.5, 8.5], [3.0, 3.0], linestyle = :dash, color = :black)
+    lines!(ax, [0.5, 8.5], [3.5, 3.5], linestyle = :dot, color = :black)
+    lines!(ax, [0.5, 8.5], [4.0, 4.0], linestyle = :dashdot, color = :black, linewidth = 2)
+    push!(figs, figure_json("markers", f))
+end
+
+# 15. colour-mapped lines, arrows and an explicit colorbar with a label
+let f = Figure()
+    ax = Axis(f[1, 1])
+    ts = collect(range(0, 2pi, length = 200))
+    lines!(ax, cos.(ts), sin.(ts), color = ts, linewidth = 4)
+    g = collect(-1.0:0.5:1.0)
+    arrows2d!(ax, vec([Point2f(x, y) for x in g, y in g]), vec([Vec2f(-y, x) * 0.3 for x in g, y in g]))
+    Colorbar(f[1, 2], limits = (0, 2pi), colormap = :viridis, label = "angle")
+    push!(figs, figure_json("colormapped", f))
+end
+
+# 16. an irregular heatmap and an image
+let f = Figure(size = (700, 350))
+    ax1 = Axis(f[1, 1], title = "irregular")
+    heatmap!(ax1, [0.0, 1.0, 3.0, 6.0, 10.0], [0.0, 2.0, 3.0, 5.0], [Float64(i + j) for i in 1:4, j in 1:3], colormap = :inferno)
+    ax2 = Axis(f[1, 2], title = "image", aspect = DataAspect())
+    image!(ax2, 0 .. 4, 0 .. 3, [RGBf(i / 4, j / 3, 0.5) for i in 1:4, j in 1:3])
+    push!(figs, figure_json("heatmap_image", f))
+end
+
+# 17. a titled horizontal legend below the axis
+let f = Figure()
+    ax = Axis(f[1, 1])
+    lines!(ax, xs, sin.(xs), label = "sin")
+    scatter!(ax, xs[1:10:end], cos.(xs[1:10:end]), marker = :rect, label = "cos")
+    band!(ax, xs, sin.(xs) .- 0.2, sin.(xs) .+ 0.2, label = "band")
+    Legend(f[2, 1], ax, "Functions", orientation = :horizontal)
+    push!(figs, figure_json("legend_horizontal", f))
+end
+
+# 18. a spanning title label, log x with minor ticks, reversed x, a horizontal colorbar
+let f = Figure(size = (700, 450))
+    Label(f[1, 1:2], "Super title", fontsize = 20, font = :bold)
+    ax1 = Axis(f[2, 1], xscale = log10, xminorticksvisible = true, xminorgridvisible = true)
+    lines!(ax1, collect(1.0:100.0), sqrt.(collect(1.0:100.0)))
+    ax2 = Axis(f[2, 2], xreversed = true, ylabel = "y")
+    hm = heatmap!(ax2, collect(1.0:10.0), collect(1.0:8.0), [sin(i / 3) + cos(j / 2) for i in 1:10, j in 1:8])
+    Colorbar(f[3, 2], hm, vertical = false, label = "value")
+    push!(figs, figure_json("label_log_reversed", f))
+end
+
+# 19. Axis3 with perspective, a wireframe and scatter
+let f = Figure()
+    ax = Axis3(f[1, 1], perspectiveness = 0.5)
+    g3 = collect(range(-1, 1, length = 9))
+    wireframe!(ax, g3, g3, [x * y for x in g3, y in g3])
+    scatter!(ax, [0.5, -0.5, 0.0], [0.5, 0.5, -0.5], [0.8, 0.2, 0.5], markersize = 15)
+    push!(figs, figure_json("axis3_wire", f))
+end
+
+# 20. hlines/vlines and autolimitaspect
+let f = Figure()
+    ax = Axis(f[1, 1], autolimitaspect = 1)
+    ts = collect(range(0, 2pi, length = 101))
+    lines!(ax, cos.(ts), 0.5 .* sin.(ts))
+    hlines!(ax, [0.25, -0.25], color = :gray)
+    vlines!(ax, [0.0], color = :red, linestyle = :dash)
+    push!(figs, figure_json("hvlines_aspect", f))
 end
 
 open(joinpath(OUT, "figure.json"), "w") do io
