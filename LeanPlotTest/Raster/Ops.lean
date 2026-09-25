@@ -124,15 +124,21 @@ def tests : T Unit := do
   check "image clipped" (pxNear (cvcl.get 29 25) 255 0 0 && pxNear (cvcl.get 30 25) 255 255 255)
   check "short image buffer ignored" ((paint 10 10 #[.image 4 4 ⟨#[0, 0, 0, 255]⟩ ⟨0, 0, 10, 10⟩ .nearest none]).data ==
     (Canvas.fill 10 10 .white).data)
-  -- text: the stub draws nothing; a custom outliner is filled with the text colour
+  -- text: a text op is exactly the fill of its outline; these checks hold for
+  -- the stub outliner and for the font module's once it is wired in
   let txt : DrawOp := .text 10 20 "Hello" { color := .black } none
-  check "text stub draws nothing" ((paint 50 50 #[txt]).data == (Canvas.fill 50 50 .white).data)
+  let txtPath := defaultTextOutliner { color := .black } "Hello" 10 20
+  check "text op = filled default outline"
+    ((paint 50 50 #[txt]).data == (paint 50 50 #[.path txtPath (some { color := .black }) none none]).data)
+  check (if txtPath.verbs.isEmpty then "text stub draws nothing" else "wired outliner draws ink")
+    (if txtPath.verbs.isEmpty then (paint 50 50 #[txt]).data == (Canvas.fill 50 50 .white).data
+     else darkArea (paint 50 50 #[txt]) > 10.0)
   let boxOutliner : TextOutliner := fun st s x y => Path.rect ⟨x, y - st.size, 6.0 * s.length.toFloat, st.size⟩
   let sc : Scene := { width := 50, height := 50, ops := #[txt] }
   let cvtext := sc.toCanvas boxOutliner
   checkNear "custom outliner filled" (darkArea cvtext) (30.0 * 12.0) 1.0e-6
-  check "renderText stub is identity" ((renderText { color := .black } "x" 5 5 (Canvas.fill 20 20 .white)).data ==
-    (Canvas.fill 20 20 .white).data)
+  check "renderText = text op" ((renderText { color := .black } "x" 5 5 (Canvas.fill 20 20 .white)).data ==
+    (paint 20 20 #[.text 5 5 "x" { color := .black } none]).data)
   -- scene: background and painter's order
   let ops2 : Array DrawOp := #[.path (Path.rect ⟨0, 0, 10, 10⟩) (some { color := ⟨1, 0, 0, 1⟩ }) none none,
     .path (Path.rect ⟨5, 5, 10, 10⟩) (some { color := ⟨0, 0, 1, 1⟩ }) none none]
