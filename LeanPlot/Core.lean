@@ -9,6 +9,8 @@ import LeanPlot.Core.ColorNames
 import LeanPlot.Core.Color
 import LeanPlot.Core.ColormapData
 import LeanPlot.Core.Colormap
+import LeanPlot.Core.Geometry
+import LeanPlot.Core.Camera
 
 /-!
 # LeanPlot core
@@ -25,4 +27,8 @@ Pure, dependency-free building blocks shared by layout, recipes and backends:
   packing), `LeanPlot.wongColors`, `LeanPlot.MakieTheme`.
 * `LeanPlot.Colormap`: non-empty LUTs with Makie `interpolated_getindex`,
   `numbers_to_colors`, `resample_cmap`, and 91 built-in `to_colormap` tables.
+* `LeanPlot.Vec2/Vec3/Vec4/Mat4`, `Rect` operations, `Rect3`, `LeanPlot.Clip`
+  (Cohen–Sutherland, Liang–Barsky, polyline and polygon clipping).
+* `LeanPlot.Camera3`: Makie's `Axis3` camera (`calculate_matrices`) and
+  projection of data points to device pixels plus depth.
 -/
