@@ -165,37 +165,48 @@ structure PC where
 /-- The polygon grid (`unordered_map<grid_point, point_connect>`). -/
 abbrev PGrid := Std.HashMap UInt64 PC
 
-/-- `poly_merge`: merge one elementary polygon (grid-point keys, clockwise). -/
+/-- The merged connection of one polygon point `p` whose neighbours in the new
+polygon are `prev`/`next`, against the existing entry `e` (`poly_merge`'s first
+loop); `none` when the point cancels out and is deleted. -/
+@[inline] def mergePoint (prev next : UInt64) (e? : Option PC) : Option PC :=
+  let pc0 : PC := { next := next, prev := prev }
+  match e? with
+  | none => some pc0
+  | some e =>
+    if !e.alt then
+      let score := 2 * (if pc0.next == e.prev then 1 else 0) + (if pc0.prev == e.next then 1 else 0)
+      match score with
+      | 3 => none
+      | 2 => some { pc0 with next := e.next }
+      | 1 => some { pc0 with prev := e.prev }
+      | _ => some { pc0 with prev2 := e.prev, next2 := e.next, alt := true }
+    else
+      let score := 8 * (if pc0.next == e.prev2 then 1 else 0) + 4 * (if pc0.prev == e.next2 then 1 else 0) +
+        2 * (if pc0.next == e.prev then 1 else 0) + (if pc0.prev == e.next then 1 else 0)
+      match score with
+      | 9 => some { pc0 with next := e.next2, prev := e.prev }
+      | 6 => some { pc0 with next := e.next, prev := e.prev2 }
+      | 8 => some { pc0 with next2 := e.next2, prev2 := pc0.prev, prev := e.prev, next := e.next, alt := true }
+      | 4 => some { pc0 with prev2 := e.prev2, next2 := pc0.next, prev := e.prev, next := e.next, alt := true }
+      | 2 => some { pc0 with next := e.next, prev2 := e.prev2, next2 := e.next2, alt := true }
+      | 1 => some { pc0 with prev := e.prev, prev2 := e.prev2, next2 := e.next2, alt := true }
+      -- the C++ throws "undefined merging configuration"; keep the new polygon's links
+      | _ => some pc0
+
+/-- `poly_merge`: merge one elementary polygon (grid-point keys, clockwise).
+The C++ reads every point's old entry before writing any; since the points of an
+elementary polygon are distinct, reading and writing point by point is the same. -/
 def polyMerge (grid : PGrid) (poly : Array UInt64) : PGrid :=
   let n := poly.size
-  let conns : Array (PC × Bool) := (Array.range n).map fun i =>
-    let p := poly[i]!
-    let pc0 : PC := { next := poly[(i + 1) % n]!, prev := poly[(i + n - 1) % n]! }
-    match grid.get? p with
-    | none => (pc0, false)
-    | some e =>
-      if !e.alt then
-        let score := 2 * (if pc0.next == e.prev then 1 else 0) + (if pc0.prev == e.next then 1 else 0)
-        match score with
-        | 3 => (pc0, true)
-        | 2 => ({ pc0 with next := e.next }, false)
-        | 1 => ({ pc0 with prev := e.prev }, false)
-        | _ => ({ pc0 with prev2 := e.prev, next2 := e.next, alt := true }, false)
-      else
-        let score := 8 * (if pc0.next == e.prev2 then 1 else 0) + 4 * (if pc0.prev == e.next2 then 1 else 0) +
-          2 * (if pc0.next == e.prev then 1 else 0) + (if pc0.prev == e.next then 1 else 0)
-        match score with
-        | 9 => ({ pc0 with next := e.next2, prev := e.prev }, false)
-        | 6 => ({ pc0 with next := e.next, prev := e.prev2 }, false)
-        | 8 => ({ pc0 with next2 := e.next2, prev2 := pc0.prev, prev := e.prev, next := e.next, alt := true }, false)
-        | 4 => ({ pc0 with prev2 := e.prev2, next2 := pc0.next, prev := e.prev, next := e.next, alt := true }, false)
-        | 2 => ({ pc0 with next := e.next, prev2 := e.prev2, next2 := e.next2, alt := true }, false)
-        | 1 => ({ pc0 with prev := e.prev, prev2 := e.prev2, next2 := e.next2, alt := true }, false)
-        -- the C++ throws "undefined merging configuration"; keep the new polygon's links
-        | _ => (pc0, false)
-  (Array.range n).foldl (init := grid) fun g i =>
-    let (pc, del) := conns[i]!
-    if del then g.erase poly[i]! else g.insert poly[i]! pc
+  let rec go (i : Nat) (g : PGrid) : PGrid :=
+    if i < n then
+      let p := poly[i]!
+      match mergePoint poly[(i + n - 1) % n]! poly[(i + 1) % n]! (g.get? p) with
+      | some pc => go (i + 1) (g.insert p pc)
+      | none => go (i + 1) (g.erase p)
+    else g
+  termination_by n - i
+  go 0 grid
 
 /-- Static data of one band. -/
 structure Ctx where
