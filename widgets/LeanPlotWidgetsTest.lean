@@ -1,1 +1,2 @@
 import LeanPlotWidgetsTest.Html
+import LeanPlotWidgetsTest.Commands
