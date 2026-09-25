@@ -3,6 +3,7 @@ import LeanPlot.Recipes.Algo.Levels
 import LeanPlot.Recipes.Algo.Streamplot
 import LeanPlot.Recipes.Algo.Contour
 import LeanPlot.Recipes.Algo.Isoband
+import LeanPlot.Recipes.Algo.Arrows
 
 /-!
 # Recipe algorithms
@@ -17,4 +18,6 @@ reproduce Makie/CairoMakie plots. Outputs are `LeanPlot` data types
 * `LeanPlot.Recipes.Algo.Contour`: Contour.jl marching squares and Makie `contourlines`.
 * `LeanPlot.Recipes.Algo.Isoband`: the `isoband` library (filled bands), Makie
   `_group_polys` and the `contourf` recipe data.
+* `LeanPlot.Recipes.Algo.Arrows`: `arrows2d`/`arrows3d` geometry and Cartan's
+  `spacing`/`scaledarrows` scaling.
 -/
