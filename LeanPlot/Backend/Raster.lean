@@ -43,6 +43,7 @@ minimum of 3 runs; the machine was shared, so treat these as upper bounds):
 | 1000×1000, 10⁵-vertex band fill (area plot) | 11 ms |
 | 1000×1000, 10⁵-vertex star (10⁵ overlapping spikes) | 116 ms |
 | 800×600 typical plot (231 ops: grid, 5×1000-pt lines, 200 markers, heatmap) | 6.4 ms |
+| 1000×1000, 10⁵ `segments`, every segment its own colour | 30 ms |
 | 1000×1000, 10⁴ markers (fill + outline, one op each) | 76 ms |
 | 1000×1000, 79k-triangle Gouraud mesh (200×200 grid) | 81–90 ms |
 | 800×600 PNG encode (filters + DEFLATE) | 25 ms, 92 KB (Pillow level 6: 91.7 KB) |

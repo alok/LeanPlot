@@ -155,6 +155,19 @@ def meshGrid (k : Nat) : DrawOp := Id.run do
       idx := push32 (push32 (push32 idx (a + 1)) (a + k + 1)) (a + k)
   return .triangles xs ys cs idx none
 
+/-- A `segments` op along the 10⁵-segment sine sweep, every segment with its
+own colour (the worst case: one sweep per segment). -/
+def colourSegments (n : Nat) : DrawOp := Id.run do
+  let mut xs := FloatArray.emptyWithCapacity (2 * n)
+  let mut ys := FloatArray.emptyWithCapacity (2 * n)
+  let mut cs := ByteArray.emptyWithCapacity (4 * n)
+  for i in [0:n] do
+    let x0 := 1000.0 * i.toFloat / n.toFloat; let x1 := 1000.0 * (i + 1).toFloat / n.toFloat
+    xs := (xs.push x0).push x1
+    ys := (ys.push (500.0 + 400.0 * Float.sin (x0 / 5.0))).push (500.0 + 400.0 * Float.sin (x1 / 5.0))
+    cs := (((cs.push (i % 256).toUInt8).push 80).push (255 - i % 256).toUInt8).push 255
+  return .segments xs ys cs 1.5 .butt none
+
 /-- The perf suite. -/
 def tests : T Unit := do
   let sweep := sineSweep 100000
@@ -169,6 +182,8 @@ def tests : T Unit := do
   let (tStar, _) ← bench 3 fun _ => paint 1000 1000 #[.path star (some { color := .black }) none none]
   let (tBand, _) ← bench 3 fun _ => paint 1000 1000 #[.path bnd (some { color := ⟨0.2, 0.4, 0.8, 0.5⟩ }) none none]
   let (tEmpty, _) ← bench 3 fun _ => paint 1000 1000 #[.path (Path.rect ⟨0, 0, 1, 1⟩) (some { color := .black }) none none]
+  let cseg := colourSegments 100000
+  let (tSegs, _) ← bench 3 fun _ => paint 1000 1000 #[cseg]
   let mk := markers 10000
   let (tMarkers, _) ← bench 3 fun _ => paint 1000 1000 mk
   let mesh := meshGrid 200
@@ -185,6 +200,7 @@ def tests : T Unit := do
   IO.println s!"  perf: 1000×1000, 10⁵-vertex star polygon fill         {tStar} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-vertex band fill (area plot)     {tBand} ms"
   IO.println s!"  perf: 1000×1000, canvas + accumulator setup           {tEmpty} ms"
+  IO.println s!"  perf: 1000×1000, 10⁵ segments, one colour each        {tSegs} ms"
   IO.println s!"  perf: 1000×1000, 10⁴ markers (fill + outline)         {tMarkers} ms"
   IO.println s!"  perf: 1000×1000, {nTri}-triangle Gouraud mesh        {tMesh} ms"
   IO.println s!"  perf: 800×600 typical plot ({plot.ops.size} ops)          {tPlot} ms"
@@ -194,6 +210,7 @@ def tests : T Unit := do
   check "10⁵-segment random walk < 5× target" (tWalk < 1000.0) s!"{tWalk} ms"
   check "10⁵-vertex star fill < 1 s" (tStar < 1000.0) s!"{tStar} ms"
   check "10⁵-vertex band fill < 5× 200 ms" (tBand < 1000.0) s!"{tBand} ms"
+  check "10⁵ coloured segments < 1 s" (tSegs < 1000.0) s!"{tSegs} ms"
   check "10⁴ markers < 1 s" (tMarkers < 1000.0) s!"{tMarkers} ms"
   check "80k-triangle mesh < 1 s" (tMesh < 1000.0) s!"{tMesh} ms"
   check "typical plot < 5× target (30 ms)" (tPlot < 150.0) s!"{tPlot} ms"
