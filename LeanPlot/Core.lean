@@ -1,0 +1,37 @@
+import LeanPlot.Core.Num
+import LeanPlot.Core.Decimal
+import LeanPlot.Core.JuliaExp
+import LeanPlot.Core.Range
+import LeanPlot.Core.Format
+import LeanPlot.Core.Ticks
+import LeanPlot.Core.Scale
+import LeanPlot.Core.ColorNames
+import LeanPlot.Core.Color
+import LeanPlot.Core.ColormapData
+import LeanPlot.Core.Colormap
+import LeanPlot.Core.Geometry
+import LeanPlot.Core.Camera
+import LeanPlot.Core.Data
+
+/-!
+# LeanPlot core
+
+Pure, dependency-free building blocks shared by layout, recipes and backends:
+
+* `LeanPlot.Num`: IEEE helpers, Julia-exact rounding/powers/`exp`, exact decimal
+  conversion (Ryu), Julia `range`/`LinRange`/`a:s:b`, the SVG number formatter
+  and Makie tick-label formatting.
+* `LeanPlot.Ticks`: `PlotUtils.optimize_ticks` (Wilkinson), log/decade/minor ticks.
+* `LeanPlot.Scale`: Makie axis scales (identity, log10/log2/ln, sqrt,
+  pseudolog10, Symlog10, logit).
+* `LeanPlot.RGBA` helpers (hex, names, N0f8/`RGBAf` rounding, blending, RGBA8
+  packing), `LeanPlot.wongColors`, `LeanPlot.MakieTheme`.
+* `LeanPlot.Colormap`: non-empty LUTs with Makie `interpolated_getindex`,
+  `numbers_to_colors`, `resample_cmap`, and 91 built-in `to_colormap` tables.
+* `LeanPlot.Vec2/Vec3/Vec4/Mat4`, `Rect` operations, `Rect3`, `LeanPlot.Clip`
+  (Cohen–Sutherland, Liang–Barsky, polyline and polygon clipping).
+* `LeanPlot.Camera3`: Makie's `Axis3` camera (`calculate_matrices`) and
+  projection of data points to device pixels plus depth.
+* `LeanPlot.Pts2/Pts3/Grid2 nx ny/TriMesh`: SoA plot data with erased size and
+  index-validity proofs; conversion classes `ToPts2`, `ToPts3`, `ToGrid2`.
+-/

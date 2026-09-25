@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="150" viewBox="0 0 200 150">
+<defs>
+<clipPath id="c0"><rect x="10" y="10" width="180" height="130"/></clipPath>
+<clipPath id="c1"><rect x="0" y="0" width="100" height="80"/></clipPath>
+</defs>
+<rect width="200" height="150" fill="#ffffff"/>
+<g clip-path="url(#c0)">
+<path d="M20 20L80 20L80 60L20 60Z" fill="#3366cc" stroke="#000000" stroke-width="2" stroke-linejoin="round"/>
+<path d="M20 100L60 120M100 90L140 130" fill="none" stroke="#e69f00" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="4,2" stroke-dashoffset="1"/>
+</g>
+<path d="M150 20Q180 10 190 40C170 60 160 60 150 40Z" fill="#00994c" fill-opacity="0.5" fill-rule="evenodd"/>
+<g clip-path="url(#c1)">
+<path d="M0 70L50 70M50 70L90 60" fill="none" stroke="#ff0000" stroke-width="3" stroke-linecap="square"/>
+<path d="M90 60L95 20" fill="none" stroke="#0080ff" stroke-opacity="0.502" stroke-width="3" stroke-linecap="square"/>
+<path d="M0 70L50 70M50 70L90 60" fill="none" stroke="#ff0000"/>
+<path d="M90 60L95 20" fill="none" stroke="#0080ff" stroke-opacity="0.502"/>
+</g>
+<defs><linearGradient id="g0" gradientUnits="userSpaceOnUse" x1="102.261" y1="128.212" x2="122.048" y2="158.351"><stop offset="0" stop-color="#fe0064"/><stop offset="1" stop-color="#ff9b00"/></linearGradient></defs>
+<path d="M110 140L150 140L130 110Z" fill="url(#g0)"/>
+<defs><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="126.033" y1="136.399" x2="165.15" y2="142.276"><stop offset="0" stop-color="#0057a8"/><stop offset="1" stop-color="#57ff00"/></linearGradient></defs>
+<path d="M150 140L170 110L130 110Z" fill="url(#g1)"/>
+<image x="150" y="100" width="40" height="40" preserveAspectRatio="none" style="image-rendering:pixelated" xlink:href="data:image/png;base64,UE5HAgIAAAD///////8AAIAAAP8A"/>
+<text x="100" y="145" font-family="sans-serif" font-size="10" fill="#000000" text-anchor="middle" dominant-baseline="text-after-edge">a&lt;b &amp; &quot;c&quot;</text>
+<g clip-path="url(#c0)">
+<text x="30" y="75" font-family="sans-serif" font-size="12" font-weight="bold" fill="#000000" fill-opacity="0.8" text-anchor="middle" transform="rotate(-90 30 75)">y label</text>
+</g>
+</svg>
