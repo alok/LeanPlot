@@ -68,6 +68,36 @@ def checkPlacement (t : Tally) (j : Json) : Tally := Id.run do
     t := t.check (Font.regular.resolve cp == 0) s!"missing U+{String.ofList (Nat.toDigits 16 cp)} resolved"
   return t
 
+/-- Kerning path (no embedded pairs exist, so use a synthetic face) and decoder robustness. -/
+def checkKerningAndDecode (t : Tally) : Tally := Id.run do
+  let mut t := t
+  let gA := herosRegular.glyphIndex 'A'.toNat
+  let gV := herosRegular.glyphIndex 'V'.toNat
+  let gT := herosRegular.glyphIndex 'T'.toNat
+  let gO := herosRegular.glyphIndex 'o'.toNat
+  let keys := #[gA * 65536 + gV, gT * 65536 + gO].qsort (· < ·)
+  let vals : FloatArray := if gA * 65536 + gV < gT * 65536 + gO then ⟨#[-80, -120]⟩ else ⟨#[-120, -80]⟩
+  let kf : Face := { herosRegular with kernKeys := keys, kernValues := vals }
+  t := t.check (kf.kerning gA gV == -80 && kf.kerning gT gO == -120 && kf.kerning gV gA == 0) "kerning lookup"
+  let font : Font := ⟨kf, dejaVuSans⟩
+  let r := layout font "AVTo∫A"
+  t := t.check (near r.xs[1]! (0.667 - 0.080) 1e-12) s!"kerned AV: {r.xs[1]!}"
+  t := t.check (near r.xs[3]! (0.667 - 0.080 + 0.667 + 0.611 - 0.120) 1e-12) s!"kerned To: {r.xs[3]!}"
+  let r0 := layout font "AVTo" .left .baseline { kerning := false }
+  t := t.check (near r0.xs[1]! 0.667 1e-12) "kerning off"
+  let rs := layoutRich font (.cat [.text "A", .sub (.text "V")])
+  t := t.check (near rs.xs[1]! (0.667 - 0.66 * 0.080) 1e-12) "kerning scales with the glyph"
+  -- base64 and decoder robustness
+  t := t.check (Face.base64Decode "TW Fu\nbGU=" == "Manle".toUTF8) "base64 decode skips whitespace/padding"
+  t := t.check ((Face.decode "").toOption.isNone) "decode empty blob fails"
+  let good := Face.base64Decode Data.herosRegularBlob
+  t := t.check ((Face.decodeBytes good).toOption.isSome) "decode good blob"
+  t := t.check ((Face.decodeBytes (good.set! 0 0)).toOption.isNone) "decode bad magic fails"
+  t := t.check ((Face.decodeBytes (good.extract 0 (good.size / 2))).toOption.isNone) "decode truncated blob fails"
+  t := t.check ((Face.decodeBytes (good.extract 0 (good.size - 1))).toOption.isNone) "decode blob missing a byte fails"
+  t := t.check ((Face.decodeBytes (good.push 0)).toOption.isNone) "decode blob with trailing bytes fails"
+  return t
+
 /-- Run the metrics checks. -/
 def run : IO (Nat × Nat) := do
   let j ← Json.readFile (dataPath "metrics.json")
@@ -77,6 +107,7 @@ def run : IO (Nat × Nat) := do
   t := checkFace t "HerosBold" herosBold (faces.get "HerosBold")
   t := checkFace t "DejaVuSans" dejaVuSans (faces.get "DejaVuSans")
   t := checkPlacement t j
+  t := checkKerningAndDecode t
   -- sanity on the charset: the characters the Grassmann/Cartan labels use are all embedded
   let needed := "∞∅∂∇ϵ∧∨⋅×⟨⟩⊗⊕⋆≈≤≥∑∫√πθφω−°′″·₀₁₂₃₄₅₆₇₈₉⁰¹²³⁴⁵⁶⁷⁸⁹ₐₑᵢⱼₖ→←↑↓⇒⇔∈∉⊂⊆∪∩ℝℂℤ𝕂𝟙★☉☾⟂"
   for c in needed.toList do

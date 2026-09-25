@@ -162,7 +162,7 @@ where
     else out
   termination_by src.size - i
 
-/-- Little-endian unsigned 16-bit read (`0` past the end). -/
+/-- Little-endian unsigned 16-bit read (callers check the bounds first). -/
 @[inline] def rdU16 (b : ByteArray) (i : Nat) : Nat :=
   (b.get! i).toNat + 256 * (b.get! (i + 1)).toNat
 
@@ -198,7 +198,8 @@ def decodeGlyphTable (b : ByteArray) (off : Nat) :
     let nc := nc + rdU16 b (off + 12)
     decodeGlyphTable b (off + 14) n adv box (vs.push nv) (cs.push nc) nv nc
 
-/-- Read one LEB128 varint at `i`; returns the value and the next offset. -/
+/-- Read one LEB128 varint at `i`; returns the value and the next offset (which exceeds
+`b.size` if the input ends inside the varint). -/
 def readVarint (b : ByteArray) (i : Nat) : UInt64 × Nat :=
   go 10 i 0 0
 where
@@ -209,7 +210,7 @@ where
         let byte := b[i]
         let acc := acc ||| ((byte &&& 0x7f).toUInt64 <<< shift)
         if byte &&& 0x80 == 0 then (acc, i + 1) else go fuel (i + 1) acc (shift + 7)
-      else (acc, i)
+      else (acc, i + 1)  -- past the end: the offset overruns `b.size`, which the caller rejects
 
 /-- Zigzag-decode to a `Float`. -/
 @[inline] def unzigzag (z : UInt64) : Float :=
@@ -299,8 +300,8 @@ def decodeBytes (b : ByteArray) : Except String Face := do
     throw "font outline verbs do not match coordinate counts"
   let (coords, kernOff) :=
     decodeCoords b (1 / Float.ofNat coordDiv) coordStart nGlyphs 0 coordOff (.emptyWithCapacity nCoords)
-  if coords.size != nCoords then throw "font blob truncated (coordinates)"
-  if b.size < kernOff + 6 * nKern then throw "font blob truncated (kerning)"
+  if coords.size != nCoords || kernOff > b.size then throw "font blob truncated (coordinates)"
+  if b.size != kernOff + 6 * nKern then throw "font blob size does not match its tables (kerning)"
   let (kernKeys, kernValues) := decodeKern b kernOff nKern #[] .empty
   unless gids.all (· < nGlyphs) do throw "cmap refers to a missing glyph"
   return {
