@@ -122,6 +122,29 @@ def text (ax : Axis3) (x y z : Float) (s : String) (fontsize : Float := 14) (col
     (halign : HAlign := .left) (valign : VAlign := .bottom) : Axis3 :=
   ax.add (.text (.xyz (Pts3.ofArrays ⟨#[x]⟩ ⟨#[y]⟩ ⟨#[z]⟩)) #[s] { size := fontsize, color, halign, valign })
 
+/-- 3D `streamplot!` from precomputed data: coloured streamlines plus arrowheads at the seeds
+drawn as `:utriangle` markers pointing along the projected directions (CairoMakie draws
+cone meshes). -/
+def streamplot (ax : Axis3) (lines : Pts3) (lineValues : FloatArray) (arrowPos arrowDir : Pts3)
+    (arrowValues : FloatArray) (colormap : Colormap := Colormap.viridis) (colorrange : Option (Float × Float) := none)
+    (linewidth : Float := 1.5) (arrowSize : Float := 10) (label : Option String := none) : Axis3 :=
+  let ax := ax.add (.lines (.xyz lines) { color := .values lineValues { colormap, colorrange }, width := linewidth }) label
+  ax.add (.scatter (.xyz arrowPos) { shape := .utriangle, size := arrowSize
+                                     color := .values arrowValues { colormap, colorrange }
+                                     alongDirections := some (.xyz arrowDir, -Num.pi / 2) })
+
+/-- `hidedecorations!(ax)`: hide labels, tick labels, ticks and grids (an `LScene`-like view
+keeps only the frame; add `hidespines` for a bare scene). -/
+def hidedecorations (ax : Axis3) : Axis3 :=
+  let hide (d : Axis3DimStyle) : Axis3DimStyle :=
+    { d with labelvisible := false, ticklabelsvisible := false, ticksvisible := false, gridvisible := false }
+  { ax with style := { ax.style with x := hide ax.style.x, y := hide ax.style.y, z := hide ax.style.z } }
+
+/-- `hidespines!(ax)`. -/
+def hidespines (ax : Axis3) : Axis3 :=
+  let hide (d : Axis3DimStyle) : Axis3DimStyle := { d with spinesvisible := false }
+  { ax with style := { ax.style with x := hide ax.style.x, y := hide ax.style.y, z := hide ax.style.z } }
+
 /-- `limits!(ax, x0, x1, y0, y1, z0, z1)`. -/
 def limits (ax : Axis3) (x0 x1 y0 y1 z0 z1 : Float) : Axis3 :=
   { ax with xlimits := (some x0, some x1), ylimits := (some y0, some y1), zlimits := (some z0, some z1) }

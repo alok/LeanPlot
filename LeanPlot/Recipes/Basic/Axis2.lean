@@ -220,6 +220,16 @@ def contourfBands (ax : Axis2) (polys : Array Pts2) (values : FloatArray) (color
     (colorrange : Option (Float × Float) := none) (label : Option String := none) : Axis2 :=
   ax.add (.poly polys { color := .values values { colormap, colorrange } }) label
 
+/-- `contourf!` from polygons given as an exterior ring and hole rings each (e.g. isoband
+output grouped into polygons), one value per polygon. -/
+def contourfPolygons (ax : Axis2) (polys : Array (Pts2 × Array Pts2)) (values : FloatArray)
+    (colormap : Colormap := Colormap.viridis) (colorrange : Option (Float × Float) := none)
+    (label : Option String := none) : Axis2 :=
+  let join (outer : Pts2) (holes : Array Pts2) : Pts2 :=
+    holes.foldl (init := outer) fun acc h =>
+      Pts2.ofArrays ⟨(acc.xs.push Num.nan).data ++ h.xs.data⟩ ⟨(acc.ys.push Num.nan).data ++ h.ys.data⟩
+  ax.contourfBands (polys.map fun (o, hs) => join o hs) values colormap colorrange label
+
 /-- `hlines!(ax, ys)`: horizontal lines across the whole x range (they only take part in
 the y autolimits). -/
 def hlines (ax : Axis2) (ys : Array Float) (color : Option ColorSpec := none) (linewidth : Float := 1.5)
