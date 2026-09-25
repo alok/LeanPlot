@@ -6,6 +6,7 @@ import LeanPlotTest.Recipes.IsobandTest
 import LeanPlotTest.Recipes.ArrowsTest
 import LeanPlotTest.Recipes.SurfaceTest
 import LeanPlotTest.Recipes.HeatmapTest
+import LeanPlotTest.Recipes.IsosurfaceTest
 import LeanPlotTest.Recipes.PerfTest
 
 /-!
@@ -30,6 +31,7 @@ def run : IO (Nat × Nat) := do
      ("recipes/cartan", ArrowsTest.cartanSuite),
      ("recipes/surface", SurfaceTest.suite),
      ("recipes/heatmap", HeatmapTest.suite),
+     ("recipes/isosurface", IsosurfaceTest.suite),
      ("recipes/perf", PerfTest.suite)]
   let mut p := 0
   let mut f := 0

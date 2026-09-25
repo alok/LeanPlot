@@ -176,6 +176,8 @@ def gridMesh (nx ny : Nat) (pos : Pts3) (f32 : Bool := false) : NMesh :=
   | some m => ⟨m, finishNormals f32 acc⟩
   | none => emptyNMesh
 
+instance : Inhabited NMesh := ⟨emptyNMesh⟩
+
 /-- Makie `matrix_grid(x, y, z)`: the vertices `(x[i], y[j], z[i, j])` in
 column-major order; for a 2×2 grid Makie lists `(x₁,y₁), (x₂,y₁), (x₂,y₂), (x₁,y₂)`
 paired with `z[:]` (a Makie quirk, reproduced). -/

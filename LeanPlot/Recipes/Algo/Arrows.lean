@@ -1,5 +1,5 @@
 import LeanPlot.Core.Data
-import LeanPlot.Recipes.Algo.Streamplot
+import LeanPlot.Recipes.Algo.Surface
 
 /-!
 # Arrow geometry (Makie 0.24 `arrows2d` / `arrows3d`) and Cartan's arrow scaling
@@ -365,15 +365,8 @@ def Quat.rotate (q : Quat) (v : Vec3) : Vec3 :=
    (xy + sz) * v.x + (1 - (xx + zz)) * v.y + (yz - sx) * v.z,
    (xz - sy) * v.x + (yz + sx) * v.y + (1 - (xx + yy)) * v.z⟩
 
-/-- The empty triangle mesh. -/
-def emptyMesh : TriMesh := ⟨Pts3.empty, #[], rfl, fun _ hk => absurd hk (Nat.not_lt_zero _)⟩
-
-/-- A mesh with per-vertex normals (`normals` parallel to `mesh.pos`). -/
-structure NormalMesh where
-  mesh : TriMesh
-  normals : Pts3
-
-instance : Inhabited NormalMesh := ⟨⟨emptyMesh, Pts3.empty⟩⟩
+/-- A mesh with per-vertex normals (`Surface.NMesh`). -/
+abbrev NormalMesh := Surface.NMesh
 
 /-- GeometryBasics `rotation(d)` for `d = (0, 0, 1)` applied to `(x, y, 0)`:
 the basis `v = (0, -1, 0)`, `w = (1, 0, 0)`, `u = d` maps it to `(y, -x, 0)`. -/
@@ -399,7 +392,7 @@ private def expandFaceViews (pos : Array Vec3) (nrm : Array Vec3) (tris : Array 
   let pts : Pts3 := toPts3 px
   match TriMesh.mk? pts idx with
   | some m => return ⟨m, toPts3 nx⟩
-  | none => return ⟨emptyMesh, Pts3.empty⟩
+  | none => return Surface.emptyNMesh
 
 /-- GeometryBasics `Tessellation(Cylinder((0,0,0), (0,0,1), 0.5), quality)` with
 its face-view normals: bottom disk, quad mantle (split into two triangles),
@@ -489,7 +482,7 @@ def arrows3dMesh (s : Style3D) (starts ends : Pts3) : NormalMesh := Id.run do
       tri := tri ++ m.mesh.tri.map (· + base.toUInt32)
   match TriMesh.mk? (Pts3.ofArrays xs ys zs) tri with
   | some m => return ⟨m, Pts3.ofArrays nx ny nz⟩
-  | none => return ⟨emptyMesh, Pts3.empty⟩
+  | none => return Surface.emptyNMesh
 
 /-! ## Cartan helpers -/
 
