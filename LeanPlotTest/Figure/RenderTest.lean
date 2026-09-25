@@ -115,9 +115,40 @@ def checkStructure : TestM Unit := do
     check s!"structure {name}: dims" (s.width == f.size.1 && s.height == f.size.2)
     check s!"structure {name}: nonempty" (s.ops.size > 5)
 
+/-- Degenerate inputs render without failing: NaN-only data, a single point, astronomically
+large coordinates (clipped before drawing), infinities, log axes with non-positive data, an
+empty figure, a tiny figure, constant data, an empty heatmap with a colorbar, a legend without
+labelled plots, empty and flat `Axis3`s. -/
+def checkRobust : TestM Unit := do
+  let nan := Num.nan
+  let cases : Array (String × Figure) := #[
+    ("all NaN", Figure.new |>.axis 1 1 (Axis2.new |>.lines ⟨#[nan, nan]⟩ ⟨#[nan, nan]⟩)),
+    ("single point", Figure.new |>.axis 1 1 (Axis2.new |>.scatter ⟨#[3]⟩ ⟨#[4]⟩)),
+    ("huge", Figure.new |>.axis 1 1 (Axis2.new |>.limits 0 1 0 1 |>.lines ⟨#[0, 1e300, 0.5]⟩ ⟨#[0, 1e300, 0.5]⟩)),
+    ("inf", Figure.new |>.axis 1 1 (Axis2.new |>.lines ⟨#[0, Num.inf, 2]⟩ ⟨#[0, 1, 2]⟩)),
+    ("log non-positive", Figure.new |>.axis 1 1 (Axis2.new (yscale := .log10) |>.lines ⟨#[0, 1, 2]⟩ ⟨#[-1, 0, 10]⟩)),
+    ("empty figure", Figure.new),
+    ("tiny", Figure.new (size := (50, 40)) |>.axis 1 1 (Axis2.new (title := "t") (xlabel := "x") |>.lines ⟨#[0, 1]⟩ ⟨#[0, 1]⟩)),
+    ("constant", Figure.new |>.axis 1 1 (Axis2.new |>.lines ⟨#[1, 1]⟩ ⟨#[1, 1]⟩)),
+    ("empty heatmap", Figure.new |>.axis 1 1 (Axis2.new |>.heatmapGrid (Grid2.fill 0 0 0)) |>.colorbar 1 2 (1, 1)),
+    ("legend without labels", Figure.new |>.axis 1 1 (Axis2.new |>.lines ⟨#[0, 1]⟩ ⟨#[0, 1]⟩) |>.legend 1 2 (1, 1)),
+    ("empty Axis3", Figure.new |>.axis3 1 1 Axis3.new),
+    ("flat Axis3", Figure.new |>.axis3 1 1 (Axis3.new |>.scatter ⟨#[0, 1]⟩ ⟨#[0, 1]⟩ ⟨#[2, 2]⟩))]
+  for (name, f) in cases do
+    let sc := f.toScene
+    let png := sc.renderPNG
+    check s!"robust {name}: renders" (png.size > 0 && sc.renderSVG.length > 0)
+  -- the far-out line is clipped to finite, moderate coordinates and still drawn
+  let sc := cases[2]!.2.toScene
+  let lineCoords := sc.ops.foldl (init := #[]) fun acc op => match op with
+    | .path p none (some s) (some _) => if s.width == 1.5 then acc ++ p.coords.data else acc
+    | _ => acc
+  check "robust huge: clipped line drawn" (!lineCoords.isEmpty && lineCoords.all fun c => c.abs < 10000)
+
 /-- The render suite. -/
 def renderSuite : TestM Unit := do
   checkStructure
+  checkRobust
   let all ← allSpecs
   for n in parityNames do
     match all.find? (·.1 == n) with
