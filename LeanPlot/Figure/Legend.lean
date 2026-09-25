@@ -140,6 +140,7 @@ def outer (s : LegendStyle) (title : Option String) (entries : Array LegendEntry
 
 /-- Makie's automatic legend size (content plus paddings plus margins). -/
 def autosize (s : LegendStyle) (title : Option String) (entries : Array LegendEntry) : Float × Float :=
+  if entries.isEmpty && title.isNone then (0, 0) else
   let (g, items) := outer s title entries
   let w := (g.determinedTotal items true).getD 0
   let h := (g.determinedTotal items false).getD 0
@@ -183,6 +184,7 @@ def geometry (s : LegendStyle) (title : Option String) (entries : Array LegendEn
 `box` (figure pixels, y up). Labels are centred in their boxes like Makie's `Label`. -/
 def lower (s : LegendStyle) (title : Option String) (entries : Array LegendEntry) (box : BBox) (figH : Float) :
     Array (Float × DrawOp) := Id.run do
+  if entries.isEmpty && title.isNone then return #[]
   let g := geometry s title entries box
   let rect := g.frame
   let mut ops : Array (Float × DrawOp) := #[]

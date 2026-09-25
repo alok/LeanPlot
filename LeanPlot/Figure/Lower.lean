@@ -96,6 +96,47 @@ def segmentsPath (xs ys : FloatArray) : Path :=
   termination_by n - k
   go 0 {}
 
+/-- Coordinates beyond this many pixels outside the clip rectangle are clipped geometrically
+before drawing (backends need not cope with astronomically large coordinates). -/
+def farOut : Float := 4096
+
+/-- `true` when some finite coordinate lies more than `farOut` pixels outside `r`. -/
+def needsPreclip (r : Rect) (xs ys : FloatArray) : Bool :=
+  let x0 := r.x - farOut
+  let x1 := r.x + r.w + farOut
+  let y0 := r.y - farOut
+  let y1 := r.y + r.h + farOut
+  let n := min xs.size ys.size
+  let rec go (i : Nat) : Bool :=
+    if i < n then
+      let x := xs[i]!
+      let y := ys[i]!
+      if (x.isFinite && (x < x0 || x > x1)) || (y.isFinite && (y < y0 || y > y1)) then true else go (i + 1)
+    else false
+  termination_by n - i
+  go 0
+
+/-- Clip a NaN-separated polyline to the clip rectangle grown by `farOut / 2` when it has
+far-out points (Liang–Barsky; visible output is unchanged). -/
+def preclipPolyline (clip : Option Rect) (xs ys : FloatArray) : FloatArray × FloatArray :=
+  match clip with
+  | some r => if needsPreclip r xs ys then Clip.polyline (r.inflate (farOut / 2)) xs ys else (xs, ys)
+  | none => (xs, ys)
+
+/-- Clip segment pairs likewise (pairs that miss become NaN pairs). -/
+def preclipSegments (clip : Option Rect) (xs ys : FloatArray) : FloatArray × FloatArray :=
+  match clip with
+  | some r =>
+    if !needsPreclip r xs ys then (xs, ys) else
+    let big := r.inflate (farOut / 2)
+    let n := min xs.size ys.size / 2
+    (Array.range n).foldl (init := (FloatArray.emptyWithCapacity (2 * n), FloatArray.emptyWithCapacity (2 * n)))
+      fun (ox, oy) k =>
+        match Clip.segment big xs[2 * k]! ys[2 * k]! xs[2 * k + 1]! ys[2 * k + 1]! with
+        | some (a, b) => ((ox.push a.x).push b.x, (oy.push a.y).push b.y)
+        | none => ((ox.push nan).push nan, (oy.push nan).push nan)
+  | none => (xs, ys)
+
 /-- The device stroke of a line style with colour `c`. -/
 def strokeOf (s : LineSpec) (c : RGBA) : Stroke :=
   { color := c, width := s.width, cap := s.cap, join := s.join, miterLimit := s.miterLimit
@@ -143,7 +184,9 @@ def coloredSegments (xs ys : FloatArray) (rgba : ByteArray) (perVertex : Bool) :
 def lines (pr : Projector) (p : Pos) (s : LineSpec) : Array DrawOp :=
   let (xs, ys, _) := projectPos pr p
   match s.color with
-  | .solid c => #[.path (polylinePath xs ys) none (some (strokeOf s c)) pr.clip]
+  | .solid c =>
+    let (xs, ys) := preclipPolyline pr.clip xs ys
+    #[.path (polylinePath xs ys) none (some (strokeOf s c)) pr.clip]
   | col =>
     let rgba := col.resolve p.size
     let (sx, sy, sc) := coloredPolylineSegments xs ys rgba
@@ -153,6 +196,7 @@ def lines (pr : Projector) (p : Pos) (s : LineSpec) : Array DrawOp :=
 colours when there is one per pair. -/
 def segments (pr : Projector) (p : Pos) (s : LineSpec) : Array DrawOp :=
   let (xs, ys, _) := projectPos pr p
+  let (xs, ys) := preclipSegments pr.clip xs ys
   match s.color with
   | .solid c => #[.path (segmentsPath xs ys) none (some (strokeOf s c)) pr.clip]
   | col =>
