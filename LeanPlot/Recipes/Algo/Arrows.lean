@@ -126,13 +126,21 @@ def processArrows (dim : Nat) (pos dir : Pts3) (align : Align := .tail) (lengths
 /-- `arrows2d` shape attributes (Makie defaults, pixel units). `shaftlength =
 none` is `automatic`. -/
 structure Style2D where
+  /-- Tail width (px). -/
   tailwidth : Float := 14
+  /-- Tail length (px); `0` draws no tail. -/
   taillength : Float := 0
+  /-- Shaft width (px). -/
   shaftwidth : Float := 3
+  /-- Fixed shaft length (px), or `none` for `automatic`. -/
   shaftlength : Option Float := none
+  /-- Minimum automatic shaft length (px). -/
   minshaftlength : Float := 10
+  /-- Maximum automatic shaft length (px). -/
   maxshaftlength : Float := inf
+  /-- Tip width (px). -/
   tipwidth : Float := 14
+  /-- Tip length (px); `0` draws no tip. -/
   tiplength : Float := 8
   /-- Width removed from every component and re-added as an outline stroke. -/
   strokemask : Float := 0.75
@@ -145,11 +153,17 @@ structure Style2D where
 /-- Scaled `(taillength, tailwidth, shaftlength, shaftwidth, tiplength, tipwidth)`
 of one arrow. -/
 structure Metrics where
+  /-- Scaled tail length. -/
   taillength : Float
+  /-- Scaled tail width (radius in 3D). -/
   tailwidth : Float
+  /-- Scaled shaft length. -/
   shaftlength : Float
+  /-- Scaled shaft width (radius in 3D). -/
   shaftwidth : Float
+  /-- Scaled tip length. -/
   tiplength : Float
+  /-- Scaled tip width (radius in 3D). -/
   tipwidth : Float
   deriving Inhabited, Repr, BEq
 
@@ -175,12 +189,17 @@ def metrics2d (s : Style2D) (dx dy : Float) : Metrics :=
 and arrow index; `z` is the arrow's pixel depth (used for Makie's back-to-front
 order, which the polygons already follow). -/
 structure Shapes2D where
+  /-- Vertex x coordinates (pixel space). -/
   xs : FloatArray
+  /-- Vertex y coordinates (pixel space, y up). -/
   ys : FloatArray
+  /-- Pixel depth of the vertex's arrow. -/
   zs : FloatArray
   /-- `offsets[k] .. offsets[k+1]` are the vertices of polygon `k`. -/
   offsets : Array Nat
+  /-- Component of each polygon: `0` tail, `1` shaft, `2` tip. -/
   component : Array Nat
+  /-- Arrow index of each polygon. -/
   arrow : Array Nat
   deriving Inhabited
 
@@ -211,56 +230,85 @@ def sortPerm (keys : FloatArray) : Array Nat :=
     let b := keys.get! j
     a < b || (a == b && i < j)
 
+/-- Append one component polygon: unit-shape vertices `pts` (already scaled,
+binary32), offset along the arrow by `offset`, rotated by `(c, sn)` and
+translated to `(ox, oy)`. -/
+def pushComponent (out : Shapes2D) (pts : Array (Float × Float)) (offset c sn ox oy oz : Float)
+    (comp arrow : Nat) : Shapes2D :=
+  -- destructure first so the coordinate buffers stay unique (pushed in place)
+  let ⟨xs, ys, zs, offsets, components, arrows⟩ := out
+  let rec go (k : Nat) (xs ys zs : FloatArray) : FloatArray × FloatArray × FloatArray :=
+    if h : k < pts.size then
+      let (px, py) := pts[k]
+      let vx := px + offset
+      let vy := py + 0
+      -- `R * v` with StaticArrays' muladd chain, then `Point3f` and the origin
+      let rx := r32 (Float.fma (-sn) vy (c * vx))
+      let ry := r32 (Float.fma c vy (sn * vx))
+      go (k + 1) (xs.push (r32 (ox + rx))) (ys.push (r32 (oy + ry))) (zs.push oz)
+    else (xs, ys, zs)
+  termination_by pts.size - k
+  let (xs, ys, zs) := go 0 xs ys zs
+  ⟨xs, ys, zs, offsets.push xs.size, components.push comp, arrows.push arrow⟩
+
+/-- The component polygon `comp` (`0` tail, `1` shaft, `2` tip) of an arrow with
+metrics `m`, in unit orientation (scaled, binary32, before offset). -/
+def componentShape (s : Style2D) (m : Metrics) (comp : Nat) : Array (Float × Float) :=
+  let len := if comp == 0 then m.taillength else if comp == 1 then m.shaftlength else m.tiplength
+  let wid := if comp == 0 then m.tailwidth else if comp == 1 then m.shaftwidth else m.tipwidth
+  let width := jmax 0 (wid - s.strokemask)
+  if comp == 0 then (tailShape len width m.shaftwidth).map fun (x, y) => (r32 x, r32 y)
+  else (if comp == 1 then shaftUnit else tipUnit).map fun (x, y) => (r32 (len * x), r32 (width * y))
+
 /-- The `meshes` node of `arrows2d`: for pixel-space start points `(sx, sy, sz)`
 and directions `(dx, dy)` (binary32, Makie pixel space), the tail, shaft and tip
 polygons of every arrow, drawn in increasing start-point depth. -/
-def shapes2d (s : Style2D) (sx sy sz dx dy : FloatArray) : Shapes2D := Id.run do
+def shapes2d (s : Style2D) (sx sy sz dx dy : FloatArray) : Shapes2D :=
   let n := min sx.size dx.size
-  let render : Array Bool := #[s.taillength > 0 && s.tailwidth > 0, s.shaftwidth > 0, s.tiplength > 0 && s.tipwidth > 0]
-  let mut out : Shapes2D := ⟨.empty, .empty, .empty, #[0], #[], #[]⟩
-  for i in sortPerm ⟨(sz.data.extract 0 n)⟩ do
-    let ddx := dx.get! i
-    let ddy := dy.get! i
-    let m := metrics2d s ddx ddy
-    let angle := (Float32.atan2 ddy.toFloat32 ddx.toFloat32)
-    let c := (Float32.cos angle).toFloat
-    let sn := (Float32.sin angle).toFloat
-    let ox := sx.get! i
-    let oy := sy.get! i
-    let lens := #[m.taillength, m.shaftlength, m.tiplength]
-    let wids := #[m.tailwidth, m.shaftwidth, m.tipwidth]
-    let mut offset : Float := 0
-    for comp in [0:3] do
-      if render[comp]! then
-        let len := lens[comp]!
-        let width := jmax 0 (wids[comp]! - s.strokemask)
-        let pts : Array (Float × Float) :=
-          if comp == 0 then (tailShape len width m.shaftwidth).map fun (x, y) => (r32 x, r32 y)
-          else (if comp == 1 then shaftUnit else tipUnit).map fun (x, y) => (r32 (len * x), r32 (width * y))
-        for (px, py) in pts do
-          let vx := px + offset
-          let vy := py + 0
-          -- `R * v` with StaticArrays' muladd chain, then `Point3f` and the origin
-          let rx := r32 (Float.fma (-sn) vy (c * vx))
-          let ry := r32 (Float.fma c vy (sn * vx))
-          out := { out with xs := out.xs.push (r32 (ox + rx)), ys := out.ys.push (r32 (oy + ry)),
-                            zs := out.zs.push (sz.get! i) }
-        out := { out with offsets := out.offsets.push out.xs.size, component := out.component.push comp,
-                          arrow := out.arrow.push i }
-        offset := offset + len
-  return out
+  let render (comp : Nat) : Bool :=
+    if comp == 0 then s.taillength > 0 && s.tailwidth > 0
+    else if comp == 1 then s.shaftwidth > 0 else s.tiplength > 0 && s.tipwidth > 0
+  let order := sortPerm ⟨(sz.data.extract 0 n)⟩
+  -- components of one arrow; `offset` advances by each rendered component's length
+  let rec comps (i comp : Nat) (m : Metrics) (offset c sn : Float) (out : Shapes2D) : Shapes2D :=
+    if comp < 3 then
+      if render comp then
+        let len := if comp == 0 then m.taillength else if comp == 1 then m.shaftlength else m.tiplength
+        let out := pushComponent out (componentShape s m comp) offset c sn (sx.get! i) (sy.get! i) (sz.get! i) comp i
+        comps i (comp + 1) m (offset + len) c sn out
+      else comps i (comp + 1) m offset c sn out
+    else out
+  termination_by 3 - comp
+  let rec arrows (k : Nat) (out : Shapes2D) : Shapes2D :=
+    if h : k < order.size then
+      let i := order[k]
+      let ddx := dx.get! i
+      let ddy := dy.get! i
+      let angle := Float32.atan2 ddy.toFloat32 ddx.toFloat32
+      arrows (k + 1) (comps i 0 (metrics2d s ddx ddy) 0 (Float32.cos angle).toFloat (Float32.sin angle).toFloat out)
+    else out
+  termination_by order.size - k
+  arrows 0 ⟨.empty, .empty, .empty, #[0], #[], #[]⟩
 
 /-! ## 3D arrows -/
 
 /-- `arrows3d` attributes (Makie defaults, relative to `markerscale`). -/
 structure Style3D where
+  /-- Tail radius. -/
   tailradius : Float := 0.15
+  /-- Tail length; `0` draws no tail. -/
   taillength : Float := 0
+  /-- Shaft radius. -/
   shaftradius : Float := 0.05
+  /-- Fixed shaft length, or `none` for `automatic`. -/
   shaftlength : Option Float := none
+  /-- Minimum automatic shaft length. -/
   minshaftlength : Float := 0.6
+  /-- Maximum automatic shaft length. -/
   maxshaftlength : Float := inf
+  /-- Tip radius. -/
   tipradius : Float := 0.15
+  /-- Tip length; `0` draws no tip. -/
   tiplength : Float := 0.4
   /-- `none` is `automatic`: the norm of the data bounding-box widths. -/
   markerscale : Option Float := none
@@ -300,8 +348,11 @@ def metrics3d (s : Style3D) (k : Float) (dx dy dz : Float) : Metrics :=
 
 /-- Placement of one `meshscatter` marker: position, scale and unit direction. -/
 structure Placement where
+  /-- Marker position. -/
   pos : Vec3
+  /-- Marker scale `(2r, 2r, l)`. -/
   scale : Vec3
+  /-- Unit direction the marker's `+z` axis is rotated to. -/
   dir : Vec3
   deriving Inhabited, Repr
 
@@ -329,9 +380,13 @@ def placements3d (s : Style3D) (starts ends : Pts3) : Array (Metrics × Placemen
 
 /-- A quaternion `(x, y, z, w)` (Makie `Quaternion` data order). -/
 structure Quat where
+  /-- Imaginary `i` part. -/
   x : Float
+  /-- Imaginary `j` part. -/
   y : Float
+  /-- Imaginary `k` part. -/
   z : Float
+  /-- Real part. -/
   w : Float
   deriving Inhabited, Repr
 

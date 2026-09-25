@@ -49,13 +49,18 @@ def normalize3 (f32 : Bool) (v : Vec3) : Vec3 :=
 /-- A triangle mesh with per-vertex normals (binary32, parallel to the vertices;
 `NaN` for vertices in no face). -/
 structure NMesh where
+  /-- The triangles. -/
   mesh : TriMesh
+  /-- Unit vertex normals. -/
   normals : Pts3
 
 /-- Accumulated (un-normalised) vertex normals, three coordinate buffers. -/
 structure NAcc where
+  /-- x components. -/
   x : FloatArray
+  /-- y components. -/
   y : FloatArray
+  /-- z components. -/
   z : FloatArray
 
 /-- Add a normal to vertex `k`. -/
@@ -176,6 +181,7 @@ def gridMesh (nx ny : Nat) (pos : Pts3) (f32 : Bool := false) : NMesh :=
   | some m => ⟨m, finishNormals f32 acc⟩
   | none => emptyNMesh
 
+/-- The empty mesh is the default. -/
 instance : Inhabited NMesh := ⟨emptyNMesh⟩
 
 /-- Makie `matrix_grid(x, y, z)`: the vertices `(x[i], y[j], z[i, j])` in
@@ -195,8 +201,11 @@ def matrixGrid {nx ny : Nat} (xs ys : FloatArray) (g : Grid2 nx ny) : Pts3 :=
 /-- A surface mesh with the per-vertex colour values Makie uses by default
 (`color = z`, binary32). -/
 structure SurfaceMesh where
+  /-- The triangles. -/
   mesh : TriMesh
+  /-- Unit vertex normals (`Vec3f`). -/
   normals : Pts3
+  /-- Colour value per vertex (`z`, binary32). -/
   values : FloatArray
 
 /-- Makie `surface(x, y, z)` as a mesh (`surface2mesh`): `z` is converted to

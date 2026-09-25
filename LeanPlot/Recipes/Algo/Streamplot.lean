@@ -175,20 +175,32 @@ see the module note). -/
 
 /-- Line-point buffers (coordinates and colours), threaded linearly. -/
 structure Lines where
+  /-- x coordinates. -/
   lx : FloatArray
+  /-- y coordinates. -/
   ly : FloatArray
+  /-- z coordinates. -/
   lz : FloatArray
+  /-- Colour values. -/
   lcol : FloatArray
 
 /-- Output buffers, threaded linearly. -/
 structure Buf where
+  /-- Arrow x positions. -/
   apx : FloatArray
+  /-- Arrow y positions. -/
   apy : FloatArray
+  /-- Arrow z positions. -/
   apz : FloatArray
+  /-- Arrow x directions. -/
   adx : FloatArray
+  /-- Arrow y directions. -/
   ady : FloatArray
+  /-- Arrow z directions. -/
   adz : FloatArray
+  /-- Arrow colour values. -/
   acol : FloatArray
+  /-- Line points and colours. -/
   lines : Lines
 
 /-- Empty buffers. -/
@@ -200,14 +212,23 @@ def Buf.empty : Buf := ⟨.empty, .empty, .empty, .empty, .empty, .empty, .empty
 
 /-- Static data of one streamplot run. -/
 structure Ctx where
+  /-- Plot dimension (2 or 3). -/
   dim : Nat
+  /-- Cells along x. -/
   ax : Axis
+  /-- Cells along y. -/
   ay : Axis
+  /-- Cells along z (3D). -/
   az : Axis
+  /-- Binary32 box. -/
   limitsF32 : Bool
+  /-- Binary32 field values. -/
   fieldF32 : Bool
+  /-- Binary32 step length. -/
   dt : Float
+  /-- Maximum points per half line. -/
   maxsteps : Nat
+  /-- Custom colour function (`none`: norm). -/
   colorFn : Option (Vec3 → Float)
 
 /-- Evaluate the field at a binary64 point, rounding to binary32 for a `Point2f`
@@ -241,8 +262,11 @@ def Ctx.cells (c : Ctx) : Nat := c.ax.res * c.ay.res * (if c.dim == 3 then c.az.
 
 /-- Result of one half-line trace. -/
 structure TraceOut where
+  /-- Visited-cell mask. -/
   mask : ByteArray
+  /-- Visited-cell count. -/
   np : Nat
+  /-- Line buffers. -/
   lines : Lines
 
 /-- Trace one half streamline from the current point (tail-recursive, with the

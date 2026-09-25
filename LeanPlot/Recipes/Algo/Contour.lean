@@ -97,11 +97,17 @@ trace beginning in a cell. -/
 
 /-- Static data of one level. -/
 structure Ctx where
+  /-- Grid size along x. -/
   nx : Nat
+  /-- Grid size along y. -/
   ny : Nat
+  /-- Vertex coordinates. -/
   coords : Coords
+  /-- Values, `z[i + nx*j]`. -/
   z : FloatArray
+  /-- The level. -/
   h : Float
+  /-- Binary32 arithmetic. -/
   f32 : Bool
 
 namespace Ctx
@@ -166,7 +172,9 @@ end Ctx
 
 /-- A polyline under construction (two coordinate buffers). -/
 structure Line where
+  /-- x coordinates. -/
   xs : FloatArray
+  /-- y coordinates. -/
   ys : FloatArray
 
 namespace Line

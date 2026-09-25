@@ -31,9 +31,13 @@ open LeanPlot.Recipes.Algo
 /-- A scalar volume on a rectilinear grid: `v[i + nx*(j + ny*k)]` at
 `(xs[i], ys[j], zs[k])` (Julia's column-major `Array{T,3}`). -/
 structure Volume where
+  /-- x coordinates. -/
   xs : FloatArray
+  /-- y coordinates. -/
   ys : FloatArray
+  /-- z coordinates. -/
   zs : FloatArray
+  /-- Values, `v[i + nx*(j + ny*k)]`. -/
   values : FloatArray
 
 namespace Volume
@@ -94,14 +98,21 @@ def kuhnTets : Array (Nat × Nat × Nat × Nat) :=
 /-- Mesh under construction: vertex buffers, triangle indices and the table of
 edge crossings already emitted (key `min·N + max` of the grid vertices). -/
 structure Builder where
+  /-- Vertex x coordinates. -/
   xs : FloatArray
+  /-- Vertex y coordinates. -/
   ys : FloatArray
+  /-- Vertex z coordinates. -/
   zs : FloatArray
-  /-- `-∇f` interpolated along the edge (normalised at the end). -/
+  /-- `-∇f` x components, interpolated along the edge (normalised at the end). -/
   gx : FloatArray
+  /-- Normal y components. -/
   gy : FloatArray
+  /-- Normal z components. -/
   gz : FloatArray
+  /-- Triangle vertex indices. -/
   tri : Array UInt32
+  /-- Grid edge key → vertex index. -/
   edges : Std.HashMap UInt64 Nat
 
 /-- The vertex on grid edge `(u, w)` (interpolated from the lower index, so both
@@ -183,6 +194,12 @@ def extract (vol : Volume) (level : Float) (normals : NormalMode := .gradient) :
       let k := c / ((nx - 1) * (ny - 1))
       let base := i + nx * (j + ny * k)
       let corner (m : Nat) : Nat := base + (m % 2) + nx * ((m / 2) % 2) + nx * ny * (m / 4)
+      -- skip cells entirely on one side of the level (most cells)
+      let above (m : Nat) : Bool := vol.values.get! (corner m) > level
+      let a0 := above 0
+      let uniform := (above 1 == a0) && (above 2 == a0) && (above 3 == a0) && (above 4 == a0) &&
+        (above 5 == a0) && (above 6 == a0) && (above 7 == a0)
+      if uniform then go (c + 1) b else
       let b := kuhnTets.foldl (init := b) fun b (a, e, f, h) =>
         tetra vol level b #[corner a, corner e, corner f, corner h]
       go (c + 1) b

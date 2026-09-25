@@ -8,7 +8,8 @@ budget, so CI noise does not flake the suite. Budgets are about twice the
 Julia/Makie times for the same workloads, measured in the oracle environment on
 the reference machine (Apple Silicon): `streamplot_impl` 0.39 ms (2D 32×32) and
 1.07 ms (3D 16³), `Contour.contours` + `contourlines` 0.49 ms, Makie
-`calculate_contourf_polys!` 15.4 ms, `surface2mesh` 1.08 ms.
+`calculate_contourf_polys!` 15.4 ms, `surface2mesh` 1.08 ms. The isosurface
+budget is LeanPlot's own (Makie has no CPU isosurface).
 -/
 
 namespace LeanPlotTest.Recipes.PerfTest
@@ -50,6 +51,10 @@ def c02 : Float := 0.2
 def c03 : Float := 0.3
 /-- `0.1` as a global. -/
 def c01 : Float := 0.1
+/-- `0.6` as a global. -/
+def c06 : Float := 0.6
+/-- `0.0441` as a global. -/
+def c0441 : Float := 0.0441
 
 /-- A smooth test field on `[-3, 3]²`. -/
 def field (x y : Float) : Float := Float.sin (1.3 * x) * Float.cos (0.9 * y) + 0.1 * x * y
@@ -72,6 +77,12 @@ def suite : TestM Unit := do
   timed "contourf 256x256 x10" 30 (fun z => Isoband.makieContourf xs xs (shift z)) (fun r => r.polys.size)
   -- surface mesh with normals
   timed "surface 256x256" 4 (fun z => Surface.surfaceMesh xs xs (shift z)) (fun r => r.mesh.numTriangles)
+  -- isosurface of a torus on a 64³ grid
+  let g64 := LeanPlot.Num.range (-1) 1 64
+  let vol := Isosurface.Volume.sample (fun x y z =>
+    let q := Float.sqrt (x * x + y * y) - c06
+    q * q + z * z) g64 g64 g64
+  timed "isosurface 64^3" 20 (fun z => Isosurface.extract vol (c0441 + z)) (fun r => r.mesh.numTriangles)
   -- 10⁴ 2D arrows
   let m := 10000
   let sx : FloatArray := ⟨(Array.range m).map fun i => (i % 100).toFloat * 8⟩

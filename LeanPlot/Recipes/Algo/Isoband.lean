@@ -146,12 +146,19 @@ def noPoint : UInt64 := 0xFFFFFFFFFFFFFFFF
 /-- `point_connect`: neighbours of a grid point in its polygon, plus the
 alternative pair when two polygons share the point. -/
 structure PC where
+  /-- Previous point of the polygon. -/
   prev : UInt64 := noPoint
+  /-- Next point of the polygon. -/
   next : UInt64 := noPoint
+  /-- Previous point of the alternative polygon. -/
   prev2 : UInt64 := noPoint
+  /-- Next point of the alternative polygon. -/
   next2 : UInt64 := noPoint
+  /-- The alternative connection is in use. -/
   alt : Bool := false
+  /-- The primary connection was emitted into a ring. -/
   collected : Bool := false
+  /-- The alternative connection was emitted into a ring. -/
   collected2 : Bool := false
   deriving Inhabited
 
@@ -192,12 +199,19 @@ def polyMerge (grid : PGrid) (poly : Array UInt64) : PGrid :=
 
 /-- Static data of one band. -/
 structure Ctx where
+  /-- Grid rows (↔ y). -/
   nrow : Nat
+  /-- Grid columns (↔ x). -/
   ncol : Nat
+  /-- Column coordinates. -/
   xs : FloatArray
+  /-- Row coordinates. -/
   ys : FloatArray
+  /-- Values, `z[col + ncol*row]`. -/
   z : FloatArray
+  /-- Band low edge (inclusive). -/
   lo : Float
+  /-- Band high edge (exclusive). -/
   hi : Float
 
 namespace Ctx
@@ -488,8 +502,9 @@ colour). `edges` are the binary32 `computed_levels`. -/
 structure BandColoring where
   /-- 256-entry banded colormap. -/
   colormap : Colormap
-  /-- Colour range. -/
+  /-- Colour range low end (`minimum(levels)`). -/
   lo : Float
+  /-- Colour range high end (`maximum(levels)`). -/
   hi : Float
   /-- Colour of values below `lo` (extended low band). -/
   lowclip : RGBA
