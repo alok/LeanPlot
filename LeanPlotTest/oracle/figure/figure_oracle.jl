@@ -100,15 +100,32 @@ end
 
 function axis3_json(ax::Axis3)
     lims = ax.finallimits[]
-    tk = Any[]
-    for (i, el) in enumerate((:xticks, :yticks, :zticks))
+    lo = Mk.minimum(lims); hi = Mk.maximum(lims)
+    ticks = Any[]; ticklabels = Any[]; labels = Any[]
+    for p in ax.blockscene.plots
+        sp = haskey(p, :space) ? p.space[] : :data
+        sp === :pixel || continue
+        z = Mk.zvalue2d(p)
+        if p isa Mk.LineSegments
+            push!(ticks, [pt(q) for q in p[1][]])
+        elseif p isa Mk.Text && z > 100
+            push!(ticklabels, Dict("positions" => [pt(q) for q in p[1][]], "align" => [string(p.align[][1]), string(p.align[][2])]))
+        elseif p isa Mk.Text
+            q = p.rotation[]
+            ang = 2 * atan(Float64(q[3]), Float64(q[4]))
+            push!(labels, Dict("position" => pt(p[1][][1]), "align" => [string(p.align[][1]), string(p.align[][2])], "rotation" => ang))
+        end
     end
+    tv = [f64.(Mk.get_ticks(t, identity, Mk.automatic, f64(lo[k]), f64(hi[k]))[1])
+          for (k, t) in enumerate((ax.xticks[], ax.yticks[], ax.zticks[]))]
     Dict(
         "viewport" => rect(ax.scene.viewport[]),
         "bbox" => rect(ax.layoutobservables.computedbbox[]),
-        "limits" => [f64(lims.origin[1]), f64(lims.origin[1] + lims.widths[1]),
-                     f64(lims.origin[2]), f64(lims.origin[2] + lims.widths[2]),
-                     f64(lims.origin[3]), f64(lims.origin[3] + lims.widths[3])],
+        "limits" => [f64(lo[1]), f64(hi[1]), f64(lo[2]), f64(hi[2]), f64(lo[3]), f64(hi[3])],
+        "tickvalues" => tv,
+        "ticks" => ticks,
+        "ticklabels" => ticklabels,
+        "labels" => labels,
     )
 end
 
@@ -230,6 +247,14 @@ let f = Figure()
     ts = collect(range(0, 4pi, length = 101))
     lines!(ax, cos.(ts), sin.(ts), ts ./ 4pi)
     push!(figs, figure_json("axis3", f))
+end
+
+# 13. Axis3 with a surface, another view and a title
+let f = Figure(size = (500, 400))
+    ax = Axis3(f[1, 1], title = "surface", azimuth = 0.3pi, elevation = 0.2pi)
+    xs3 = collect(range(-2, 2, length = 21)); ys3 = collect(range(-1, 1, length = 11))
+    surface!(ax, xs3, ys3, [exp(-(x^2 + y^2)) for x in xs3, y in ys3])
+    push!(figs, figure_json("surface3", f))
 end
 
 open(joinpath(OUT, "figure.json"), "w") do io
