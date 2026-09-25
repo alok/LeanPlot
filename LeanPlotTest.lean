@@ -1,1 +1,1 @@
-/-! LeanPlot golden tests. -/
+import LeanPlotTest.Font

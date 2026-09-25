@@ -3,8 +3,8 @@ version = "0.2.0"
 description = "Plotting for Lean 4: a zero-dependency figure/layout core with deterministic SVG and anti-aliased PNG backends"
 keywords = ["plotting", "visualization", "svg", "png"]
 license = "Apache-2.0"
-defaultTargets = ["LeanPlot", "leanplot-golden"]
-testDriver = "leanplot-golden"
+defaultTargets = ["LeanPlot", "leanplottest"]
+testDriver = "leanplottest"
 
 [leanOptions]
 autoImplicit = false
@@ -18,5 +18,5 @@ name = "LeanPlot"
 name = "LeanPlotTest"
 
 [[lean_exe]]
-name = "leanplot-golden"
+name = "leanplottest"
 root = "LeanPlotTest.Main"
