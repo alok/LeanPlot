@@ -194,6 +194,31 @@ def rotatedClip : Figure :=
                                                y := { ax.style.y with ticklabelrotation := Num.pi / 2 } } }
   Figure.new |>.axis 1 1 ax |>.colorbar 1 2 (1, 1)
 
+/-- 23. a coloured 2D mesh, a stroked polygon, rotated text, colour-mapped scatter and
+per-segment colours. -/
+def meshPolyText : Figure :=
+  let pos := Pts3.ofArrays ⟨#[0, 1, 0.5, 1.5]⟩ ⟨#[0, 0, 1, 1]⟩ ⟨#[0, 0, 0, 0]⟩
+  let m := (TriMesh.mk? pos #[0, 1, 2, 1, 3, 2]).getD default
+  let segColors : ByteArray := RGBA.pushRGBA8 (RGBA.pushRGBA8 .empty (RGBA.rgb 1 0 0)) (RGBA.rgb 0 0 1)
+  let ax := Axis2.new
+    |>.mesh m (color := ColorSpec.values ⟨#[1, 2, 3, 4]⟩ {})
+    |>.poly (Pts2.ofArrays ⟨#[2, 3, 3, 2]⟩ ⟨#[0, 0, 1, 1]⟩) (color := ColorSpec.ofName "orange") (strokecolor := RGBA.black)
+      (strokewidth := 2)
+    |>.text 2.5 1.2 "rotated" (fontsize := 18) (halign := .center) (valign := .bottom) (rotation := Num.pi / 6)
+    |>.scatter ⟨#[0.5, 1.5, 2.5]⟩ ⟨#[1.5, 1.5, 1.5]⟩ (color := ColorSpec.mapped ⟨#[0, 0.5, 1]⟩ "plasma") (markersize := 20)
+    |>.linesegments (Pts2.ofArrays ⟨#[0, 1, 2, 3]⟩ ⟨#[-0.5, -0.5, -0.5, -0.5]⟩) (color := ColorSpec.perElement segColors)
+      (linewidth := 3)
+  Figure.new |>.axis 1 1 ax
+
+/-- 24. fixed axis sizes, custom ticks and a column gap. -/
+def fixedTicks : Figure :=
+  let a1 : Axis2 := { (Axis2.new |>.linesFn Float.sin xs) with
+    width := .fixed 250, height := .fixed 200, xticks := .values #[0, 2.5, 7]
+    yticks := .labeled #[-1, 0, 1] #["low", "mid", "high"] }
+  let s := every 5 xs
+  let a2 := Axis2.new (title := "gap") |>.scatter s (fmap (· ^ 2) s)
+  Figure.new (size := (640, 400)) |>.axis 1 1 a1 |>.axis 1 2 a2 |>.colgap 40
+
 /-- All oracle figures by name. -/
 def specs : Array (String × Figure) := #[
   ("basic", basic), ("empty", empty), ("twoaxes", twoaxes), ("grid22", grid22), ("limits", limits),
@@ -201,6 +226,7 @@ def specs : Array (String × Figure) := #[
   ("dataaspect", dataaspect), ("bandpoly", bandpoly), ("axis3", axis3), ("surface3", surface3),
   ("markers", markers), ("colormapped", colormapped), ("heatmap_image", heatmapImage),
   ("legend_horizontal", legendHorizontal), ("label_log_reversed", labelLogReversed), ("axis3_wire", axis3Wire),
-  ("hvlines_aspect", hvlinesAspect), ("rotated_clip", rotatedClip)]
+  ("hvlines_aspect", hvlinesAspect), ("rotated_clip", rotatedClip), ("mesh_poly_text", meshPolyText),
+  ("fixed_ticks", fixedTicks)]
 
 end LeanPlotTest.Figure

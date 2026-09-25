@@ -344,6 +344,28 @@ let f = Figure()
     push!(figs, figure_json("rotated_clip", f))
 end
 
+# 23. a coloured 2D mesh, a stroked polygon, rotated text, colour-mapped scatter, per-segment colours
+let f = Figure()
+    ax = Axis(f[1, 1])
+    mesh!(ax, [Point2f(0, 0), Point2f(1, 0), Point2f(0.5, 1), Point2f(1.5, 1)],
+          [Mk.GLTriangleFace(1, 2, 3), Mk.GLTriangleFace(2, 4, 3)], color = [1.0, 2.0, 3.0, 4.0])
+    poly!(ax, Point2f[(2, 0), (3, 0), (3, 1), (2, 1)], color = :orange, strokecolor = :black, strokewidth = 2)
+    text!(ax, 2.5, 1.2, text = "rotated", rotation = pi / 6, align = (:center, :bottom), fontsize = 18)
+    scatter!(ax, [0.5, 1.5, 2.5], [1.5, 1.5, 1.5], color = [0.0, 0.5, 1.0], colormap = :plasma, markersize = 20)
+    linesegments!(ax, [Point2f(0, -0.5), Point2f(1, -0.5), Point2f(2, -0.5), Point2f(3, -0.5)], color = [:red, :blue], linewidth = 3)
+    push!(figs, figure_json("mesh_poly_text", f))
+end
+
+# 24. fixed axis sizes, custom ticks, grid gaps
+let f = Figure(size = (640, 400))
+    ax1 = Axis(f[1, 1], width = 250, height = 200, xticks = [0, 2.5, 7], yticks = ([-1, 0, 1], ["low", "mid", "high"]))
+    lines!(ax1, xs, sin.(xs))
+    ax2 = Axis(f[1, 2], title = "gap")
+    scatter!(ax2, xs[1:5:end], xs[1:5:end] .^ 2)
+    colgap!(f.layout, 40)
+    push!(figs, figure_json("fixed_ticks", f))
+end
+
 # 21. a streamplot (its computed lines and arrowheads are dumped to streamplot.json so the
 #     Lean test draws exactly the same data)
 let f = Figure()
