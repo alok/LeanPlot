@@ -234,3 +234,22 @@ def roundArray (xs : FloatArray) : FloatArray :=
   go 0 (FloatArray.emptyWithCapacity xs.size)
 
 end LeanPlot.Recipes.Algo.F32
+
+namespace LeanPlot.Recipes.Algo
+
+/-- `a ++ b` for float arrays (in place when `a` is unique). -/
+def appendFloats (a b : FloatArray) : FloatArray :=
+  let rec go (i : Nat) (acc : FloatArray) : FloatArray :=
+    if h : i < b.size then go (i + 1) (acc.push b[i]) else acc
+  termination_by b.size - i
+  go 0 a
+
+/-- Reverse a float array. -/
+def reverseFloats (a : FloatArray) : FloatArray :=
+  let n := a.size
+  let rec go (k : Nat) (acc : FloatArray) : FloatArray :=
+    if k < n then go (k + 1) (acc.push (a.get! (n - 1 - k))) else acc
+  termination_by n - k
+  go 0 (FloatArray.emptyWithCapacity n)
+
+end LeanPlot.Recipes.Algo

@@ -1,6 +1,7 @@
 import LeanPlot.Recipes.Algo.F32
 import LeanPlot.Recipes.Algo.Levels
 import LeanPlot.Recipes.Algo.Streamplot
+import LeanPlot.Recipes.Algo.Contour
 
 /-!
 # Recipe algorithms
@@ -12,4 +13,5 @@ reproduce Makie/CairoMakie plots. Outputs are `LeanPlot` data types
 * `LeanPlot.Recipes.Algo.F32`: binary32 emulation and Julia `Float32` ranges.
 * `LeanPlot.Recipes.Algo.Levels`: contour/contourf level selection.
 * `LeanPlot.Recipes.Algo.Stream`: Makie `streamplot_impl` (2D and 3D).
+* `LeanPlot.Recipes.Algo.Contour`: Contour.jl marching squares and Makie `contourlines`.
 -/

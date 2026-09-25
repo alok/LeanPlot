@@ -53,13 +53,15 @@ def contourLevels (n : Nat) (zmin zmax : Float) (f32 : Bool := true) : FloatArra
 def dataRange (z : FloatArray) : Float × Float := (extremaNaN z).getD (nan, nan)
 
 /-- The `zlevels` node of Makie's `Contour` recipe for data `z` (binary32 values
-when `f32`). Degenerate ranges (`isapprox(zmin, zmax)`) give no levels. -/
+when `f32`). Degenerate ranges (`isapprox(zmin, zmax)`) give no levels; explicit
+levels are passed through unchanged (tracing converts them to the data's element
+type). -/
 def contourZLevels (spec : LevelSpec) (z : FloatArray) (f32 : Bool := true) : FloatArray :=
   let (lo, hi) := dataRange z
   let degenerate := if f32 then isApprox32 lo hi else isApprox lo hi (Float.sqrt eps64)
   if degenerate then .empty else
   match spec with
-  | .values vs => if f32 then roundArray vs else vs
+  | .values vs => vs
   | .count n => contourLevels n lo hi f32
 
 /-- Makie `_get_isoband_levels(n, lo, hi)`: `n + 1` binary32 band edges from `lo`
