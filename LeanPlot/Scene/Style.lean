@@ -84,7 +84,9 @@ def empty : Pos := .xy Pts2.empty
 
 end Pos
 
+/-- 2D points are positions. -/
 instance : Coe Pts2 Pos := ⟨Pos.xy⟩
+/-- 3D points are positions. -/
 instance : Coe Pts3 Pos := ⟨Pos.xyz⟩
 
 /-! ## Line styles -/

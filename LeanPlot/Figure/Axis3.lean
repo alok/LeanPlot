@@ -202,57 +202,79 @@ def approx (a b : Float) : Bool := a == b || (a - b).abs ≤ 1.4901161193847656e
 /-- Makie's default camera-relative light direction. -/
 def lightDirection : Vec3 := ⟨-0.45679495, -0.6293204, -0.6287243⟩
 
-/-- Per-vertex normals of a mesh: normalized sums of the (unnormalized) face normals
-(GeometryBasics `normals`). -/
-def vertexNormals (m : TriMesh) : Array Vec3 := Id.run do
+/-- Per-vertex normals of a mesh as SoA `(nx, ny, nz)`: normalized sums of the
+(unnormalized) face normals (GeometryBasics `normals`). -/
+def vertexNormals (m : TriMesh) : FloatArray × FloatArray × FloatArray :=
   let nv := m.numVertices
-  let mut acc : Array Vec3 := Array.replicate nv Vec3.zero
-  for t in [0:m.numTriangles] do
-    let ia := m.tri[3 * t]!.toNat
-    let ib := m.tri[3 * t + 1]!.toNat
-    let ic := m.tri[3 * t + 2]!.toNat
-    let (a, b, c) := m.triangle t
-    let n := (b.sub a).cross (c.sub a)
-    if n.isFinite then
-      acc := acc.modify ia (·.add n)
-      acc := acc.modify ib (·.add n)
-      acc := acc.modify ic (·.add n)
-  return acc.map Vec3.normalize
+  let nt := m.numTriangles
+  let z := FloatArray.mk (Array.replicate nv 0)
+  let rec faces (t : Nat) (ax ay az : FloatArray) : FloatArray × FloatArray × FloatArray :=
+    if t < nt then
+      let ia := m.tri[3 * t]!.toNat
+      let ib := m.tri[3 * t + 1]!.toNat
+      let ic := m.tri[3 * t + 2]!.toNat
+      let (a, b, c) := m.triangle t
+      let n := (b.sub a).cross (c.sub a)
+      if n.isFinite then
+        let add (arr : FloatArray) (i : Nat) (v : Float) : FloatArray := arr.set! i (arr.get! i + v)
+        faces (t + 1) (add (add (add ax ia n.x) ib n.x) ic n.x) (add (add (add ay ia n.y) ib n.y) ic n.y)
+          (add (add (add az ia n.z) ib n.z) ic n.z)
+      else faces (t + 1) ax ay az
+    else (ax, ay, az)
+  termination_by nt - t
+  let (ax, ay, az) := faces 0 z z z
+  let rec norm (i : Nat) (ox oy oz : FloatArray) : FloatArray × FloatArray × FloatArray :=
+    if i < nv then
+      let v := Vec3.normalize ⟨ax.get! i, ay.get! i, az.get! i⟩
+      norm (i + 1) (ox.push v.x) (oy.push v.y) (oz.push v.z)
+    else (ox, oy, oz)
+  termination_by nv - i
+  norm 0 (FloatArray.emptyWithCapacity nv) (FloatArray.emptyWithCapacity nv) (FloatArray.emptyWithCapacity nv)
 
-/-- Shade per-vertex colours like CairoMakie's `_calculate_shaded_vertexcolors`. -/
-def shadeColors (cam : Camera3) (m : MeshData) : ByteArray := Id.run do
+/-- Makie's default light: ambient 0.45, directional light colour 0.5, specular 0.2,
+shininess 32. -/
+structure Light where
+  ambient : Float := 0.45
+  color : Float := 0.5
+  specular : Float := 0.2
+  shininess : Float := 32
+  deriving Inhabited
+
+/-- Shade per-vertex colours like CairoMakie's `_calculate_shaded_vertexcolors`: the vertex
+normals go through the normal matrix of the axis model, the light direction is camera
+relative, and each colour becomes `(ambient + light·max(L·(−N), 0))·c + light·specular·
+max(H·(−N), 0)^shininess` with `H = normalize(L + v)`, `v` the camera-to-vertex direction. -/
+def shadeColors (cam : Camera3) (m : MeshData) (light : Light := {}) : ByteArray :=
   let nv := m.mesh.numVertices
   let base := m.color.resolve nv
-  let normals := vertexNormals m.mesh
+  let (nxs, nys, nzs) := vertexNormals m.mesh
   let model := cam.model
   -- normal matrix: transpose(inv(M₃)) for the diagonal-scale-plus-translation model
-  let nx := if model.m00 != 0 then 1 / model.m00 else 0
-  let ny := if model.m11 != 0 then 1 / model.m11 else 0
-  let nz := if model.m22 != 0 then 1 / model.m22 else 0
+  let sx := if model.m00 != 0 then 1 / model.m00 else 0
+  let sy := if model.m11 != 0 then 1 / model.m11 else 0
+  let sz := if model.m22 != 0 then 1 / model.m22 else 0
   -- camera-relative light: inverse(view)[1:3, 1:3] * dir = transpose of the rotation
   let v := cam.view
   let d := lightDirection
   let L : Vec3 := ⟨v.m00 * d.x + v.m10 * d.y + v.m20 * d.z, v.m01 * d.x + v.m11 * d.y + v.m21 * d.z,
     v.m02 * d.x + v.m12 * d.y + v.m22 * d.z⟩
-  let ambient : Float := 0.45
-  let light : Float := 0.5
-  let specular : Float := 0.2
-  let mut out := ByteArray.emptyWithCapacity (4 * nv)
-  for i in [0:nv] do
-    let c := RGBA.ofRGBA8At base i
-    let n0 := normals[i]!
-    let N := (Vec3.mk (n0.x * nx) (n0.y * ny) (n0.z * nz)).normalize
-    let p := m.mesh.pos.get! i
-    let w := model.mulPoint p
-    let world : Vec3 := ⟨w.x / w.w, w.y / w.w, w.z / w.w⟩
-    let view := (world.sub cam.eyepos).normalize
-    let diff := max 0 (L.dot N.neg)
-    let H := (L.add view).normalize
-    let spec := Float.pow (max 0 (H.dot N.neg)) 32
-    let k := ambient + light * diff
-    let s := light * specular * spec
-    out := RGBA.pushRGBA8 out ⟨k * c.r + s, k * c.g + s, k * c.b + s, c.a⟩
-  return out
+  let eye := cam.eyepos
+  let rec go (i : Nat) (out : ByteArray) : ByteArray :=
+    if i < nv then
+      let c := RGBA.ofRGBA8At base i
+      let N := (Vec3.mk (nxs.get! i * sx) (nys.get! i * sy) (nzs.get! i * sz)).normalize
+      let w := model.mulPoint (m.mesh.pos.get! i)
+      let world : Vec3 := ⟨w.x / w.w, w.y / w.w, w.z / w.w⟩
+      let view := (world.sub eye).normalize
+      let diff := max 0 (L.dot N.neg)
+      let H := (L.add view).normalize
+      let spec := Float.pow (max 0 (H.dot N.neg)) light.shininess
+      let k := light.ambient + light.color * diff
+      let s := light.color * light.specular * spec
+      go (i + 1) (RGBA.pushRGBA8 out ⟨k * c.r + s, k * c.g + s, k * c.b + s, c.a⟩)
+    else out
+  termination_by nv - i
+  go 0 (ByteArray.emptyWithCapacity (4 * nv))
 
 /-- Decorations of one dimension in figure pixels (y up): tick segments, tick label anchors
 and alignment, and the axis label anchor, rotation and vertical alignment. -/
