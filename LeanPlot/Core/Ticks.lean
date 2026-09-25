@@ -119,9 +119,49 @@ def tenThousand : Float := 10000.0
 /-- `1000.0`. -/
 def oneThousand : Float := 1000.0
 
+/-- Label `i` of a candidate: Julia's `(r + i) * tickspan` with `r::Int64`,
+where `base = r + off`. Small bases (the only ones that occur in practice) go
+through `Int64` (exact: `Int64 → Float64` rounds to nearest in both
+languages); others through `Int`. -/
+@[inline] def rawLabel (base : Int) (small : Bool) (base64 : Int64) (i : Nat) (tickspan : Float) : Float :=
+  if small then (base64 + i.toInt64).toFloat * tickspan else ofInt (base + (i : Int)) * tickspan
+
+/-- Number of labels from index `i` to `imax` whose value lies in `[lo, hi]`, where the
+labels at `imin` and `imax` are the rounded view ends `vmin0`, `vmax0` and the
+others are `rawLabel`s (PlotUtils' in-place filter of `S[1:imax]`). -/
+def countInView (base : Int) (small : Bool) (base64 : Int64) (tickspan : Float) (imin imax : Nat)
+    (vmin0 vmax0 lo hi : Float) (fuel i acc : Nat) : Nat :=
+  match fuel with
+  | 0 => acc
+  | fuel + 1 =>
+    if i ≤ imax then
+      let v :=
+        if i == imin then vmin0 else if i == imax then vmax0
+        else rawLabel base small base64 i tickspan
+      countInView base small base64 tickspan imin imax vmin0 vmax0 lo hi fuel (i + 1)
+        (if lo ≤ v && v ≤ hi then acc + 1 else acc)
+    else acc
+
+/-- PlotUtils' score of a labelling with given granularity `g` and coverage `c`
+(total `span`, simplicity `s`, niceness `qscore`), including the strict-span and
+over-coverage penalties, evaluated in PlotUtils' order. -/
+@[inline] def labellingScore (cfg : WilkinsonConfig) (strictSpan : Bool) (xspan span s qscore : Float)
+    (g c : Float) : Float :=
+  let score := cfg.granularityWeight * g + cfg.simplicityWeight * s + cfg.coverageWeight * c + cfg.nicenessWeight * qscore
+  let score := if strictSpan && span > xspan then score - tenThousand else score
+  if span ≥ fTwo * xspan then score - oneThousand else score
+
 /-- Score one candidate labelling (step `tickspan`, `k` labels starting at
 `r·tickspan`) exactly as PlotUtils does, and keep it if it beats `best`. The
-label array is only materialised for a new best candidate. -/
+label array is only materialised for a new best candidate.
+
+Candidates that provably cannot beat `best` are skipped before the (costly)
+rounding of the view ends: with non-negative granularity and coverage weights
+and `xspan > 0`, the score is monotone in `g ≤ 1` and in `c ≤ cmax` (coverage
+at the smallest admissible label count), and IEEE addition and multiplication
+by non-negative numbers are monotone, so the bound computed with the same
+expression dominates the exact score. Ties keep the earlier candidate either
+way (`score > best` is required). -/
 def scoreCandidate (cfg : WilkinsonConfig) (strictSpan : Bool) (xMin xMax xspan : Float) (sigdigits : Int)
     (k : Nat) (tickspan span qscore : Float) (r : Int) (best : SearchResult) : SearchResult :=
   -- labels are `(r + i + off) * tickspan` for `i ∈ [0, imax]`; with
@@ -130,38 +170,38 @@ def scoreCandidate (cfg : WilkinsonConfig) (strictSpan : Bool) (xMin xMax xspan 
   let off : Int := if cfg.extendTicks then -(k : Int) else 0
   let imin : Nat := if cfg.extendTicks then k else 0
   let imax : Nat := if cfg.extendTicks then 2 * k - 1 else k - 1
-  let raw (i : Nat) : Float := ofInt (r + (i : Int) + off) * tickspan
-  -- only the view ends are rounded (to `sigdigits` significant digits)
-  let vmin0 := roundSigDigits (raw imin) sigdigits
-  let vmax0 := roundSigDigits (raw imax) sigdigits
-  let label (i : Nat) : Float := if i == imin then vmin0 else if i == imax then vmax0 else raw i
-  let viewmin := if strictSpan then jmax vmin0 xMin else vmin0
-  let viewmax := if strictSpan then jmin vmax0 xMax else vmax0
-  let buf := cfg.spanBuffer.getD 0.0 * (viewmax - viewmin)
-  let keep (v : Float) : Bool := !strictSpan || (viewmin - buf ≤ v && v ≤ viewmax + buf)
-  let lo := viewmin - buf
-  let hi := viewmax + buf
-  -- count the labels inside the view (no closures: this is the hot loop)
-  let rec count (fuel i acc : Nat) : Nat :=
-    match fuel with
-    | 0 => acc
-    | fuel + 1 =>
-      if i ≤ imax then
-        let v := if i == imin then vmin0 else if i == imax then vmax0 else ofInt (r + (i : Int) + off) * tickspan
-        count fuel (i + 1) (if !strictSpan || (lo ≤ v && v ≤ hi) then acc + 1 else acc)
-      else acc
-  let len := count (imax + 2) 0 0
   -- linear scale: every step is "nice", so simplicity only rewards a zero label
   let hasZero := r ≤ 0 && r.natAbs < k
   let s : Float := if hasZero then fOne else fZero
+  let prunable := xspan > fZero && cfg.granularityWeight ≥ fZero && cfg.coverageWeight ≥ fZero
+  let mMin : Nat := max cfg.kMin 2
+  let cmax := (onePointFive * xspan) / (ofInt ((mMin : Int) - 1) * tickspan)
+  let bound := labellingScore cfg strictSpan xspan span s qscore fOne cmax
+  if prunable && bound ≤ best.highScore then best else
+  let base : Int := r + off
+  let small : Bool := -1000000000 < base && base < 1000000000
+  let base64 : Int64 := base.toInt64
+  -- only the view ends are rounded (to `sigdigits` significant digits)
+  let vmin0 := roundSigDigits (rawLabel base small base64 imin tickspan) sigdigits
+  let vmax0 := roundSigDigits (rawLabel base small base64 imax tickspan) sigdigits
+  let viewmin := if strictSpan then jmax vmin0 xMin else vmin0
+  let viewmax := if strictSpan then jmin vmax0 xMax else vmax0
+  let buf := cfg.spanBuffer.getD fZero * (viewmax - viewmin)
+  let lo := viewmin - buf
+  let hi := viewmax + buf
+  -- without `strict_span` PlotUtils keeps all `imax` (1-based) labels
+  let len :=
+    if strictSpan then countInView base small base64 tickspan imin imax vmin0 vmax0 lo hi (imax + 2) 0 0
+    else imax + 1
   let g : Float :=
     if 0 < len && len < 2 * cfg.kIdeal then fOne - ofInt ((len : Int) - cfg.kIdeal).natAbs / ofInt cfg.kIdeal
     else fZero
   let c : Float := if len > 1 then (onePointFive * xspan) / (ofInt ((len : Int) - 1) * tickspan) else fZero
-  let score := cfg.granularityWeight * g + cfg.simplicityWeight * s + cfg.coverageWeight * c + cfg.nicenessWeight * qscore
-  let score := if strictSpan && span > xspan then score - tenThousand else score
-  let score := if span ≥ fTwo * xspan then score - oneThousand else score
+  let score := labellingScore cfg strictSpan xspan span s qscore g c
   if score > best.highScore && cfg.kMin ≤ len && len ≤ cfg.kMax then
+    let label (i : Nat) : Float :=
+      if i == imin then vmin0 else if i == imax then vmax0 else rawLabel base small base64 i tickspan
+    let keep (v : Float) : Bool := !strictSpan || (lo ≤ v && v ≤ hi)
     let sel := ((Array.range (imax + 1)).map label).filter keep
     ⟨score, sel, viewmin, viewmax⟩
   else best
@@ -246,11 +286,14 @@ def logTicks (forward inverse : Float → Float) (vmin vmax : Float) (cfg : Wilk
   let scaled := wilkinson (forward vmin) (forward vmax) cfg
   (scaled.map inverse, scaled)
 
+/-- `eps(floatmax(Float64)) = 2^971`. -/
+def ulpFloatMax : Float := Float.ofBits 0x7CA0000000000000
+
 /-- Julia `eps(x)` for `Float64` (spacing to the next larger magnitude). -/
 def ulp (x : Float) : Float :=
   if !x.isFinite then nan else
   let a := x.abs
-  if a == floatMax then powInt 2.0 971 else nextFloat a - a
+  if a == floatMax then ulpFloatMax else nextFloat a - a
 
 /-- Makie `is_within_limits`: keep ticks within the limits up to `100 eps`. -/
 def isWithinLimits (tv lo hi : Float) : Bool :=
@@ -358,12 +401,12 @@ def decadeSelectAnchoredZero (nIdeal : Int) (kminPos kminNeg kmaxPos kmaxNeg : I
     return best
   if bestS == 0 then none else
   let ticks : Array Float := Id.run do
-    let mut out : Array Float := #[0.0]
+    let mut out : Array Float := #[fZero]
     let mut k := bestS
     for _ in [0:4000] do
       if k > maxExtreme then break
-      if k ≤ kmaxPos then out := out.push (powInt 10.0 k)
-      if k ≤ kmaxNeg then out := out.push (-(powInt 10.0 k))
+      if k ≤ kmaxPos then out := out.push (pow10 k)
+      if k ≤ kmaxNeg then out := out.push (-(pow10 k))
       k := k + bestS
     return out
   some (ticks.qsort (· < ·))
@@ -400,13 +443,13 @@ def decadeSelectSingleSided (vmin vmax : Float) (nIdeal : Int) (kminSide kmaxSid
 
 /-- Makie `_decade_auto_tickvalues(vmin, vmax, n_ideal; kmin_pos, kmin_neg)`. -/
 def decadeTicks (vmin vmax : Float) (nIdeal : Int) (kminPos kminNeg : Int := 0) : Option (Array Float) :=
-  let kmaxPos : Int := if vmax ≥ powInt 10.0 kminPos then floorInt (Float.log10 vmax) else -1
-  let kmaxNeg : Int := if vmin ≤ -(powInt 10.0 kminNeg) then floorInt (Float.log10 (-vmin)) else -1
+  let kmaxPos : Int := if vmax ≥ pow10 kminPos then floorInt (Float.log10 vmax) else -1
+  let kmaxNeg : Int := if vmin ≤ -(pow10 kminNeg) then floorInt (Float.log10 (-vmin)) else -1
   let ticks :=
     if vmin ≤ 0 && 0 ≤ vmax then
       decadeSelectAnchoredZero nIdeal (max kminPos 1) (max kminNeg 1) kmaxPos kmaxNeg
-    else if vmin > 0 then decadeSelectSingleSided vmin vmax nIdeal kminPos kmaxPos 1.0
-    else decadeSelectSingleSided (-vmax) (-vmin) nIdeal kminNeg kmaxNeg (-1.0)
+    else if vmin > 0 then decadeSelectSingleSided vmin vmax nIdeal kminPos kmaxPos fOne
+    else decadeSelectSingleSided (-vmax) (-vmin) nIdeal kminNeg kmaxNeg fMinusOne
   match ticks with
   | none => none
   | some ts => if (ts.filter (· != 0)).size < 2 then none else some ts
