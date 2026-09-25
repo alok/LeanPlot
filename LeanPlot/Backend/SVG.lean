@@ -126,9 +126,10 @@ def strokeAttrs (c : Ctx) (s : Stroke) : String :=
       (if s.dashOffset == 0 then "" else s!" stroke-dashoffset=\"{c.f s.dashOffset}\"")
   col ++ op ++ w ++ cap ++ join ++ ml ++ dash
 
-/-- The `d` attribute of a path. Non-finite points lift the pen: the next
-finite point starts a new subpath (`M`). Malformed trailing verbs are ignored. -/
-def pathData (c : Ctx) (p : Path) : String :=
+/-- The `d` attribute of a path, numbers formatted with `f`. Non-finite points
+lift the pen: the next finite point starts a new subpath (`M`). Malformed
+trailing verbs are ignored. -/
+def pathDataWith (f : Float → String) (p : Path) : String :=
   let cs := p.coords
   let g (k : Nat) : Float := cs[k]!
   let rec go (fuel i k : Nat) (pen : Bool) (acc : String) : String :=
@@ -142,30 +143,48 @@ def pathData (c : Ctx) (p : Path) : String :=
         | .moveTo =>
           let x := g k
           let y := g (k + 1)
-          if x.isFinite && y.isFinite then go fuel (i + 1) (k + 2) true (acc ++ s!"M{c.f x} {c.f y}")
+          if x.isFinite && y.isFinite then go fuel (i + 1) (k + 2) true (acc ++ s!"M{f x} {f y}")
           else go fuel (i + 1) (k + 2) false acc
         | .lineTo =>
           let x := g k
           let y := g (k + 1)
           if x.isFinite && y.isFinite then
-            go fuel (i + 1) (k + 2) true (acc ++ s!"{if pen then "L" else "M"}{c.f x} {c.f y}")
+            go fuel (i + 1) (k + 2) true (acc ++ s!"{if pen then "L" else "M"}{f x} {f y}")
           else go fuel (i + 1) (k + 2) false acc
         | .quadTo =>
-          let ok := (List.range 4).all fun j => (g (k + j)).isFinite
+          let ok := (g k).isFinite && (g (k+1)).isFinite && (g (k+2)).isFinite && (g (k+3)).isFinite
           if ok && pen then
-            go fuel (i + 1) (k + 4) true (acc ++ s!"Q{c.f (g k)} {c.f (g (k+1))} {c.f (g (k+2))} {c.f (g (k+3))}")
-          else if ok then go fuel (i + 1) (k + 4) true (acc ++ s!"M{c.f (g (k+2))} {c.f (g (k+3))}")
+            go fuel (i + 1) (k + 4) true (acc ++ s!"Q{f (g k)} {f (g (k+1))} {f (g (k+2))} {f (g (k+3))}")
+          else if ok then go fuel (i + 1) (k + 4) true (acc ++ s!"M{f (g (k+2))} {f (g (k+3))}")
           else go fuel (i + 1) (k + 4) false acc
         | .cubicTo =>
-          let ok := (List.range 6).all fun j => (g (k + j)).isFinite
+          let ok := (g k).isFinite && (g (k+1)).isFinite && (g (k+2)).isFinite && (g (k+3)).isFinite &&
+            (g (k+4)).isFinite && (g (k+5)).isFinite
           if ok && pen then
             go fuel (i + 1) (k + 6) true
-              (acc ++ s!"C{c.f (g k)} {c.f (g (k+1))} {c.f (g (k+2))} {c.f (g (k+3))} {c.f (g (k+4))} {c.f (g (k+5))}")
-          else if ok then go fuel (i + 1) (k + 6) true (acc ++ s!"M{c.f (g (k+4))} {c.f (g (k+5))}")
+              (acc ++ s!"C{f (g k)} {f (g (k+1))} {f (g (k+2))} {f (g (k+3))} {f (g (k+4))} {f (g (k+5))}")
+          else if ok then go fuel (i + 1) (k + 6) true (acc ++ s!"M{f (g (k+4))} {f (g (k+5))}")
           else go fuel (i + 1) (k + 6) false acc
         | .close => go fuel (i + 1) k pen (if pen then acc ++ "Z" else acc)
       else acc
   go (p.verbs.size + 1) 0 0 false ""
+
+/-- The `d` attribute of a path in the writer's number format (`pathDataWith`). -/
+@[inline] def pathData (c : Ctx) (p : Path) : String := pathDataWith c.f p
+
+/-- A `svgText` hook that draws text as filled glyph outlines instead of an SVG
+`<text>` element, so SVG and raster output agree glyph for glyph. `glyphs st s x y`
+must return the device-space outline of `s` anchored at `(x, y)` (the font
+module's `LeanPlot.Font.textPath` has exactly this shape). Coordinates are
+written with `precision` decimals; the fill is the text colour, nonzero rule. -/
+def glyphText (glyphs : TextStyle → String → Float → Float → Path) (precision : Nat := 3) :
+    TextStyle → String → Float → Float → String :=
+  fun st s x y =>
+    let fmt := fmtFixed precision
+    let body := pathDataWith fmt (glyphs st s x y)
+    if body.isEmpty || st.color.a ≤ 0 then "" else
+    let op := if st.color.a < 1 then s!" fill-opacity=\"{fmt st.color.a}\"" else ""
+    s!"<path d=\"{body}\" fill=\"{RGBA.toHexRGB st.color}\"{op}/>"
 
 /-- Render a `path` op. -/
 def renderPath (c : Ctx) (p : Path) (fill : Option Fill) (stroke : Option Stroke) : String :=

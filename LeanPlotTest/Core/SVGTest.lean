@@ -78,5 +78,22 @@ def suite : TestM Unit := do
   check "deterministic" (scene.toSVG (encodePNG := some fakePNG) == flat) fun _ => "differs"
   -- clip deduplication is by formatted rectangle: 100.0005 and 100.0004 both print as 100
   check "clip paths deduplicated" ((flat.splitOn "<clipPath").length - 1 == 2) fun _ => s!"{(flat.splitOn "<clipPath").length - 1}"
+  -- glyph-outline text hook: a stand-in "font" drawing each character as a
+  -- 0.5em-wide box advancing by 0.6em from the anchor
+  let boxes (st : TextStyle) (s : String) (x y : Float) : Path :=
+    (List.range s.length).foldl (init := {}) fun p i =>
+      let x0 := x + i.toFloat * 0.6 * st.size
+      let y0 := y - 0.7 * st.size
+      let x1 := x0 + 0.5 * st.size
+      ((((p.moveTo x0 y0).lineTo x1 y0).lineTo x1 y).lineTo x0 y).close
+  let glyph := SVG.glyphText boxes
+  let g1 := glyph { size := 10, color := ⟨1, 0, 0, 0.5⟩ } "ab" 1.25 20
+  check "glyphText" (g1 == "<path d=\"M1.25 13L6.25 13L6.25 20L1.25 20ZM7.25 13L12.25 13L12.25 20L7.25 20Z\" fill=\"#ff0000\" fill-opacity=\"0.5\"/>")
+    fun _ => g1
+  check "glyphText empty" (glyph {} "" 0 0 == "") fun _ => glyph {} "" 0 0
+  let withGlyphs := scene.toSVG (encodePNG := some fakePNG) (svgText := some glyph)
+  check "glyphText replaces <text>" ((withGlyphs.splitOn "<text").length == 1 &&
+      (withGlyphs.splitOn "fill-opacity=\"0.8\"").length == 2)
+    fun _ => withGlyphs
 
 end LeanPlotTest.Core.SVGTest
