@@ -102,4 +102,80 @@ expected a Figure, Scene, Axis2 or Axis3, or an IO action returning one
 
 #guard_no_widget #guard_msgs (drop error) in #figure (1 : Nat)
 
+/-! ## `#plot` -/
+
+#guard_msgs in
+#plot Float.sin
+
+-- functions: sampled on `range(-5, 5, length = 201)` by default
+#guard_widget (plotFigure Float.sin).toHtml => #plot Float.sin
+#guard_widget (plotFigure (fun x : Float => x * x)).toHtml => #plot fun x => x * x
+#guard_widget (plotFigure (fun x : Float => x * x)).toHtml => #plot (fun x => x * x)
+#guard_widget (plotFigure (fun x : Float => x ^ 2) { domain := (-1, 1) }).toHtml => #plot (fun x => x ^ 2) on -1..1
+#guard_widget (plotFigure Float.tanh { domain := (-3, 3), samples := 50 }).toHtml => #plot Float.tanh on -3..3 using 50
+#guard_widget (plotFigure Float.tanh { samples := 50 }).toHtml => #plot Float.tanh using 50
+#guard_widget (plotFigure Float.sin { domain := (0, 2 * Num.pi) }).toHtml => #plot Float.sin on 0..2*Num.pi
+#guard_widget (plotFigure Float.sin { domain := (-Num.pi, Num.pi) }).toHtml => #plot Float.sin on -Num.pi..Num.pi
+#guard_widget (plotFigure Float.sin { domain := (-1, 1) }).toHtml => #plot Float.sin on (-1)..1
+#guard_widget (plotFigure [Float.sin, Float.cos] { domain := (0, 6.3) }).toHtml => #plot [Float.sin, Float.cos] on 0..6.3
+#guard_widget (plotFigure (fun t : Float => (Float.cos t, Float.sin t)) { domain := (0, 6.3) }).toHtml =>
+  #plot (fun t => (Float.cos t, Float.sin t)) on 0..6.3
+
+-- data: against 1, 2, …, n, or as points
+#guard_widget (plotFigure #[1.0, 4.0, 9.0, 16.0]).toHtml => #plot #[1.0, 4.0, 9.0, 16.0]
+#guard_widget (plotFigure #[1.0, 4.0, 9.0, 16.0]).toHtml => #plot [1, 4, 9, 16]
+#guard_widget (plotFigure #[1.0, 4.0, 9.0, 16.0]).toHtml => #plot (FloatArray.mk #[1, 4, 9, 16])
+#guard_widget (plotFigure #[-1.0, 2.0]).toHtml => #plot [(-1 : Int), 2]
+#guard_widget (plotFigure (Pts2.ofArrays ⟨#[0, 1, 3]⟩ ⟨#[1, 0, 2]⟩)).toHtml => #plot [((0 : Float), (1 : Float)), (1, 0), (3, 2)]
+#guard_widget (plotFigure (Pts2.ofArrays ⟨#[0, 1, 3]⟩ ⟨#[1, 0, 2]⟩)).toHtml => #plot (#[0.0, 1, 3], #[1.0, 0, 2])
+#guard_widget (plotFigure (Pts2.sample Float.exp 0 1 5)).toHtml => #plot Pts2.sample Float.exp 0 1 5
+
+-- the data instances draw what Makie's `lines` draws
+#guard (Plottable.plot #[1.0, 4.0] {} Axis2.new).items.size == 1
+#guard (Plottable.plot [Float.sin, Float.cos] {} Axis2.new).items.size == 2
+#guard ((plotFigure Float.sin).size) == (600, 450)
+#guard PlotSpec.xs {} == Num.range (-5) 5 201
+#guard (PlotSpec.xs { domain := (0, 1), samples := 3 }).data == #[0, 0.5, 1]
+
+-- figures pass through
+#guard_widget fig.toHtml => #plot fig
+
+-- a doc comment is the caption
+#guard_widget (plotFigure Float.exp { domain := (0, 1) }).toHtml { caption := some "exp" } =>
+  /-- exp -/
+  #plot Float.exp on 0..1
+
+/--
+warning: #plot: `on`/`using` only apply to functions; ignored for
+  Array Float
+-/
+#guard_msgs in
+#plot #[1.0, 2.0] on 0..1
+
+/--
+error: #plot: cannot plot a value of type
+  String
+expected a function `Float → Float` (or `Float → Float × Float`), a list or array of them, data (`FloatArray`, arrays or lists of numbers or pairs, `Pts2`), or a Figure, Scene, Axis2 or Axis3
+-/
+#guard_msgs in
+#plot "hello"
+
+/-- error: #plot: the domain 1..1 is empty -/
+#guard_msgs in
+#plot Float.sin on 1..1
+
+/-- error: #plot: the domain 0..inf is not finite -/
+#guard_msgs in
+#plot Float.sin on 0..(1 / 0)
+
+/-- error: #plot: need at least 2 samples, got 1 -/
+#guard_msgs in
+#plot Float.sin using 1
+
+/-- error: Unknown identifier `noSuchFunction` -/
+#guard_msgs in
+#plot noSuchFunction
+
+#guard_no_widget #guard_msgs (drop error) in #plot Float.sin using 1
+
 end LeanPlotWidgetsTest.Commands
