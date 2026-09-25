@@ -87,4 +87,16 @@ def suite : TestM Unit := do
     check s!"{name} raw64 lines" (got64.size == want64.size && bad64.isEmpty)
       (fun _ => s!"sizes {got64.size} {want64.size}, {bad64.length} differ")
 
+/-- `contour3d` lifts every point to its level. -/
+def liftSuite : TestM Unit := do
+  let xs := LeanPlot.Num.range (-1) 1 9
+  let g := Grid2.sample (fun x y => x * x + y * y) xs xs
+  let ls := Contour.makieContour (.rect xs xs) g (.values ⟨#[0.25, 0.5]⟩)
+  let (p3, segs) := ls.flatten3d
+  let (p2, _) := ls.flatten
+  let ok := (List.range p3.size).all fun i =>
+    let v := p3.get! i
+    if (p2.xs.get! i).isNaN then v.z.isNaN else bitEq v.x (p2.xs.get! i) && (bitEq v.z 0.25 || bitEq v.z 0.5)
+  check "contour3d lift" (ok && segs.size == ls.lines.size && p3.size == p2.size)
+
 end LeanPlotTest.Recipes.ContourTest

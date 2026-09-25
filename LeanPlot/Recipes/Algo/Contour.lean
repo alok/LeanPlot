@@ -338,6 +338,15 @@ def flatten (ls : Lines) : Pts2 × Array (Nat × Nat) :=
   termination_by ls.lines.size - k
   go 0 (FloatArray.emptyWithCapacity n) (FloatArray.emptyWithCapacity n) #[]
 
+/-- Makie `contour3d` layout: like `flatten`, with every point lifted to
+`z = level` (`to_ndim(Point3f, p, level)`). -/
+def flatten3d (ls : Lines) : Pts3 × Array (Nat × Nat) :=
+  let (p, segs) := ls.flatten
+  let zs := segs.foldl (init := FloatArray.emptyWithCapacity p.size) fun acc (lvl, cnt) =>
+    let z := ls.levels.get! lvl
+    (List.range cnt).foldl (fun acc k => acc.push (if k + 1 == cnt then nan else z)) acc
+  (Pts3.ofArrays p.xs p.ys zs, segs)
+
 /-- The level value of every line. -/
 def lineLevels (ls : Lines) : FloatArray :=
   ⟨ls.lines.map fun (l, _) => ls.levels.get! l⟩

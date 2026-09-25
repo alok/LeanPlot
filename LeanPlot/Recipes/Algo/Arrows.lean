@@ -525,6 +525,16 @@ def scaledArrowsLengthscale (spacing : Float) (t : Pts3) : Float := spacing / me
 /-- Cartan `arrowsbundle(M, t)`: `lengthscale = s/2`. -/
 def arrowsBundleLengthscale (spacing : Float) (t : Pts3) : Float := spacing / meanNorm t / 2
 
+/-- Cartan `scaledarrows(M, t::TensorOperator)`: one arrow field per column,
+`lengthscale = s/3` with `s = spacing / max(mean column norm)`. -/
+def scaledArrowsLengthscaleOp (spacing : Float) (cols : Array Pts3) : Float :=
+  spacing / cols.foldl (fun m c => jmax m (meanNorm c)) 0 / 3
+
+/-- Cartan `arrowsbundle`/`planesbundle`/`scaledplanes` for a `TensorOperator`:
+`s = spacing / min(mean column norm)`, `lengthscale = s/2`. -/
+def bundleLengthscaleOp (spacing : Float) (cols : Array Pts3) : Float :=
+  spacing / cols.foldl (fun m c => jmin m (meanNorm c)) inf / 2
+
 end Cartan
 
 end LeanPlot.Recipes.Algo.Arrows

@@ -82,4 +82,15 @@ def suite : TestM Unit := do
     check s!"{name} line_colors" (faBitEq r.lineColors (floatArr (c.get "line_colors")))
       (fun _ => s!"maxdiff {maxAbsDiff r.lineColors (floatArr (c.get "line_colors"))}")
 
+/-- The transform hook keeps `NaN` separators and maps every other point. -/
+def hookSuite : TestM Unit := do
+  let r := Stream.streamplot2 (fun p => ⟨-p.y, p.x⟩) (-1) (-1) 2 2 { gridsize := #[4, 4] }
+  let m := r.mapPoints fun v => ⟨v.x, v.y, v.x * v.x + v.y * v.y⟩
+  let ok := (List.range r.linePoints.size).all fun i =>
+    let a := r.linePoints.get! i
+    let b := m.linePoints.get! i
+    if a.x.isNaN then b.x.isNaN && b.z.isNaN else bitEq b.x a.x && bitEq b.z (a.x * a.x + a.y * a.y)
+  check "streamplot transform hook" (ok && m.dim == 3 && m.linePoints.size == r.linePoints.size)
+  check "streamplot 3D arrow size" (bitEq (Stream.arrowSize3 ⟨2, 1, 4⟩ #[8, 10, 5]) (0.2 * 1 / 5))
+
 end LeanPlotTest.Recipes.StreamTest

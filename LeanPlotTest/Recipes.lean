@@ -22,9 +22,12 @@ def run : IO (Nat × Nat) := do
   let suites : List (String × TestM Unit) :=
     [("recipes/levels", LevelsTest.suite),
      ("recipes/streamplot", StreamTest.suite),
+     ("recipes/streamplot-hook", StreamTest.hookSuite),
      ("recipes/contour", ContourTest.suite),
+     ("recipes/contour3d", ContourTest.liftSuite),
      ("recipes/isoband", IsobandTest.suite),
      ("recipes/arrows", ArrowsTest.suite),
+     ("recipes/cartan", ArrowsTest.cartanSuite),
      ("recipes/surface", SurfaceTest.suite),
      ("recipes/heatmap", HeatmapTest.suite),
      ("recipes/perf", PerfTest.suite)]

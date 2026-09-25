@@ -80,6 +80,21 @@ def arrowDir2 (r : Result) : Pts2 := r.arrowDir.xy
 /-- Line points as 2D points. -/
 def linePoints2 (r : Result) : Pts2 := r.linePoints.xy
 
+/-- Push line points and arrow anchors through a transform (the Makie
+`transform_func` hook Cartan uses to draw parameter-space streamlines on an
+embedded surface); `NaN` separators stay `NaN`. Directions and colours are kept. -/
+def mapPoints (r : Result) (f : Vec3 → Vec3) : Result :=
+  let tr (p : Pts3) : Pts3 := Id.run do
+    let mut xs : FloatArray := .empty
+    let mut ys : FloatArray := .empty
+    let mut zs : FloatArray := .empty
+    for i in [0:p.size] do
+      let v := p.get! i
+      let w := if v.x.isNaN || v.y.isNaN || v.z.isNaN then (⟨nan, nan, nan⟩ : Vec3) else f v
+      xs := xs.push w.x; ys := ys.push w.y; zs := zs.push w.z
+    return Pts3.ofArrays xs ys zs
+  { r with dim := 3, arrowPos := tr r.arrowPos, linePoints := tr r.linePoints }
+
 end Result
 
 /-- Julia `norm` of a `StaticVector` (StaticArrays `_norm`): `√(Σ xᵢ²)`, with

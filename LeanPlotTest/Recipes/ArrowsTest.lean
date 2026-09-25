@@ -148,4 +148,12 @@ def suite : TestM Unit := do
     let w := (c.get "spacing").float
     check s!"spacing n={p.size}" ((s - w).abs ≤ 1e-12 * w.abs) (fun _ => s!"got {s} want {w}")
 
+/-- Cartan operator scalings on hand-made columns. -/
+def cartanSuite : TestM Unit := do
+  let c1 : Pts3 := Pts3.ofArrays ⟨#[3, 0]⟩ ⟨#[4, 2]⟩ ⟨#[0, 0]⟩  -- norms 5, 2 → mean 3.5
+  let c2 : Pts3 := Pts3.ofArrays ⟨#[1, 1]⟩ ⟨#[0, 0]⟩ ⟨#[0, 0]⟩  -- mean 1
+  check "scaledarrows operator" (bitEq (Arrows.Cartan.scaledArrowsLengthscaleOp 7 #[c1, c2]) (7 / 3.5 / 3))
+  check "bundle operator" (bitEq (Arrows.Cartan.bundleLengthscaleOp 7 #[c1, c2]) (7 / 1 / 2))
+  check "scaledarrows field" (bitEq (Arrows.Cartan.scaledArrowsLengthscale 7 c1) (7 / 3.5 / 3))
+
 end LeanPlotTest.Recipes.ArrowsTest
