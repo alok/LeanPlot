@@ -41,3 +41,26 @@ See [`docs/DESIGN.md`](docs/DESIGN.md) for the pipeline (Figure → layout → d
 scene → backends) and [`docs/AUDIT.md`](docs/AUDIT.md) for the plan and performance rules.
 LeanPlot is co-developed with [Grassmann.lean](https://github.com/alok/Grassmann.jl), a Lean port
 of Michael Reed's Grassmann.jl ecosystem, whose Makie plots it reproduces.
+
+## Widgets
+
+The optional [`widgets/`](widgets) package (`LeanPlotWidgets`, built on ProofWidgets) shows figures
+in the infoview. The picture is the same SVG that `Figure.save` writes, so it looks exactly like the
+saved file. No npm is needed.
+
+```lean
+import LeanPlotWidgets
+open LeanPlot
+
+#plot Float.sin                                         -- Makie `lines`, sampled on -5..5
+#plot (fun x => x * Float.exp (-x)) on 0..8 using 400   -- domain and sample count
+#plot #[1.0, 4.0, 9.0, 16.0]                            -- data against 1, 2, …, n
+/-- A caption. -/
+#figure Figure.new |>.axis 1 1 (Axis2.new (title := "cos") |>.linesFn Float.cos (Num.range 0 10 101))
+```
+
+`Figure.toHtml` returns the `ProofWidgets.Html`, for use inside other widgets. Depend on the package
+with `[[require]] name = "LeanPlotWidgets"`, `git = "https://github.com/alok/LeanPlot"`,
+`subDir = "widgets"`. Downstream projects that only need files and PNG/SVG output keep requiring the
+dependency-free root package. See [`docs/WIDGETS.md`](docs/WIDGETS.md) for the syntax, display
+options, API, tests and performance.
