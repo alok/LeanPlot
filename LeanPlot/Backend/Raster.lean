@@ -29,9 +29,8 @@ import LeanPlot.Backend.PNG
 
 Text: pass the font module's outliner, `s.toCanvas LeanPlot.Font.textPath`
 (it has exactly the `TextOutliner` type), or lower the text ops to filled
-paths first with `(s.lowerText LeanPlot.Font.textPath).toCanvas` (which any
-path-filling backend, SVG included, can then draw). The default outliner is a
-stub that draws nothing.
+paths first with the font module's `Scene.lowerText` (`LeanPlot.Font.Lower`):
+`s.lowerText.toCanvas`. The default outliner is a stub that draws nothing.
 
 Measured on Apple Silicon, v4.35.0-rc3 (`LeanPlotTest/Raster/Perf.lean`,
 minimum of 3 runs; the machine was shared, so treat these as upper bounds):

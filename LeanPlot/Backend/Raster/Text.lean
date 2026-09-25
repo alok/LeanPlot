@@ -49,27 +49,4 @@ def renderText {w h : Nat} (style : TextStyle) (s : String) (x y : Float) (cv : 
   if p.verbs.isEmpty then cv else
   (textInto defaultTextOutliner (Accum.new w h) cv (Clip.make w h none) style s x y).2
 
-/-- The `path` op that draws `s` as filled glyph outlines (nonzero rule, text
-colour, same clip); `none` when the outliner yields no geometry. -/
-def lowerTextOp (outline : TextOutliner) (x y : Float) (s : String) (style : TextStyle) (clip : Option Rect) :
-    Option DrawOp :=
-  if s.isEmpty then none else
-  let p := outline style s x y
-  if p.verbs.isEmpty then none else
-  some (.path p (some { color := style.color, rule := .nonzero }) none clip)
-
 end LeanPlot.Raster
-
-namespace LeanPlot.Scene
-
-/-- Replace every `text` op by a `path` op that fills its glyph outlines, so
-any backend that can fill paths draws the text (and SVG and raster output
-agree exactly). Text for which `outline` yields no geometry is dropped. Other
-ops keep their order. With the font module: `s.lowerText LeanPlot.Font.textPath`. -/
-def lowerText (s : Scene) (outline : Raster.TextOutliner) : Scene :=
-  { s with ops := s.ops.filterMap fun op =>
-      match op with
-      | .text x y str style clip => Raster.lowerTextOp outline x y str style clip
-      | op => some op }
-
-end LeanPlot.Scene

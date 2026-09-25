@@ -133,14 +133,6 @@ def tests : T Unit := do
   checkNear "custom outliner filled" (darkArea cvtext) (30.0 * 12.0) 1.0e-6
   check "renderText stub is identity" ((renderText { color := .black } "x" 5 5 (Canvas.fill 20 20 .white)).data ==
     (Canvas.fill 20 20 .white).data)
-  -- lowering text to paths draws the same pixels as the outliner hook
-  let mixedOps : Array DrawOp := #[.path (Path.rect ⟨0, 0, 5, 5⟩) (some {}) none none, txt, .text 1 1 "" {} none]
-  let scMixed : Scene := { width := 50, height := 50, ops := mixedOps }
-  let low := scMixed.lowerText boxOutliner
-  check "lowerText replaces text by paths" (low.ops.size == 2 &&
-    low.ops.all (fun | .path .. => true | _ => false))
-  check "lowerText renders like the hook" (low.toCanvas.data == (scMixed.toCanvas boxOutliner).data)
-  check "lowerText with the stub drops text" ((scMixed.lowerText TextOutliner.none).ops.size == 1)
   -- scene: background and painter's order
   let ops2 : Array DrawOp := #[.path (Path.rect ⟨0, 0, 10, 10⟩) (some { color := ⟨1, 0, 0, 1⟩ }) none none,
     .path (Path.rect ⟨5, 5, 10, 10⟩) (some { color := ⟨0, 0, 1, 1⟩ }) none none]
