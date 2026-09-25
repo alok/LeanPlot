@@ -151,6 +151,12 @@ def tests : T Unit := do
     | .ok img => img.colorType == .rgba8 && img.pixels == tr.data | _ => false)
   check "empty scene" ((({ width := 3, height := 2 } : Scene).toCanvas).data.size == 24)
   check "zero-size scene" ((({ width := 0, height := 5 } : Scene).toCanvas).data.size == 0)
+  let allOps : Array DrawOp := #[.path (Path.rect ⟨0, 0, 5, 5⟩) (some {}) (some {}) none,
+    .segments xs ys cols 3 .round none, .triangles gx gy gc (packIdx [0, 1, 2]) none,
+    .image 2 2 img ⟨0, 0, 5, 5⟩ .linear none, txt]
+  check "zero-width scene with ops" ((({ width := 0, height := 5, ops := allOps } : Scene).toCanvas).data.size == 0)
+  check "zero-height scene with ops" ((({ width := 7, height := 0, ops := allOps } : Scene).toCanvas).data.size == 0)
+  check "1×1 scene with ops" ((({ width := 1, height := 1, ops := allOps } : Scene).toCanvas).data.size == 4)
 
 /-- Run the ops suite. -/
 def run : IO (Nat × Nat) := runSuite "ops" tests
