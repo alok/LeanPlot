@@ -387,10 +387,14 @@ def contourColormap (d : Data) (levels : Levels.LevelSpec) (cm : Colormap) (alph
   let lv : FloatArray := match levels with
     | .count n => Levels.contourLevels n vmin vmax true
     | .values v => v
+  -- Makie's `minimum(levels[2:end] .- levels[1:end-1])`: for automatic levels (a binary32
+  -- range) the broadcast difference of two ranges is a constant range, its value the first
+  -- difference; explicit levels take the elementwise minimum
   let iso := isorange.getD <|
     if lv.size > 1 then
-      let gap := (List.range (lv.size - 1)).foldl (init := inf) fun m i => min m (F32.r32 (lv.get! (i + 1) - lv.get! i))
-      0.1 * gap
+      match levels with
+      | .count _ => 0.1 * F32.r32 (lv.get! 1 - lv.get! 0)
+      | .values _ => 0.1 * (List.range (lv.size - 1)).foldl (init := inf) fun m i => min m (lv.get! (i + 1) - lv.get! i)
     else 0.1 * F32.r32 (vmax - vmin)
   let (tlo, thi) := colorrange.getD (vmin, vmax)
   let plo := tlo - 2 * iso
