@@ -210,17 +210,24 @@ where
         ((rgba.get! (4*k+2)).toUInt32 <<< 8) ||| (rgba.get! (4*k+3)).toUInt32
     else 0x000000FF
 
+/-- Bounding-box loop over index slots `[k, stop)` (three per triangle):
+slots naming a missing vertex or a non-finite point are skipped. -/
+def trianglesBBoxLoop (xs ys : FloatArray) (idx : ByteArray) (nv k stop : Nat) (x0 y0 x1 y1 : Float) :
+    Float × Float × Float × Float :=
+  if k < stop then
+    let i := u32At idx k
+    if i < nv then
+      let x := xs.get! i; let y := ys.get! i
+      if x.isFinite && y.isFinite then
+        trianglesBBoxLoop xs ys idx nv (k + 1) stop (min x0 x) (min y0 y) (max x1 x) (max y1 y)
+      else trianglesBBoxLoop xs ys idx nv (k + 1) stop x0 y0 x1 y1
+    else trianglesBBoxLoop xs ys idx nv (k + 1) stop x0 y0 x1 y1
+  else (x0, y0, x1, y1)
+termination_by stop - k
+
 /-- Bounding box (min x, min y, max x, max y) of the valid triangles. -/
-def trianglesBBox (xs ys : FloatArray) (idx : ByteArray) (nv nt : Nat) : Float × Float × Float × Float := Id.run do
-  let mut x0 := K.huge; let mut y0 := K.huge; let mut x1 := -K.huge; let mut y1 := -K.huge
-  for t in [0:nt] do
-    for j in [0:3] do
-      let i := u32At idx (3*t + j)
-      if i < nv then
-        let x := xs.get! i; let y := ys.get! i
-        if x.isFinite && y.isFinite then
-          x0 := min x0 x; y0 := min y0 y; x1 := max x1 x; y1 := max y1 y
-  return (x0, y0, x1, y1)
+def trianglesBBox (xs ys : FloatArray) (idx : ByteArray) (nv nt : Nat) : Float × Float × Float × Float :=
+  trianglesBBoxLoop xs ys idx nv 0 (3 * nt) K.huge K.huge (-K.huge) (-K.huge)
 
 /-- Render a `triangles` op. -/
 def renderTriangles {w h : Nat} (acc : Accum w h) (cv : Canvas w h) (cl : Clip) (xs ys : FloatArray)
