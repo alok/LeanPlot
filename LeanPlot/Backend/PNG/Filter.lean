@@ -104,6 +104,40 @@ def filterRows (raw : ByteArray) (rowLen bpp h : Nat) (strategy : Strategy := .a
   termination_by h - y
   go 0 (ByteArray.emptyWithCapacity (h * (rowLen + 1)))
 
+/-! ### Layout -/
+
+/-- `writeRow.go` appends one byte per remaining column. -/
+theorem size_writeRow_go (raw : ByteArray) (base prevBase rowLen bpp : Nat) (first : Bool) (k : Kind)
+    (j : Nat) (out : ByteArray) :
+    (writeRow.go raw base prevBase rowLen bpp first k j out).size = out.size + (rowLen - j) := by
+  fun_induction writeRow.go raw base prevBase rowLen bpp first k j out
+  · rename_i ih; rw [ih]; simp only [ByteArray.size_push]; omega
+  · omega
+
+/-- A filtered row is its filter-type byte plus `rowLen` bytes. -/
+theorem size_writeRow (out raw : ByteArray) (base prevBase rowLen bpp : Nat) (first : Bool) (k : Kind) :
+    (writeRow out raw base prevBase rowLen bpp first k).size = out.size + (rowLen + 1) := by
+  simp only [writeRow, size_writeRow_go, ByteArray.size_push]; omega
+
+/-- `filterRows.go` appends `rowLen + 1` bytes per remaining row. -/
+theorem size_filterRows_go (raw : ByteArray) (rowLen bpp h : Nat) (strategy : Strategy) (y : Nat) (out : ByteArray) :
+    (filterRows.go raw rowLen bpp h strategy y out).size = out.size + (h - y) * (rowLen + 1) := by
+  fun_induction filterRows.go raw rowLen bpp h strategy y out
+  · rename_i y _ hy _ _ _ _ ih
+    rw [ih, size_writeRow]
+    have : h - y = (h - (y + 1)) + 1 := by omega
+    rw [this, Nat.add_mul]; omega
+  · rename_i hy
+    rw [Nat.sub_eq_zero_of_le (by omega), Nat.zero_mul, Nat.add_zero]
+
+/-- The scanline stream has the size the PNG spec requires, `h * (rowLen + 1)`
+(PNG §7.2), for every filter strategy. -/
+theorem size_filterRows (raw : ByteArray) (rowLen bpp h : Nat) (strategy : Strategy) :
+    (filterRows raw rowLen bpp h strategy).size = h * (rowLen + 1) := by
+  rw [filterRows, size_filterRows_go]
+  show 0 + (h - 0) * (rowLen + 1) = _
+  rw [Nat.zero_add, Nat.sub_zero]
+
 /-- Undo the filters of a scanline stream (`h * (rowLen+1)` bytes). -/
 def unfilterRows (scan : ByteArray) (rowLen bpp h : Nat) : Except String ByteArray :=
   if scan.size < h * (rowLen + 1) then .error "png: scanline data too short" else
