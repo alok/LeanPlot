@@ -194,6 +194,32 @@ def arrows (ax : Axis2) (xs ys us vs : FloatArray) (color : ColorSpec := .black)
     (normalize : Bool := false) (align : Float := 0) : Axis2 :=
   ax.arrows2d (Pts2.ofArrays xs ys) (Pts2.ofArrays us vs) color lengthscale normalize align
 
+/-- `streamplot!` from precomputed data (e.g. the streamplot algorithm of the recipes
+module): NaN-separated streamline points with one value per point (Makie colours by
+`norm(f(p))`), and arrowheads at `arrowPos` pointing along `arrowDir` (`:utriangle`,
+markersize 15, rotated in pixel space like Makie's `register_projected_rotations_2d!`).
+Lines and arrowheads each get their own automatic colour range unless `colorrange` is set,
+as in Makie. -/
+def streamplot (ax : Axis2) (lines : Pts2) (lineValues : FloatArray) (arrowPos arrowDir : Pts2)
+    (arrowValues : FloatArray) (colormap : Colormap := Colormap.viridis) (colorrange : Option (Float × Float) := none)
+    (linewidth : Float := 1.5) (arrowSize : Float := 15) (label : Option String := none) : Axis2 :=
+  let ax := ax.add (.lines (.xy lines) { color := .values lineValues { colormap, colorrange }, width := linewidth }) label
+  ax.add (.scatter (.xy arrowPos) { shape := .utriangle, size := arrowSize
+                                    color := .values arrowValues { colormap, colorrange }
+                                    alongDirections := some (.xy arrowDir, -Num.pi / 2) })
+
+/-- `contour!` from precomputed isolines: NaN-separated points with the level of each point,
+coloured through `colormap` over the level range (Makie's contour `linewidth = 1`). -/
+def contourLines (ax : Axis2) (lines : Pts2) (levels : FloatArray) (colormap : Colormap := Colormap.viridis)
+    (colorrange : Option (Float × Float) := none) (linewidth : Float := 1) (label : Option String := none) : Axis2 :=
+  ax.add (.lines (.xy lines) { color := .values levels { colormap, colorrange }, width := linewidth }) label
+
+/-- `contourf!` from precomputed bands: one polygon per band piece (holes as NaN-separated
+rings, filled even-odd) with its band value, coloured through `colormap`. -/
+def contourfBands (ax : Axis2) (polys : Array Pts2) (values : FloatArray) (colormap : Colormap := Colormap.viridis)
+    (colorrange : Option (Float × Float) := none) (label : Option String := none) : Axis2 :=
+  ax.add (.poly polys { color := .values values { colormap, colorrange } }) label
+
 /-- `hlines!(ax, ys)`: horizontal lines across the whole x range (they only take part in
 the y autolimits). -/
 def hlines (ax : Axis2) (ys : Array Float) (color : Option ColorSpec := none) (linewidth : Float := 1.5)
