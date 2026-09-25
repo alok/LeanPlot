@@ -5,6 +5,7 @@ import LeanPlotTest.Raster.Stroke
 import LeanPlotTest.Raster.Ops
 import LeanPlotTest.Raster.Perf
 import LeanPlotTest.Raster.Cairo
+import LeanPlotTest.Raster.Fuzz
 
 /-!
 Raster backend + PNG codec test aggregator.
@@ -21,7 +22,7 @@ namespace LeanPlotTest.Raster
 /-- Run all raster/PNG suites; returns `(passed, failed)`. -/
 def run : IO (Nat × Nat) := do
   let suites : List (IO (Nat × Nat)) :=
-    [PNGTests.run, FillTests.run, StrokeTests.run, OpsTests.run, CairoTests.run, PerfTests.run]
+    [PNGTests.run, FillTests.run, StrokeTests.run, OpsTests.run, CairoTests.run, FuzzTests.run, PerfTests.run]
   let mut p := 0
   let mut f := 0
   for s in suites do
