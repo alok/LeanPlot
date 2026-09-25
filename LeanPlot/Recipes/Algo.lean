@@ -5,6 +5,7 @@ import LeanPlot.Recipes.Algo.Contour
 import LeanPlot.Recipes.Algo.Isoband
 import LeanPlot.Recipes.Algo.Arrows
 import LeanPlot.Recipes.Algo.Surface
+import LeanPlot.Recipes.Algo.Heatmap
 
 /-!
 # Recipe algorithms
@@ -23,4 +24,6 @@ reproduce Makie/CairoMakie plots. Outputs are `LeanPlot` data types
   `spacing`/`scaledarrows` scaling.
 * `LeanPlot.Recipes.Algo.Surface`: `surface2mesh`, mesh normals, wireframe
   segments and CairoMakie's per-vertex Blinn–Phong shading.
+* `LeanPlot.Recipes.Algo.Heatmap`: heatmap cell edges (centres vs edges, end
+  points) and CairoMakie's regular-grid test.
 -/

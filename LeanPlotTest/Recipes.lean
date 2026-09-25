@@ -5,6 +5,7 @@ import LeanPlotTest.Recipes.ContourTest
 import LeanPlotTest.Recipes.IsobandTest
 import LeanPlotTest.Recipes.ArrowsTest
 import LeanPlotTest.Recipes.SurfaceTest
+import LeanPlotTest.Recipes.HeatmapTest
 
 /-!
 Recipe-algorithm test suites (`LeanPlot.Recipes.Algo`). `LeanPlotTest.Recipes.run`
@@ -23,7 +24,8 @@ def run : IO (Nat × Nat) := do
      ("recipes/contour", ContourTest.suite),
      ("recipes/isoband", IsobandTest.suite),
      ("recipes/arrows", ArrowsTest.suite),
-     ("recipes/surface", SurfaceTest.suite)]
+     ("recipes/surface", SurfaceTest.suite),
+     ("recipes/heatmap", HeatmapTest.suite)]
   let mut p := 0
   let mut f := 0
   for (name, s) in suites do
