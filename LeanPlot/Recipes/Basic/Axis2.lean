@@ -214,6 +214,21 @@ def contourLines (ax : Axis2) (lines : Pts2) (levels : FloatArray) (colormap : C
     (colorrange : Option (Float × Float) := none) (linewidth : Float := 1) (label : Option String := none) : Axis2 :=
   ax.add (.lines (.xy lines) { color := .values levels { colormap, colorrange }, width := linewidth }) label
 
+/-- `contour!` from isolines given one polyline per line with its level (e.g. traced by a
+marching-squares recipe): concatenated with NaN breaks and coloured per line through
+`colormap` over the level range. -/
+def contourSet (ax : Axis2) (lines : Array Pts2) (levels : FloatArray) (colormap : Colormap := Colormap.viridis)
+    (colorrange : Option (Float × Float) := none) (linewidth : Float := 1) (label : Option String := none) : Axis2 :=
+  let (pts, vals) := (Array.range lines.size).foldl (init := (Pts2.empty, FloatArray.empty)) fun (acc, vs) k =>
+    let l := lines[k]!
+    let lv := levels.get! k
+    let acc := if acc.size == 0 then acc else acc.push Num.nan Num.nan
+    let vs := if vs.size == 0 then vs else vs.push lv
+    (Pts2.ofArrays ⟨acc.xs.data ++ l.xs.data⟩ ⟨acc.ys.data ++ l.ys.data⟩,
+     ⟨vs.data ++ Array.replicate l.size lv⟩)
+  let range := colorrange.orElse fun _ => extremaFinite levels
+  ax.contourLines pts vals colormap range linewidth label
+
 /-- `contourf!` from precomputed bands: one polygon per band piece (holes as NaN-separated
 rings, filled even-odd) with its band value, coloured through `colormap`. -/
 def contourfBands (ax : Axis2) (polys : Array Pts2) (values : FloatArray) (colormap : Colormap := Colormap.viridis)
