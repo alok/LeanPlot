@@ -175,6 +175,19 @@ def scatter (pr : Projector) (p : Pos) (s : MarkerSpec) : Array DrawOp :=
     if s.strokeWidth > 0 && s.strokeColor.a > 0 then some { color := s.strokeColor, width := s.strokeWidth } else none
   let flush (ops : Array DrawOp) (path : Path) (c : RGBA) : Array DrawOp :=
     if path.verbs.isEmpty then ops else ops.push (.path path (some { color := c }) stroke pr.clip)
+  -- rotations along projected directions (finite difference of the projection)
+  let angles : Option FloatArray := s.alongDirections.map fun (dirs, off) =>
+    let delta := match p.bounds? with
+      | some r => 1.0e-3 * r.widths.norm
+      | none => 1.0e-3
+    let delta := if delta > 0 then delta else 1.0e-3
+    (Array.range n).foldl (init := FloatArray.emptyWithCapacity n) fun acc i =>
+      let q := p.get3 i
+      let d := (dirs.get3 i).normalize
+      let a := pr.project q
+      let b := pr.project (q.add (Vec3.smul delta d))
+      -- device y points down: the on-screen angle uses −dy
+      acc.push (Float.atan2 (a.y - b.y) (b.x - a.x) + off)
   let rec go (i : Nat) (ops : Array DrawOp) (path : Path) (cur : RGBA) : Array DrawOp :=
     if i < n then
       let x := xs[i]!
@@ -184,27 +197,34 @@ def scatter (pr : Projector) (p : Pos) (s : MarkerSpec) : Array DrawOp :=
       let c := RGBA.ofRGBA8At rgba i
       if c.a == 0 && stroke.isNone then go (i + 1) ops path cur else
       -- opaque markers of the same colour can share one path; translucent ones are separate
+      let θ := match angles with
+        | some a => a.get! i
+        | none => s.rotationAt i
       if c == cur && c.a == 1 && !path.verbs.isEmpty then
-        go (i + 1) ops (s.shape.appendPath sz x y path) cur
+        go (i + 1) ops (s.shape.appendPathRotated sz θ x y path) cur
       else
         let ops := flush ops path cur
-        go (i + 1) ops (s.shape.toPath sz x y) c
+        go (i + 1) ops (s.shape.appendPathRotated sz θ x y {}) c
     else flush ops path cur
   termination_by n - i
   go 0 #[] {} RGBA.transparent
 
-/-- Closed polygon path through projected points (NaN points skipped). -/
+/-- Closed polygon path through projected points; a NaN point closes the current ring and
+starts the next (rings after the first are holes, filled with the even-odd rule). -/
 def ringPath (xs ys : FloatArray) (p : Path := {}) : Path :=
   let n := min xs.size ys.size
   let rec go (i : Nat) (p : Path) (started : Bool) : Path :=
     if i < n then
       let x := xs[i]!
       let y := ys[i]!
-      if x.isNaN || y.isNaN then go (i + 1) p started
+      if x.isNaN || y.isNaN then go (i + 1) (if started then p.close else p) false
       else go (i + 1) (if started then p.lineTo x y else p.moveTo x y) true
     else if started then p.close else p
   termination_by n - i
   go 0 p false
+
+/-- `true` when the positions contain a NaN point (a ring separator). -/
+def hasBreak (xs : FloatArray) : Bool := countNaN xs > 0
 
 /-- `band`: one polygon per NaN-free run of `(lower[k], upper[k])` pairs. -/
 def band (pr : Projector) (lo hi : Pos) (fill : ColorSpec) : Array DrawOp :=
@@ -274,11 +294,13 @@ def poly (pr : Projector) (rings : Array Pts2) (s : PolySpec) : Array DrawOp :=
              dash := s.strokeStyle.dashArray s.strokeWidth }
     else none
   (Array.range n).filterMap fun k =>
-    let (xs, ys, _) := projectPos pr (.xy rings[k]!)
+    let ring := rings[k]!
+    let (xs, ys, _) := projectPos pr (.xy ring)
     let path := ringPath xs ys
     if path.verbs.isEmpty then none else
     let c := RGBA.ofRGBA8At rgba k
-    some (.path path (if c.a > 0 then some { color := c } else none) stroke pr.clip)
+    let rule : FillRule := if hasBreak ring.xs || hasBreak ring.ys then .evenOdd else .nonzero
+    some (.path path (if c.a > 0 then some { color := c, rule } else none) stroke pr.clip)
 
 /-- `text`: one op per string, at the projected point plus the pixel offset (y up). -/
 def text (pr : Projector) (p : Pos) (strs : Array String) (s : TextSpec) : Array DrawOp :=

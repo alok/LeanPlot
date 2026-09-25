@@ -1,12 +1,14 @@
 import LeanPlot.Scene.DrawOp
 import LeanPlot.Core.Color
 import LeanPlot.Core.Colormap
+import LeanPlot.Core.Data
 
 /-!
 # Plot styles
 
 The data-space styling vocabulary of marks (`LeanPlot.Mark`), with Makie's defaults:
 
+* `Pos`: 2D (`Pts2`) or 3D (`Pts3`) positions;
 * `LineStyle`: Makie's `:solid/:dash/:dot/:dashdot/:dashdotdot` patterns (in units of the
   line width, `line_diff_pattern` with `:normal` gaps) or a custom on/off pattern;
 * `MarkerShape`: the default marker map (`Makie.DEFAULT_MARKER_MAP`), unit-size outlines
@@ -20,6 +22,70 @@ The data-space styling vocabulary of marks (`LeanPlot.Mark`), with Makie's defau
 namespace LeanPlot
 
 open LeanPlot.Num
+
+/-! ## Positions -/
+
+/-- 2D or 3D positions. -/
+inductive Pos where
+  | xy (p : Pts2)
+  | xyz (p : Pts3)
+  deriving Inhabited
+
+namespace Pos
+
+/-- Number of points. -/
+def size : Pos → Nat
+  | xy p => p.size
+  | xyz p => p.size
+
+/-- x coordinates. -/
+def xs : Pos → FloatArray
+  | xy p => p.xs
+  | xyz p => p.xs
+
+/-- y coordinates. -/
+def ys : Pos → FloatArray
+  | xy p => p.ys
+  | xyz p => p.ys
+
+/-- z coordinates (`none` for 2D positions). -/
+def zs? : Pos → Option FloatArray
+  | xy _ => none
+  | xyz p => some p.zs
+
+/-- `true` for 3D positions. -/
+def is3D : Pos → Bool
+  | xy _ => false
+  | xyz _ => true
+
+/-- Point `i` (z = 0 for 2D positions, NaN out of range). -/
+def get3 (p : Pos) (i : Nat) : Vec3 :=
+  match p with
+  | xy q => let v := q.get! i; ⟨v.x, v.y, 0⟩
+  | xyz q => q.get! i
+
+/-- The xy projection. -/
+def toPts2 : Pos → Pts2
+  | xy p => p
+  | xyz p => p.xy
+
+/-- 3D positions (z = 0 for 2D input). -/
+def toPts3 : Pos → Pts3
+  | xy p => Pts3.ofArrays p.xs p.ys ⟨Array.replicate p.size 0⟩
+  | xyz p => p
+
+/-- Finite bounding box (`Rect3`, z extent zero for 2D positions). -/
+def bounds? : Pos → Option Rect3
+  | xy p => p.bounds?.map fun r => ⟨⟨r.x, r.y, 0⟩, ⟨r.w, r.h, 0⟩⟩
+  | xyz p => p.bounds?
+
+/-- The empty 2D position set. -/
+def empty : Pos := .xy Pts2.empty
+
+end Pos
+
+instance : Coe Pts2 Pos := ⟨Pos.xy⟩
+instance : Coe Pts3 Pos := ⟨Pos.xyz⟩
 
 /-! ## Line styles -/
 
@@ -193,6 +259,26 @@ def appendPath (m : MarkerShape) (s cx cy : Float) (p : Path) : Path :=
     termination_by n - i
     go 0 p
 
+/-- Append the marker outline rotated by `θ` radians (counter-clockwise on screen, Makie's
+`rotation`). The circle is rotation invariant. -/
+def appendPathRotated (m : MarkerShape) (s θ cx cy : Float) (p : Path) : Path :=
+  if θ == 0 || m == circle then m.appendPath s cx cy p else
+  let c := Float.cos θ
+  let sn := Float.sin θ
+  let v := m.unitPolygon
+  let n := v.size / 2
+  let rec go (i : Nat) (p : Path) : Path :=
+    if i < n then
+      let u := v[2 * i]!
+      let w := v[2 * i + 1]!
+      -- rotate in the y-up marker frame, then flip into device space
+      let x := cx + s * (u * c - w * sn)
+      let y := cy - s * (u * sn + w * c)
+      go (i + 1) (if i == 0 then p.moveTo x y else p.lineTo x y)
+    else p.close
+  termination_by n - i
+  go 0 p
+
 /-- The marker outline as a path (see `appendPath`). -/
 @[inline] def toPath (m : MarkerShape) (s cx cy : Float) : Path := m.appendPath s cx cy {}
 
@@ -334,6 +420,12 @@ structure MarkerSpec where
   color : ColorSpec := .black
   strokeColor : RGBA := RGBA.black
   strokeWidth : Float := 0
+  /-- Per-marker rotation in radians (counter-clockwise on screen), `none` for upright. -/
+  rotations : Option FloatArray := none
+  /-- Rotate each marker to point along the *projected* direction `dirs[i]` plus `offset`
+  radians (Makie's `register_projected_rotations_2d!`; streamplot arrowheads use
+  `:utriangle` with `offset = -π/2`). Overrides `rotations`. -/
+  alongDirections : Option (Pos × Float) := none
   deriving Inhabited
 
 namespace MarkerSpec
@@ -342,6 +434,11 @@ namespace MarkerSpec
   match m.sizes with
   | some s => s.get! i
   | none => m.size
+/-- Rotation of marker `i`. -/
+@[inline] def rotationAt (m : MarkerSpec) (i : Nat) : Float :=
+  match m.rotations with
+  | some r => r.get! i
+  | none => 0
 end MarkerSpec
 
 /-- Polygon style: fill colour (per polygon for `perElement`/`values`) and outline. -/
