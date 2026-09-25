@@ -37,6 +37,7 @@ namespace K
 /-- `2` -/ def two : Float := 2.0
 /-- `3` -/ def three : Float := 3.0
 /-- `4` -/ def four : Float := 4.0
+/-- `6` -/ def six : Float := 6.0
 /-- `0.1` -/ def tenth : Float := 0.1
 /-- `255` -/ def c255 : Float := 255.0
 /-- `1024` -/ def c1024 : Float := 1024.0

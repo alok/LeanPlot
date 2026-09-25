@@ -68,26 +68,42 @@ direction `(ux, uy)` (the canonical orientation used by every piece). -/
   let n := (sweep.abs / step).ceil
   if n.isNaN || n < K.one then 1 else min 1024 n.toUInt64.toNat
 
-/-- Arc points `i = 1‥n` of the arc centred at `(px, py)`, radius `r`, from
-angle `a0` sweeping `sw`; the previous point is `(x, y)`. -/
-def arcEdges (b : FloatArray) (w h : Nat) (cl : Clip) (px py r a0 sw : Float) (n i : Nat) (x y : Float)
+/-- Arc points `i = 1‥n` of the arc centred at `(px, py)` from angle `a0`
+sweeping `sw`: interior points at radius `rin`, the last at `r`; the
+previous point is `(x, y)`. -/
+def arcEdges (b : FloatArray) (w h : Nat) (cl : Clip) (px py r rin a0 sw : Float) (n i : Nat) (x y : Float)
     (fuel : Nat) : FloatArray × Float × Float :=
   match fuel with
   | 0 => (b, x, y)
   | fuel + 1 =>
     if i > n then (b, x, y) else
     let t := a0 + sw * (natF i / natF n)
-    let nx := px + r * Float.cos t
-    let ny := py + r * Float.sin t
-    arcEdges (edge b w h cl x y nx ny) w h cl px py r a0 sw n (i + 1) nx ny fuel
+    let rr := if i == n then r else rin
+    let nx := px + rr * Float.cos t
+    let ny := py + rr * Float.sin t
+    arcEdges (edge b w h cl x y nx ny) w h cl px py r rin a0 sw n (i + 1) nx ny fuel
 
-/-- Pie slice centred at `P`: `P → arc(a0, a0 + sw) → P` (orientation follows `sw`). -/
+/-- Radius for the interior vertices of an `n`-step fan of radius `r` and step
+angle `θ` whose end points stay on the circle, chosen so that the fan's area
+equals the sector's. The triangles have area `½ sin θ · (2 r r' + (n−2) r'²)`,
+which must equal `½ r² n θ`. -/
+def fanRadius (r θ : Float) (n : Nat) : Float :=
+  if n ≤ 1 || !(θ > K.eps9) then r else
+  let q := natF n * θ / Float.sin θ
+  if n == 2 then r * q / K.two
+  else
+    let m := natF (n - 2)
+    r * ((K.one + m * q).sqrt - K.one) / m
+
+/-- Pie slice centred at `P`: `P → arc(a0, a0 + sw) → P` (orientation follows
+`sw`). The polygon is area-exact (see `fanRadius`). -/
 def fan (b : FloatArray) (w h : Nat) (cl : Clip) (px py r a0 sw tol : Float) : FloatArray :=
   let n := arcSteps r sw tol
+  let rin := fanRadius r (sw.abs / natF n) n
   let sx := px + r * Float.cos a0
   let sy := py + r * Float.sin a0
   let b := edge b w h cl px py sx sy
-  let (b, ex, ey) := arcEdges b w h cl px py r a0 sw n 1 sx sy (n + 1)
+  let (b, ex, ey) := arcEdges b w h cl px py r rin a0 sw n 1 sx sy (n + 1)
   edge b w h cl ex ey px py
 
 /-- Cap at an end point `P` of a stroke leaving in direction `(ux, uy)`. -/
@@ -215,20 +231,31 @@ structure DashSt where
   on : Bool
   /-- is a dash currently open in the output? -/
   inDash : Bool
+  /-- a dash has begun at `(sx, sy)` but has no point yet: it is only written
+  out when its first point arrives, so a dash that would begin exactly at the
+  end of a subpath never appears -/
+  pend : Bool := false
+  sx : Float := 0.0
+  sy : Float := 0.0
 
 namespace DashSt
 
+/-- Begin a dash at `(x, y)` (deferred until its first point). -/
 @[inline] def startDash (s : DashSt) (x y : Float) : DashSt :=
-  { s with starts := s.starts.push s.xs.size, xs := s.xs.push x, ys := s.ys.push y, inDash := true }
+  { s with pend := true, sx := x, sy := y, inDash := true }
 
+/-- Append a point to the open dash, materialising a pending start. -/
 @[inline] def addPoint (s : DashSt) (x y : Float) : DashSt :=
-  { s with xs := s.xs.push x, ys := s.ys.push y }
+  if s.pend then
+    { s with starts := s.starts.push s.xs.size, xs := (s.xs.push s.sx).push x, ys := (s.ys.push s.sy).push y,
+             pend := false }
+  else { s with xs := s.xs.push x, ys := s.ys.push y }
 
 /-- Advance to the next pattern element at point `(x, y)`. -/
 @[inline] def toggle (s : DashSt) (pat : Array Float) (x y : Float) : DashSt :=
   let idx := (s.idx + 1) % pat.size
   let on := !s.on
-  let s := { s with idx, rem := pat[idx]!, on, inDash := false }
+  let s := { s with idx, rem := pat[idx]!, on, inDash := false, pend := false }
   if on then s.startDash x y else s
 
 /-- Walk the segment `(px, py) → (qx, qy)` of length `len` starting at arc
@@ -279,7 +306,7 @@ def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zer
         off := off - rem; idx := (idx + 1) % pat.size; rem := pat[idx]!; on := !on
       else
         rem := rem - off; off := K.zero
-    s := { s with idx, rem, on, inDash := false }
+    s := { s with idx, rem, on, inDash := false, pend := false }
     let x0 := pl.xs[a]!; let y0 := pl.ys[a]!
     if on then s := s.startDash x0 y0
     let closed := pl.closed[k]!
@@ -295,7 +322,7 @@ def dashPolylines (pl : Polylines) (dash : Array Float) (offset : Float := K.zer
         -- bound the steps: every step either finishes the segment or an element
         let fuel := ((len / total).ceil.toUInt64.toNat + 2) * pat.size + 4
         s := s.seg pat px py qx qy len K.zero (min fuel 10000000)
-    s := { s with inDash := false }
+    s := { s with inDash := false, pend := false }
   return { xs := s.xs, ys := s.ys, starts := s.starts, closed := Array.replicate s.starts.size false }
 
 end LeanPlot.Raster

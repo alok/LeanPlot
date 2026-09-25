@@ -10,8 +10,17 @@ second-difference bound on the chord error:
 * quadratic: `err ≤ |P₀ − 2P₁ + P₂| / (4n²)`,
 * cubic: `err ≤ 3·max(|P₀ − 2P₁ + P₂|, |P₁ − 2P₂ + P₃|) / (4n²)`,
 
-so `n = ⌈√(bound / tol)⌉` meets the tolerance (default 0.25 px). The piece
-count therefore adapts to curvature and size. Points are evaluated directly
+so `n = ⌈√(bound / tol)⌉` meets the tolerance. The piece count therefore
+adapts to curvature and size. The default tolerance is 0.1 px, Cairo's
+default.
+
+Area compensation: chords through points *on* a curve always lie on its
+concave side, so a filled curve loses about ⅔·s·L of area per chord (sagitta
+`s`, length `L`). At 0.25 px a radius-2.5 marker comes out 10 % small. Each
+interior point is therefore moved to the convex side by `B''(t)·h²/12`
+(two thirds of the local sagitta). The polygon then crosses the curve, the
+signed area error cancels to second order, and the worst deviation drops from
+`s` to `⅔s`. Curve end points stay exact. Points are evaluated directly
 at `t = i/n`, so there is no forward-difference drift.
 
 Consecutive duplicate points are dropped. A non-finite coordinate (NaN or
@@ -47,7 +56,7 @@ def numPoints (p : Polylines) : Nat := p.xs.size
 end Polylines
 
 /-- Default flattening tolerance in pixels. -/
-def flattenTol : Float := K.quarter
+def flattenTol : Float := 0.1
 
 /-- Maximum number of pieces per curve. -/
 def maxCurvePieces : Nat := 1000
@@ -93,8 +102,10 @@ if needed), dropping exact duplicates; non-finite points break the path. -/
 def quadTo (s : FlatSt) (x1 y1 x y tol : Float) : FlatSt :=
   let x0 := s.cx; let y0 := s.cy
   let dx := x0 - K.two * x1 + x; let dy := y0 - K.two * y1 + y
-  let n := curvePieces ((dx * dx + dy * dy).sqrt / K.four) tol
+  let n := max 2 (curvePieces ((dx * dx + dy * dy).sqrt / K.four) tol)
   let nf := natF n
+  -- B'' = 2d, so B''·h²/12 = d / (6n²)
+  let comp := K.one / (K.six * nf * nf)
   let rec go (i : Nat) (s : FlatSt) (fuel : Nat) : FlatSt :=
     match fuel with
     | 0 => s
@@ -102,10 +113,9 @@ def quadTo (s : FlatSt) (x1 y1 x y tol : Float) : FlatSt :=
       if i > n then s else
       let t := natF i / nf
       let u := K.one - t
-      let px := u * u * x0 + K.two * u * t * x1 + t * t * x
-      let py := u * u * y0 + K.two * u * t * y1 + t * t * y
-      -- land exactly on the end point
-      let (px, py) := if i == n then (x, y) else (px, py)
+      -- interior points move outward by B''·h²/12 (area compensation); the end point is exact
+      let px := if i == n then x else u * u * x0 + K.two * u * t * x1 + t * t * x - comp * dx
+      let py := if i == n then y else u * u * y0 + K.two * u * t * y1 + t * t * y - comp * dy
       go (i + 1) (s.lineTo px py) fuel
   go 1 s (n + 1)
 
@@ -115,8 +125,10 @@ def cubicTo (s : FlatSt) (x1 y1 x2 y2 x y tol : Float) : FlatSt :=
   let ax := x0 - K.two * x1 + x2; let ay := y0 - K.two * y1 + y2
   let bx := x1 - K.two * x2 + x; let by_ := y1 - K.two * y2 + y
   let m := max (ax * ax + ay * ay).sqrt (bx * bx + by_ * by_).sqrt
-  let n := curvePieces (K.c0_75 * m) tol
+  -- at least 4 pieces: tiny curves (markers, glyphs) are otherwise visibly polygonal
+  let n := max 4 (curvePieces (K.c0_75 * m) tol)
   let nf := natF n
+  let comp := K.half / (nf * nf)
   let rec go (i : Nat) (s : FlatSt) (fuel : Nat) : FlatSt :=
     match fuel with
     | 0 => s
@@ -125,9 +137,9 @@ def cubicTo (s : FlatSt) (x1 y1 x2 y2 x y tol : Float) : FlatSt :=
       let t := natF i / nf
       let u := K.one - t
       let c0 := u * u * u; let c1 := K.three * u * u * t; let c2 := K.three * u * t * t; let c3 := t * t * t
-      let px := c0 * x0 + c1 * x1 + c2 * x2 + c3 * x
-      let py := c0 * y0 + c1 * y1 + c2 * y2 + c3 * y
-      let (px, py) := if i == n then (x, y) else (px, py)
+      -- B''(t)·h²/12 = ((1-t)·a + t·b) / (2n²), moved outward (area compensation)
+      let px := if i == n then x else c0 * x0 + c1 * x1 + c2 * x2 + c3 * x - comp * (u * ax + t * bx)
+      let py := if i == n then y else c0 * y0 + c1 * y1 + c2 * y2 + c3 * y - comp * (u * ay + t * by_)
       go (i + 1) (s.lineTo px py) fuel
   go 1 s (n + 1)
 
