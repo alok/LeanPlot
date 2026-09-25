@@ -34,7 +34,8 @@ stride = w * bpp
 out = bytearray(); prev = bytearray(stride)
 for y in range(h):
     f = scan[y*(stride+1)]; row = bytearray(scan[y*(stride+1)+1:(y+1)*(stride+1)])
-    for i in range(stride):
+    assert f <= 4, 'filter type'
+    for i in (range(stride) if f else ()):
         a = row[i-bpp] if i >= bpp else 0; b = prev[i]; c = prev[i-bpp] if i >= bpp else 0
         if f == 1: row[i] = (row[i] + a) & 255
         elif f == 2: row[i] = (row[i] + b) & 255
@@ -151,6 +152,16 @@ def tests : T Unit := do
     match PNG.decode (PNG.encode w h .gray8 g) with
     | .ok img => check s!"png gray {w}x{h}" (img.pixels == g)
     | .error e => check s!"png gray {w}x{h}" false e
+  -- a large odd size: several 1 MiB IDAT chunks (random pixels barely compress)
+  let bigPx := randBytes (4 * 997 * 613) 997
+  let bigPng := PNG.encodeRGBA 997 613 bigPx
+  check "png 997x613 spans several IDATs" (bigPng.size > 2 * PNG.idatChunk) s!"{bigPng.size} B"
+  check "png rgba 997x613" (match PNG.decode bigPng with
+    | .ok img => img.width == 997 && img.height == 613 && img.pixels == bigPx | _ => false)
+  -- zero width or height: PNG forbids it (IHDR), but the stream stays well formed
+  for (w, h) in [(0, 5), (5, 0), (0, 0)] do
+    check s!"png {w}x{h} decodes empty" (match PNG.decode (PNG.encodeRGBA w h .empty) with
+      | .ok img => img.width == w && img.height == h && img.pixels.size == 0 | _ => false)
   -- zero-height image still yields a valid zlib stream
   let z0 := PNG.Deflate.zlibCompress .empty
   check "empty zlib stream valid" (match PNG.Inflate.zlibDecompress z0 with | .ok o => o.size == 0 | _ => false)
@@ -173,7 +184,10 @@ def tests : T Unit := do
   let cases : List (String × ByteArray × ByteArray) :=
     [("plot rgb", small.toPNG, PNG.rgbaToRGB small.data),
      ("random rgba", PNG.encodeRGBA 45 31 (randBytes (4*45*31) 5), randBytes (4*45*31) 5),
-     ("stored rgba", PNG.encodeRGBA 45 31 (randBytes (4*45*31) 6) { stored := true }, randBytes (4*45*31) 6)]
+     ("stored rgba", PNG.encodeRGBA 45 31 (randBytes (4*45*31) 6) { stored := true }, randBytes (4*45*31) 6),
+     -- unfiltered, so the stdlib checker stays fast on 2.4 MB of pixels
+     ("997x613 multi-IDAT", PNG.encodeRGBA 997 613 bigPx { filter := .fixed .none }, bigPx),
+     ("0x5", PNG.encodeRGBA 0 5 .empty, .empty), ("5x0", PNG.encodeRGBA 5 0 .empty, .empty)]
   for (name, png, raw) in cases do
     match ← pythonRoundTrip png raw with
     | none => IO.println s!"  (skipped python round trip {name}: no python3)"

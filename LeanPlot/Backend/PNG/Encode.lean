@@ -70,7 +70,11 @@ def ihdr (w h : Nat) (ct : ColorType) : ByteArray :=
 /-- Maximum IDAT chunk payload we emit. -/
 def idatChunk : Nat := 1 <<< 20
 
-/-- Encode raw row-major pixels (`w * h * bpp` bytes, top row first) as PNG. -/
+/-- Encode raw row-major pixels (`w * h * bpp` bytes, top row first) as PNG.
+
+The PNG spec forbids a zero width or height in IHDR, so for `w = 0` or
+`h = 0` the result is well formed (valid chunks, CRCs and zlib stream) but
+strict decoders such as libpng reject it; `decode` here accepts it. -/
 def encode (w h : Nat) (ct : ColorType) (pixels : ByteArray) (opts : Options := {}) : ByteArray :=
   let rowLen := w * ct.bpp
   let scan := Filter.filterRows pixels rowLen ct.bpp h (if opts.stored then .fixed .none else opts.filter)
