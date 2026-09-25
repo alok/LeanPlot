@@ -4,8 +4,9 @@ import LeanPlot.Recipes.Algo.Arrows
 /-!
 Oracle tests for `LeanPlot.Recipes.Algo.Arrows` against `arrows.json`:
 `_process_arrow_arguments` (bit-exact), `arrows2d` metrics (bit-exact) and
-pixel-space component polygons (within 1e-4 px: Julia's binary32 `atan`/`sin`/`cos`
-may differ from libm by an ulp), `arrows3d` placements, the GeometryBasics
+pixel-space component polygons and their triangulation (bit-exact on the
+reference machine; checked within 1e-4 px because the binary32 `atan`/`sin`/`cos`
+come from the platform libm), `arrows3d` placements, the GeometryBasics
 Cylinder/Cone markers, and Cartan `spacing`.
 -/
 
@@ -83,6 +84,10 @@ def suite : TestM Unit := do
       let d := LeanPlot.Num.jmax (maxAbsDiff p.xs w.xs) (maxAbsDiff p.ys w.ys)
       worst := LeanPlot.Num.jmax worst d
     check s!"arrows2d {name} polygons" (worst ≤ 1e-4) (fun _ => s!"max diff {worst}")
+    let facesOk := (List.range (min shapes.count meshes.size)).all fun k =>
+      let want := ((c.get "faces").arrD[k]!).arrD.foldl (fun acc f => acc ++ f.arrD.map (·.nat)) #[]
+      Arrows.componentTriangles shapes.component[k]! == want
+    check s!"arrows2d {name} triangles" facesOk
   -- arrows3d
   for c in (j.get "arrows3d").arrD do
     let name := (c.get "name").string

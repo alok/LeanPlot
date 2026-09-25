@@ -52,7 +52,8 @@ for (name, kw) in (("default", (;)), ("tail", (; taillength = 6, tailwidth = 10)
     push!(a2, Dict("name" => name, "kw" => Dict(string(k) => (v isa Symbol ? string(v) : Float64(v)) for (k, v) in pairs(kw)),
         "start" => cols(a.pixel_startpoints[]), "dir" => cols(a.pixel_directions[]),
         "metrics" => [jfv(collect(m)) for m in a.arrow_metrics[]],
-        "meshes" => [cols(GB.coordinates(m)) for m in meshes]))
+        "meshes" => [cols(GB.coordinates(m)) for m in meshes],
+        "faces" => [[[Int(GB.value(i)) - 1 for i in f] for f in GB.faces(m)] for m in meshes]))
 end
 out["arrows2d"] = a2
 

@@ -206,6 +206,20 @@ structure Shapes2D where
 /-- Number of polygons. -/
 def Shapes2D.count (s : Shapes2D) : Nat := s.component.size
 
+/-- Makie's triangulation (`poly_convert` faces, 0-based) of a component
+polygon: the shaft rectangle `(0,1,2), (0,2,3)`, the tip `(1,2,0)`, and the
+earcut triangulation of the default tail heptagon. -/
+def componentTriangles (comp : Nat) : Array Nat :=
+  if comp == 0 then #[5, 6, 0, 0, 1, 2, 2, 3, 4, 4, 5, 0, 0, 2, 4]
+  else if comp == 1 then #[0, 1, 2, 0, 2, 3]
+  else #[1, 2, 0]
+
+/-- All arrow triangles as global vertex indices into `xs`/`ys` (three per
+triangle), in drawing order. -/
+def Shapes2D.triangles (s : Shapes2D) : Array Nat :=
+  (Array.range s.count).foldl (init := #[]) fun acc k =>
+    (componentTriangles s.component[k]!).foldl (init := acc) fun acc v => acc.push (s.offsets[k]! + v)
+
 /-- Vertices of polygon `k`. -/
 def Shapes2D.polygon (s : Shapes2D) (k : Nat) : Pts2 :=
   let a := s.offsets[k]!
