@@ -59,6 +59,14 @@ def bigStar (n : Nat) : Path := Id.run do
     p := if i == 0 then p.moveTo x y else p.lineTo x y
   return p.close
 
+/-- A filled band under a noisy 10⁵-point curve (a realistic large fill). -/
+def band (n : Nat) : Path := Id.run do
+  let mut p : Path := ({} : Path).moveTo 0 900
+  for i in [0:n] do
+    let x := 1000.0 * i.toFloat / n.toFloat
+    p := p.lineTo x (500.0 + 300.0 * Float.sin (x / 40.0) + 20.0 * Float.sin (x * 7.3))
+  return (p.lineTo 1000 900).close
+
 /-- A typical 800×600 plot: frame, 11+11 grid lines, 5 series × 1000 points,
 200 circle markers with outlines, a 500-segment colour-mapped line, a 64×48
 heatmap, and a legend box. -/
@@ -113,11 +121,13 @@ def tests : T Unit := do
   let sweep := sineSweep 100000
   let walk := randomWalk 100000
   let star := bigStar 100000
+  let bnd := band 100000
   let st : Stroke := { color := ⟨0.1, 0.2, 0.6, 1⟩, width := 1.5 }
   let (tSweep, _) ← bench 3 fun _ => paint 1000 1000 #[.path sweep none (some st) none]
   let (tSweepRound, _) ← bench 3 fun _ => paint 1000 1000 #[.path sweep none (some { st with join := .round, cap := .round }) none]
   let (tWalk, _) ← bench 3 fun _ => paint 1000 1000 #[.path walk none (some st) none]
   let (tStar, _) ← bench 3 fun _ => paint 1000 1000 #[.path star (some { color := .black }) none none]
+  let (tBand, _) ← bench 3 fun _ => paint 1000 1000 #[.path bnd (some { color := ⟨0.2, 0.4, 0.8, 0.5⟩ }) none none]
   let (tEmpty, _) ← bench 3 fun _ => paint 1000 1000 #[.path (Path.rect ⟨0, 0, 1, 1⟩) (some { color := .black }) none none]
   let plot := typicalPlot
   let (tPlot, plotCv) ← bench 5 fun _ => plot.toCanvas
@@ -126,13 +136,15 @@ def tests : T Unit := do
   IO.println s!"  perf: 1000×1000, 10⁵-segment sine stroke (miter)     {tSweep} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-segment sine stroke (round)     {tSweepRound} ms"
   IO.println s!"  perf: 1000×1000, 10⁵-segment random-walk stroke      {tWalk} ms"
-  IO.println s!"  perf: 1000×1000, 10⁵-vertex polygon fill              {tStar} ms"
+  IO.println s!"  perf: 1000×1000, 10⁵-vertex star polygon fill         {tStar} ms"
+  IO.println s!"  perf: 1000×1000, 10⁵-vertex band fill (area plot)     {tBand} ms"
   IO.println s!"  perf: 1000×1000, canvas + accumulator setup           {tEmpty} ms"
   IO.println s!"  perf: 800×600 typical plot ({plot.ops.size} ops)          {tPlot} ms"
   IO.println s!"  perf: 800×600 PNG encode default: {tPng} ms, {png.size} B; fast: {tPngFast} ms, {pngFast.size} B"
   check "10⁵-segment stroke < 5× target (200 ms)" (tSweep < 1000.0) s!"{tSweep} ms"
   check "10⁵-segment random walk < 5× target" (tWalk < 1000.0) s!"{tWalk} ms"
-  check "10⁵-vertex fill < 1 s" (tStar < 1000.0) s!"{tStar} ms"
+  check "10⁵-vertex star fill < 1 s" (tStar < 1000.0) s!"{tStar} ms"
+  check "10⁵-vertex band fill < 5× 200 ms" (tBand < 1000.0) s!"{tBand} ms"
   check "typical plot < 5× target (30 ms)" (tPlot < 150.0) s!"{tPlot} ms"
   check "plot PNG < 1 s" (tPng < 1000.0) s!"{tPng} ms"
 
