@@ -395,18 +395,17 @@ def polygon (r : Rect) (xs ys : FloatArray) : FloatArray × FloatArray :=
   let n := min xs.size ys.size
   let pts : Array Vec2 := (Array.range n).map fun i => ⟨xs[i]!, ys[i]!⟩
   -- clip against one half-plane `inside p` with boundary intersection `cut a b`
-  let clipEdge (poly : Array Vec2) (inside : Vec2 → Bool) (cut : Vec2 → Vec2 → Vec2) : Array Vec2 := Id.run do
-    if poly.isEmpty then return poly
-    let mut out : Array Vec2 := #[]
-    let mut prev := poly[poly.size - 1]!
-    for cur in poly do
-      if inside cur then
-        if !inside prev then out := out.push (cut prev cur)
-        out := out.push cur
-      else if inside prev then
-        out := out.push (cut prev cur)
-      prev := cur
-    return out
+  let clipEdge (poly : Array Vec2) (inside : Vec2 → Bool) (cut : Vec2 → Vec2 → Vec2) : Array Vec2 :=
+    let rec go (i : Nat) (prev : Vec2) (out : Array Vec2) : Array Vec2 :=
+      if h : i < poly.size then
+        let cur := poly[i]
+        let out :=
+          if inside cur then (if inside prev then out else out.push (cut prev cur)).push cur
+          else if inside prev then out.push (cut prev cur) else out
+        go (i + 1) cur out
+      else out
+    termination_by poly.size - i
+    if poly.isEmpty then poly else go 0 poly[poly.size - 1]! #[]
   let atX (x : Float) (a b : Vec2) : Vec2 := ⟨x, a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x)⟩
   let atY (y : Float) (a b : Vec2) : Vec2 := ⟨a.x + (b.x - a.x) * (y - a.y) / (b.y - a.y), y⟩
   let x0 := r.x

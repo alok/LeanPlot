@@ -39,6 +39,11 @@ inductive Scale where
   | logit
   deriving Repr, Inhabited, BEq
 
+/-- LogExpFunctions' `logistic` lower cut-off for `Float64`. -/
+def logisticLower : Float := -744.4400719213812
+/-- LogExpFunctions' `logistic` upper cut-off for `Float64`. -/
+def logisticUpper : Float := 36.7368005696771
+
 /-- An interval with open/closed ends. -/
 structure Interval where
   lo : Float
@@ -71,25 +76,25 @@ def logBase : Scale → String
 
 /-- The `Symlog10` shift so that 0 maps to 0. -/
 @[inline] private def symShift (lower upper linscale : Float) : Float :=
-  (-lower / (upper - lower) * 2 - 1) * linscale
+  (-lower / (upper - lower) * fTwo - fOne) * linscale
 
 /-- Forward transform (data → scaled). NaN outside the domain. -/
 def forward : Scale → Float → Float
   | identity, x => x
-  | log10, x => if x < 0 then nan else Float.log10 x
-  | log2, x => if x < 0 then nan else Float.log2 x
-  | ln, x => if x < 0 then nan else Float.log x
-  | sqrt, x => if x < 0 then nan else Float.sqrt x
-  | pseudolog10, x => sign x * Float.log10 (x.abs + 1)
+  | log10, x => if x < fZero then nan else Float.log10 x
+  | log2, x => if x < fZero then nan else Float.log2 x
+  | ln, x => if x < fZero then nan else Float.log x
+  | sqrt, x => if x < fZero then nan else Float.sqrt x
+  | pseudolog10, x => sign x * Float.log10 (x.abs + fOne)
   | symlog10 lower upper linscale, x =>
     let y :=
-      if lower < x && x < upper then ((x - lower) / (upper - lower) * 2 - 1) * linscale
-      else sign x * (linscale + Float.log10 (x.abs / (if x > 0 then upper else lower.abs)))
+      if lower < x && x < upper then ((x - lower) / (upper - lower) * fTwo - fOne) * linscale
+      else sign x * (linscale + Float.log10 (x.abs / (if x > fZero then upper else lower.abs)))
     y - symShift lower upper linscale
   | logit, x =>
     -- LogExpFunctions.logit
-    if x < 0 || x > 1 then nan
-    else if 4 * x < 1 then -(Float.log (1 / x - 1)) else 2 * Float.atanh (2 * x - 1)
+    if x < fZero || x > fOne then nan
+    else if fTwo * fTwo * x < fOne then -(Float.log (fOne / x - fOne)) else fTwo * Float.atanh (fTwo * x - fOne)
 
 /-- Inverse transform (scaled → data). -/
 def inverse : Scale → Float → Float
@@ -97,17 +102,17 @@ def inverse : Scale → Float → Float
   | log10, y => exp10 y
   | log2, y => exp2J y
   | ln, y => expJ y
-  | sqrt, y => if y < 0 then nan else y * y
-  | pseudolog10, y => sign y * (exp10 y.abs - 1)
+  | sqrt, y => if y < fZero then nan else y * y
+  | pseudolog10, y => sign y * (exp10 y.abs - fOne)
   | symlog10 lower upper linscale, y =>
     let y := y + symShift lower upper linscale
-    if y.abs < linscale then (y / linscale + 1) / 2 * (upper - lower) + lower
-    else sign y * exp10 (y.abs - linscale) * (if y > 0 then upper else lower.abs)
+    if y.abs < linscale then (y / linscale + fOne) / fTwo * (upper - lower) + lower
+    else sign y * exp10 (y.abs - linscale) * (if y > fZero then upper else lower.abs)
   | logit, y =>
     -- LogExpFunctions.logistic (Float64 bounds)
-    if y < -744.4400719213812 then 0 else if y > 36.7368005696771 then 1 else
+    if y < logisticLower then fZero else if y > logisticUpper then fOne else
     let e := expJ y
-    e / (1 + e)
+    e / (fOne + e)
 
 /-- Makie `defined_interval(scale)`. -/
 def definedInterval : Scale → Interval

@@ -34,6 +34,33 @@ def pi : Float := Float.ofBits 0x400921FB54442D18
 /-- `floatmin(Float32)` as a `Float`. -/
 def floatMin32 : Float := Float.ofBits 0x3810000000000000
 
+/-! ## Constants for hot code
+
+Lean's code generator can fail to hoist a float literal that sits inside a
+branch (the literal's `Bool` sign argument gets merged with the branch
+condition) and then rebuilds it with `Float.ofScientific` (big-integer
+arithmetic) on every call; `Nat` literals ≥ 2³² are likewise re-parsed from a
+string on every use. Hot code therefore refers to these top-level constants. -/
+
+/-- `0.0` as a global. -/
+def fZero : Float := 0.0
+/-- `1.0` as a global. -/
+def fOne : Float := 1.0
+/-- `-1.0` as a global. -/
+def fMinusOne : Float := -1.0
+/-- `2.0` as a global. -/
+def fTwo : Float := 2.0
+/-- `0.5` as a global. -/
+def fHalf : Float := 0.5
+/-- `10.0` as a global. -/
+def fTen : Float := 10.0
+/-- `255.0` as a global. -/
+def f255 : Float := 255.0
+/-- `2^52` as a global `Nat`. -/
+@[noinline] def twoPow52Nat : Nat := 4503599627370496
+/-- `2^53` as a global `Nat`. -/
+@[noinline] def twoPow53Nat : Nat := 9007199254740992
+
 /-! ## Bit-level helpers -/
 
 /-- Sign bit of `x` (true for `-0.0` and negative NaNs). -/
@@ -48,7 +75,7 @@ def floatMin32 : Float := Float.ofBits 0x3810000000000000
 
 /-- Julia `sign`: `±1` for nonzero numbers, `±0` for signed zeros, NaN for NaN. -/
 @[inline] def sign (x : Float) : Float :=
-  if x > 0 then 1.0 else if x < 0 then -1.0 else x
+  if x > fZero then fOne else if x < fZero then fMinusOne else x
 
 /-- Julia `nextfloat`. -/
 def nextFloat (x : Float) : Float :=
@@ -109,7 +136,7 @@ def decompose (x : Float) : Dyadic :=
   let neg := (b >>> 63) == 1
   let e := ((b >>> 52) &&& 0x7FF).toNat
   let f := (b &&& 0xFFFFFFFFFFFFF).toNat
-  if e == 0 then ⟨neg, f, -1074⟩ else ⟨neg, f + 2 ^ 52, (e : Int) - 1075⟩
+  if e == 0 then ⟨neg, f, -1074⟩ else ⟨neg, f + twoPow52Nat, (e : Int) - 1075⟩
 
 /-- Exact decomposition of a finite `Float32`. -/
 def decompose32 (x : Float32) : Dyadic :=
@@ -141,22 +168,30 @@ def roundToFloat (neg : Bool) (m : Nat) (e : Int) : Float :=
     if e ≥ q then (m <<< (e - q).toNat, q)
     else (shiftRoundEven m (q - e).toNat, q)
   -- `mant < 2^53` normally; rounding may carry into 2^53
-  let (mant, qe) := if mant ≥ 2 ^ 53 then (mant >>> 1, qe + 1) else (mant, qe)
-  if mant < 2 ^ 52 then
+  let (mant, qe) := if mant ≥ twoPow53Nat then (mant >>> 1, qe + 1) else (mant, qe)
+  if mant < twoPow52Nat then
     -- subnormal (qe = -1074), encoding is the mantissa itself
     signed (Float.ofBits mant.toUInt64)
   else
     let biased := qe + 1075
     if biased ≥ 2047 then signed inf else
-    signed (Float.ofBits ((biased.toNat.toUInt64 <<< 52) ||| (mant - 2 ^ 52).toUInt64))
+    signed (Float.ofBits ((biased.toNat.toUInt64 <<< 52) ||| (mant - twoPow52Nat).toUInt64))
 
-/-- Correctly rounded conversion of an integer to `Float`. -/
-def ofIntExact (i : Int) : Float := roundToFloat (i < 0) i.natAbs 0
+/-- Correctly rounded conversion of an integer to `Float` (exact below `2^53`;
+the native conversion is used there, the exact big-integer path above). The
+range test is done on `Int64` so that no big `Nat` literal is materialised per
+call (the code generator re-parses `Nat` literals ≥ 2³² on every use). -/
+def ofIntExact (i : Int) : Float :=
+  let j := i.toInt64
+  if j.toInt == i && j < 9007199254740992 && j > -9007199254740992 then j.toFloat
+  else roundToFloat (i < 0) i.natAbs 0
 
 /-- The integer value of an integral finite `Float` (exact). Non-integral inputs
 are truncated toward zero; non-finite inputs give 0. -/
 def toIntExact (x : Float) : Int :=
   if !x.isFinite then 0 else
+  -- fast path: the native conversion truncates toward zero and is exact here
+  if x.abs < 9.0e18 then x.toInt64.toInt else
   let d := decompose x
   let n : Nat := if d.exp ≥ 0 then d.man <<< d.exp.toNat else d.man >>> (-d.exp).toNat
   if d.neg then -(n : Int) else n
@@ -224,7 +259,7 @@ def powBody (x : Float) (n : Int) : Float :=
 /-- Julia `x ^ n` for `x::Float64`, `n::Integer`. Exponents outside
 `[-2^12, 3·2^13]` fall back to the C `pow` (Julia uses its own `exp`/`log` there). -/
 def powInt (x : Float) (n : Int) : Float :=
-  if n == 0 then 1.0
+  if n == 0 then fOne
   else if -4096 ≤ n && n ≤ 24576 then powBody x n
   else Float.pow x (ofInt n)
 
@@ -250,7 +285,7 @@ def powF (x y : Float) : Float :=
   if x > hi then hi else if x < lo then lo else x
 
 /-- `clamp x 0 1`. -/
-@[inline] def clamp01 (x : Float) : Float := clamp x 0.0 1.0
+@[inline] def clamp01 (x : Float) : Float := clamp x fZero fOne
 
 /-- Replace NaN by `d`. -/
 @[inline] def nanTo (d x : Float) : Float := if x.isNaN then d else x
@@ -289,7 +324,7 @@ coincide (so a colour range is never degenerate). `(NaN, NaN)` if empty. -/
 def distinctExtrema (xs : FloatArray) : Float × Float :=
   match extremaFinite xs with
   | none => (nan, nan)
-  | some (lo, hi) => if lo == hi then (lo - 0.5, hi + 0.5) else (lo, hi)
+  | some (lo, hi) => if lo == hi then (lo - fHalf, hi + fHalf) else (lo, hi)
 
 /-- Number of NaN entries. -/
 def countNaN (xs : FloatArray) : Nat :=

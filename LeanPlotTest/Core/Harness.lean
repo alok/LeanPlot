@@ -61,8 +61,10 @@ def loadOracle (file : String) : TestM (Option J) := do
 
 /-- Run a suite: print a summary line and up to `maxShow` failure messages. -/
 def runSuite (name : String) (t : TestM Unit) (maxShow : Nat := 25) : IO (Nat × Nat) := do
+  let t0 ← IO.monoMsNow
   let ((), tally) ← t.run {}
-  IO.println s!"[{name}] passed {tally.passed}, failed {tally.failed}"
+  let t1 ← IO.monoMsNow
+  IO.println s!"[{name}] passed {tally.passed}, failed {tally.failed} ({t1 - t0} ms)"
   for m in tally.msgs.extract 0 maxShow do
     IO.println s!"  FAIL {m}"
   if tally.msgs.size > maxShow then

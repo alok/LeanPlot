@@ -113,14 +113,14 @@ def withAlpha (cm : Colormap) (a : Float) : Colormap :=
 /-- `Float64` blend `d·(1-t) + u·t` rounded to `Float32`, per channel (Makie's
 `convert(RGBAf, downc * (1 - t) + upc * t)`). -/
 @[inline] private def mix (d u : Float) (t : Float) : Float :=
-  (d * (1 - t) + u * t).toFloat32.toFloat
+  (d * (fOne - t) + u * t).toFloat32.toFloat
 
 /-- Makie `interpolated_getindex(cmap, i01)` for `i01 ∈ [0, 1]`. Non-finite
 inputs (an error in Makie) give transparent. -/
 def interpolatedGetIndex (cm : Colormap) (i01 : Float) : RGBA :=
   if !i01.isFinite then RGBA.transparent else
   let n := cm.size
-  let i1len := i01 * ofInt ((n : Int) - 1) + 1
+  let i1len := i01 * ofInt ((n : Int) - 1) + fOne
   let down := floorInt i1len
   let up := ceilInt i1len
   let dn := (down - 1).toNat
@@ -137,7 +137,7 @@ def nearestGetIndex (cm : Colormap) (i01 : Float) : RGBA :=
   cm.get (roundInt (i01 * ofInt ((cm.size : Int) - 1))).toNat
 
 /-- Makie's clim normalisation `clamp((v - lo)/(hi - lo), 0, 1)`. -/
-@[inline] def normalize (v lo hi : Float) : Float := clamp ((v - lo) / (hi - lo)) 0 1
+@[inline] def normalize (v lo hi : Float) : Float := clamp ((v - lo) / (hi - lo)) fZero fOne
 
 /-- Makie `interpolated_getindex(cmap, value, (lo, hi))`. -/
 def lookup (cm : Colormap) (v lo hi : Float) : RGBA :=

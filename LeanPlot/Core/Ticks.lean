@@ -67,19 +67,19 @@ def boundingOrderOfMagnitude (xspan base : Float) : Int :=
 def floorDigits (x : Float) (i : Int) : Float :=
   if !x.isFinite then x
   else if i ≥ 0 then
-    let invstep := powInt 10.0 i
+    let invstep := powInt fTen i
     if invstep.isFinite then
       let y := (x * invstep).floor / invstep
       if y.isFinite then y else x
     else
-      let s := powF 10.0 (ofInt i / 2)
+      let s := powF fTen (ofInt i / fTwo)
       let y := ((x * s) * s).floor / s / s
       if y.isFinite then y else x
   else
-    let step := powInt 10.0 (-i)
+    let step := powInt fTen (-i)
     let y := (x / step).floor * step
     if y.isFinite then y
-    else if x > 0 then 0.0 else if x < 0 then -inf else x
+    else if x > fZero then fZero else if x < fZero then -inf else x
 
 /-- PlotUtils `postdecimal_digits(x)`: the first `i ∈ [-308, 309]` with
 `floor(x; digits = i) == x`, else 0. -/
@@ -88,7 +88,11 @@ def postdecimalDigits (x : Float) : Int :=
     match fuel with
     | 0 => 0
     | fuel + 1 => if i > 309 then 0 else if x == floorDigits x i then i else go fuel (i + 1)
-  go 700 (-308)
+  -- For finite nonzero `x`, every `i` with `10^(-i) > |x|` fails (the floor is
+  -- `0` or `-10^(-i)`), so the scan can start just below `-log10 |x|`.
+  let start : Int :=
+    if x.isFinite && x != 0 then max (-308) (-(ceilInt (Float.log10 x.abs)) - 2) else -308
+  go 700 start
 
 /-- PlotUtils `fallback_ticks`: used when the span is (numerically) empty or no
 labelling satisfies the constraints. -/
@@ -108,78 +112,112 @@ structure SearchResult where
   viewMax : Float
   deriving Repr, Inhabited
 
-/-- One pass of PlotUtils `optimize_ticks_typed` (base 10, linear scale). -/
-def optimizeTicksTyped (xMin xMax : Float) (cfg : WilkinsonConfig) (strictSpan : Bool) : SearchResult := Id.run do
+/-- `1.5` (see the note on constants in `LeanPlot.Num`). -/
+def onePointFive : Float := 1.5
+/-- `10000.0`. -/
+def tenThousand : Float := 10000.0
+/-- `1000.0`. -/
+def oneThousand : Float := 1000.0
+
+/-- Score one candidate labelling (step `tickspan`, `k` labels starting at
+`r·tickspan`) exactly as PlotUtils does, and keep it if it beats `best`. The
+label array is only materialised for a new best candidate. -/
+def scoreCandidate (cfg : WilkinsonConfig) (strictSpan : Bool) (xMin xMax xspan : Float) (sigdigits : Int)
+    (k : Nat) (tickspan span qscore : Float) (r : Int) (best : SearchResult) : SearchResult :=
+  -- labels are `(r + i + off) * tickspan` for `i ∈ [0, imax]`; with
+  -- `extend_ticks` the first `k` of the `3k` computed labels are dropped by
+  -- the view (`imin = k`), otherwise `imin = 0`
+  let off : Int := if cfg.extendTicks then -(k : Int) else 0
+  let imin : Nat := if cfg.extendTicks then k else 0
+  let imax : Nat := if cfg.extendTicks then 2 * k - 1 else k - 1
+  let raw (i : Nat) : Float := ofInt (r + (i : Int) + off) * tickspan
+  -- only the view ends are rounded (to `sigdigits` significant digits)
+  let vmin0 := roundSigDigits (raw imin) sigdigits
+  let vmax0 := roundSigDigits (raw imax) sigdigits
+  let label (i : Nat) : Float := if i == imin then vmin0 else if i == imax then vmax0 else raw i
+  let viewmin := if strictSpan then jmax vmin0 xMin else vmin0
+  let viewmax := if strictSpan then jmin vmax0 xMax else vmax0
+  let buf := cfg.spanBuffer.getD 0.0 * (viewmax - viewmin)
+  let keep (v : Float) : Bool := !strictSpan || (viewmin - buf ≤ v && v ≤ viewmax + buf)
+  let lo := viewmin - buf
+  let hi := viewmax + buf
+  -- count the labels inside the view (no closures: this is the hot loop)
+  let rec count (fuel i acc : Nat) : Nat :=
+    match fuel with
+    | 0 => acc
+    | fuel + 1 =>
+      if i ≤ imax then
+        let v := if i == imin then vmin0 else if i == imax then vmax0 else ofInt (r + (i : Int) + off) * tickspan
+        count fuel (i + 1) (if !strictSpan || (lo ≤ v && v ≤ hi) then acc + 1 else acc)
+      else acc
+  let len := count (imax + 2) 0 0
+  -- linear scale: every step is "nice", so simplicity only rewards a zero label
+  let hasZero := r ≤ 0 && r.natAbs < k
+  let s : Float := if hasZero then fOne else fZero
+  let g : Float :=
+    if 0 < len && len < 2 * cfg.kIdeal then fOne - ofInt ((len : Int) - cfg.kIdeal).natAbs / ofInt cfg.kIdeal
+    else fZero
+  let c : Float := if len > 1 then (onePointFive * xspan) / (ofInt ((len : Int) - 1) * tickspan) else fZero
+  let score := cfg.granularityWeight * g + cfg.simplicityWeight * s + cfg.coverageWeight * c + cfg.nicenessWeight * qscore
+  let score := if strictSpan && span > xspan then score - tenThousand else score
+  let score := if span ≥ fTwo * xspan then score - oneThousand else score
+  if score > best.highScore && cfg.kMin ≤ len && len ≤ cfg.kMax then
+    let sel := ((Array.range (imax + 1)).map label).filter keep
+    ⟨score, sel, viewmin, viewmax⟩
+  else best
+
+/-- One pass of PlotUtils `optimize_ticks_typed` (base 10, linear scale). The
+loops (over the magnitude `z`, the label count `k`, the nice numbers `q` and
+the start `r`) run in PlotUtils' order, and ties keep the first candidate. -/
+def optimizeTicksTyped (xMin xMax : Float) (cfg : WilkinsonConfig) (strictSpan : Bool) : SearchResult :=
   let base : Float := 10.0
   let xspan := xMax - xMin
-  let z0 := boundingOrderOfMagnitude xspan base
   let maxPost := cfg.q.foldl (init := (none : Option Int)) fun acc (qv, _) =>
     let d := postdecimalDigits qv
     some (match acc with | none => d | some m => max m d)
   let numDigits := boundingOrderOfMagnitude (jmax xMin.abs xMax.abs) base + maxPost.getD 0
-  let kMin := cfg.kMin
-  let kMax := cfg.kMax
-  let kIdealF := ofInt cfg.kIdeal
-  let mut best : SearchResult := ⟨-inf, #[], xMin, xMax⟩
-  let mut z := z0
-  -- the outer loop runs a handful of times (while 2k_max·10^(z+1) > xspan)
-  for _ in [0:4000] do
-    if !(ofInt (2 * kMax) * powInt base (z + 1) > xspan) then break
-    let sigdigits : Int := max 1 (numDigits - z)
-    let pz := powInt base z
-    for k in [kMin:2 * kMax + 1] do
-      for (qv, qs) in cfg.q do
+  -- `while r * tickspan ≤ x_min` (at most k + 1 iterations)
+  let rec rLoop (fuel : Nat) (k : Nat) (tickspan span qscore : Float) (sigdigits r : Int)
+      (best : SearchResult) : SearchResult :=
+    match fuel with
+    | 0 => best
+    | fuel + 1 =>
+      if ofInt r * tickspan ≤ xMin then
+        rLoop fuel k tickspan span qscore sigdigits (r + 1)
+          (scoreCandidate cfg strictSpan xMin xMax xspan sigdigits k tickspan span qscore r best)
+      else best
+  -- `for (q, qscore) in zip(Qv, Qs)`
+  let rec qLoop (fuel i k : Nat) (pz : Float) (sigdigits : Int) (best : SearchResult) : SearchResult :=
+    match fuel with
+    | 0 => best
+    | fuel + 1 =>
+      match cfg.q[i]? with
+      | none => best
+      | some (qv, qs) =>
         let tickspan := qv * pz
-        if tickspan < eps64 then continue
         let span := ofInt ((k : Int) - 1) * tickspan
-        if span < xspan then continue
         let rFloat := (xMax - span) / tickspan
-        if !rFloat.isFinite then continue
-        let mut r : Int := ceilInt rFloat
-        -- linear scale: every step is "nice"
-        let niceScale := true
-        let qscore := qs
-        for _ in [0:4 * k + 8] do
-          if !(ofInt r * tickspan ≤ xMin) then break
-          -- candidate labels
-          let (s0, imin, imax) : Array Float × Nat × Nat :=
-            if cfg.extendTicks then
-              ((Array.range (3 * k)).map (fun (i : Nat) => ofInt (r + (i : Int) - (k : Int)) * tickspan), k, 2 * k - 1)
-            else
-              ((Array.range k).map (fun (i : Nat) => ofInt (r + (i : Int)) * tickspan), 0, k - 1)
-          let vmin0 := roundSigDigits s0[imin]! sigdigits
-          let vmax0 := roundSigDigits s0[imax]! sigdigits
-          let s1 := (s0.set! imin vmin0).set! imax vmax0
-          let (sel, viewmin, viewmax) : Array Float × Float × Float :=
-            if strictSpan then
-              let viewmin := jmax vmin0 xMin
-              let viewmax := jmin vmax0 xMax
-              let buf := cfg.spanBuffer.getD 0.0 * (viewmax - viewmin)
-              let sel := (s1.extract 0 (imax + 1)).filter fun v => viewmin - buf ≤ v && v ≤ viewmax + buf
-              (sel, viewmin, viewmax)
-            else (s1.extract 0 (imax + 1), vmin0, vmax0)
-          let len := sel.size
-          let hasZero := r ≤ 0 && r.natAbs < k
-          let s : Float := if hasZero && niceScale then 1.0 else 0.0
-          let g : Float :=
-            if 0 < len && len < 2 * cfg.kIdeal then
-              1 - ofInt ((len : Int) - cfg.kIdeal).natAbs / kIdealF
-            else 0.0
-          let c : Float :=
-            if len > 1 then
-              let effectiveSpan := ofInt ((len : Int) - 1) * tickspan
-              (1.5 * xspan) / effectiveSpan
-            else 0.0
-          let mut score :=
-            cfg.granularityWeight * g + cfg.simplicityWeight * s +
-              cfg.coverageWeight * c + cfg.nicenessWeight * qscore
-          if strictSpan && span > xspan then score := score - 10000
-          if span ≥ 2 * xspan then score := score - 1000
-          if score > best.highScore && kMin ≤ len && len ≤ kMax then
-            best := ⟨score, sel, viewmin, viewmax⟩
-          r := r + 1
-    z := z - 1
-  return best
+        let best :=
+          if tickspan < eps64 || span < xspan || !rFloat.isFinite then best
+          else rLoop (k + 8) k tickspan span qs sigdigits (ceilInt rFloat) best
+        qLoop fuel (i + 1) k pz sigdigits best
+  -- `for k in k_min:2k_max`
+  let rec kLoop (fuel k : Nat) (pz : Float) (sigdigits : Int) (best : SearchResult) : SearchResult :=
+    match fuel with
+    | 0 => best
+    | fuel + 1 =>
+      if k ≤ 2 * cfg.kMax then kLoop fuel (k + 1) pz sigdigits (qLoop (cfg.q.size + 1) 0 k pz sigdigits best)
+      else best
+  -- `while 2k_max * base^(z + 1) > xspan; …; z -= 1; end`
+  let rec zLoop (fuel : Nat) (z : Int) (best : SearchResult) : SearchResult :=
+    match fuel with
+    | 0 => best
+    | fuel + 1 =>
+      if ofInt (2 * cfg.kMax : Nat) * powInt base (z + 1) > xspan then
+        let sigdigits : Int := max 1 (numDigits - z)
+        zLoop fuel (z - 1) (kLoop (2 * cfg.kMax + 1) cfg.kMin (powInt base z) sigdigits best)
+      else best
+  zLoop 4000 (boundingOrderOfMagnitude xspan base) ⟨-inf, #[], xMin, xMax⟩
 
 /-- PlotUtils `optimize_ticks(x_min, x_max; ...)` (linear scale): the tick
 locations and the chosen view limits. -/
@@ -224,6 +262,23 @@ def filterWithinLimits {α : Type} (vals : Array Float) (labels : Array α) (lo 
   let idx := (Array.range vals.size).filter fun i => isWithinLimits vals[i]! lo hi
   (idx.map (vals[·]!), idx.filterMap (labels[·]?))
 
+/-- The `n - 1` points strictly between consecutive major ticks, accumulated
+as Makie does (`v += stepsize`, so rounding matches bit for bit). -/
+def betweenTicks (n : Nat) (ticks : Array Float) : Array Float :=
+  let nF := ofInt n
+  let rec steps (m : Nat) (v step : Float) (acc : Array Float) : Array Float :=
+    match m with
+    | 0 => acc
+    | m + 1 => let v := v + step; steps m v step (acc.push v)
+  let rec go (i : Nat) (acc : Array Float) : Array Float :=
+    if h : i + 1 < ticks.size then
+      let lo := ticks[i]
+      let hi := ticks[i + 1]
+      go (i + 1) (steps (n - 1) lo ((hi - lo) / nF) acc)
+    else acc
+  termination_by ticks.size - i
+  go 0 #[]
+
 /-- Makie `get_minor_tickvalues(IntervalsBetween(n, mirror), identity, ticks, vmin, vmax)`.
 Note: the mirrored values before the first major tick come out in descending
 order, exactly as Makie produces them. -/
@@ -235,17 +290,7 @@ def minorIntervalsBetween (n : Nat) (mirror : Bool) (ticks : Array Float) (vmin 
       let stepsize := (ticks[1]! - ticks[0]!) / nF
       (colon (ticks[0]! - stepsize) (-stepsize) vmin).toList.toArray
     else #[]
-  let inner : Array Float := Id.run do
-    let mut out := #[]
-    for i in [0:ticks.size - 1] do
-      let lo := ticks[i]!
-      let hi := ticks[i + 1]!
-      let stepsize := (hi - lo) / nF
-      let mut v := lo
-      for _ in [1:n] do
-        v := v + stepsize
-        out := out.push v
-    return out
+  let inner := betweenTicks n ticks
   let post : Array Float :=
     if mirror then
       let m := ticks.size
@@ -268,17 +313,7 @@ def minorIntervalsBetweenLog (forward inverse : Float → Float) (n : Nat) (mirr
       let stepsize := (ticks[0]! - prevtick) / nF
       (colon (ticks[0]! - stepsize) (-stepsize) vmin).toList.toArray
     else #[]
-  let inner : Array Float := Id.run do
-    let mut out := #[]
-    for i in [0:ticks.size - 1] do
-      let lo := ticks[i]!
-      let hi := ticks[i + 1]!
-      let stepsize := (hi - lo) / nF
-      let mut v := lo
-      for _ in [1:n] do
-        v := v + stepsize
-        out := out.push v
-    return out
+  let inner := betweenTicks n ticks
   let post : Array Float :=
     if mirror then
       let m := ticks.size

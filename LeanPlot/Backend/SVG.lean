@@ -189,7 +189,7 @@ def rgba8Attrs (c : Ctx) (kind : String) (col : UInt8 × UInt8 × UInt8 × UInt8
   let (r, g, b, a) := col
   let hex := RGBA.toHexRGB (RGBA.ofRGB8 r g b)
   if a == 255 then s!" {kind}=\"{hex}\""
-  else s!" {kind}=\"{hex}\" {kind}-opacity=\"{c.f (a.toNat.toFloat / 255)}\""
+  else s!" {kind}=\"{hex}\" {kind}-opacity=\"{c.f (a.toUInt64.toFloat / f255)}\""
 
 /-- Render a `segments` op: one `<path>` per run of equal colours. -/
 def renderSegments (c : Ctx) (xs ys : FloatArray) (rgba : ByteArray) (width : Float) (cap : LineCap) : String :=
@@ -268,6 +268,11 @@ def renderTrianglesFlat (c : Ctx) (xs ys : FloatArray) (rgba : ByteArray) (idx :
         else go fuel (t + 1) (flush acc d col) tri ci
   go nt 0 "" "" (0, 0, 0, 0)
 
+/-- Luminance-like weights used to pick a gradient direction (r, g, b, alpha). -/
+def lumWeights : Array Float := #[0.299, 0.587, 0.114, 0.5]
+/-- Below this gradient length a triangle counts as flat. -/
+def tinyLen : Float := 1e-12
+
 /-- One triangle with its own two-stop `linearGradient` (see
 `renderTrianglesGradient`); `none` if invalid or non-finite. -/
 def gradientTriangle (c : Ctx) (xs ys : FloatArray) (rgba : ByteArray) (idx : ByteArray) (t gid : Nat) :
@@ -294,20 +299,20 @@ def gradientTriangle (c : Ctx) (xs ys : FloatArray) (rgba : ByteArray) (idx : By
     if det == 0 then (0, 0) else
     (((v1 - v0) * (y2 - y0) - (v2 - v0) * (y1 - y0)) / det,
      ((x1 - x0) * (v2 - v0) - (x2 - x0) * (v1 - v0)) / det)
-  let w : Array Float := #[0.299, 0.587, 0.114, 0.5]
-  let (dx, dy) := (List.range 4).foldl (init := (0.0, 0.0)) fun acc k =>
+  let w := lumWeights
+  let (dx, dy) := (List.range 4).foldl (init := (fZero, fZero)) fun acc k =>
     let g := grad k
     (acc.1 + w[k]! * g.1, acc.2 + w[k]! * g.2)
   let len := Float.sqrt (dx * dx + dy * dy)
-  let ux := if len > 1e-12 then dx / len else 1.0
-  let uy := if len > 1e-12 then dy / len else 0.0
+  let ux := if len > tinyLen then dx / len else fOne
+  let uy := if len > tinyLen then dy / len else fZero
   let proj (x y : Float) := (x - x0) * ux + (y - y0) * uy
   let s1 := proj x1 y1
   let s2 := proj x2 y2
   let smin := min 0 (min s1 s2)
   let smax := max 0 (max s1 s2)
   let colAt (s : Float) : RGBA :=
-    let v (k : Nat) := let g := grad k; clamp01 ((c0[k]! + (g.1 * ux + g.2 * uy) * s) / 255)
+    let v (k : Nat) := let g := grad k; clamp01 ((c0[k]! + (g.1 * ux + g.2 * uy) * s) / f255)
     ⟨v 0, v 1, v 2, v 3⟩
   let stop (off : String) (col : RGBA) : String :=
     let op := if col.a < 1 then s!" stop-opacity=\"{c.f col.a}\"" else ""

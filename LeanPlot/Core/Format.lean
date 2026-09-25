@@ -104,22 +104,22 @@ def plainLabelPrecision (xs : Array Float) : Nat :=
 /-- Julia `round(x; sigdigits = n)` (base 10, `RoundNearest`), bit-exact. -/
 def roundSigDigits (x : Float) (n : Int) : Float :=
   if !x.isFinite then x else
-  let h : Int := if x == 0 then 0 else 1 + floorInt (Float.log10 x.abs)
+  let h : Int := if x == fZero then 0 else 1 + floorInt (Float.log10 x.abs)
   let digits := n - h
   if digits ≥ 0 then
-    let invstep := powInt 10.0 digits
+    let invstep := powInt fTen digits
     if invstep.isFinite then
       let y := roundEven (x * invstep) / invstep
       if y.isFinite then y else x
     else
-      let invstepsqrt := powF 10.0 (ofInt digits / 2)
+      let invstepsqrt := powF fTen (ofInt digits / fTwo)
       let y := roundEven ((x * invstepsqrt) * invstepsqrt) / invstepsqrt / invstepsqrt
       if y.isFinite then y else x
   else
-    let step := powInt 10.0 (-digits)
+    let step := powInt fTen (-digits)
     let y := roundEven (x / step) * step
     if y.isFinite then y
-    else if x > 0 then 0.0 else if x < 0 then -0.0 else x
+    else if x > fZero then fZero else if x < fZero then -fZero else x
 
 /-- Makie `_scientific_label_precision`. -/
 def scientificLabelPrecision (xs : Array Float) : Nat :=

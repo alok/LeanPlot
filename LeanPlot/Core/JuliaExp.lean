@@ -84,6 +84,9 @@ private def expConsts : ExpBase → ExpConsts
 /-- `1.5 · 2^52`: adding and subtracting it rounds to an integer. -/
 private def magicRound : Float := Float.ofBits 0x4338000000000000
 
+/-- `2^-53`. -/
+private def twoPowMinus53 : Float := Float.ofBits 0x3CA0000000000000
+
 /-- Julia `exp_impl(x::Float64, base)`. -/
 def juliaExpImpl (b : ExpBase) (x : Float) : Float :=
   let c := expConsts b
@@ -101,14 +104,15 @@ def juliaExpImpl (b : ExpBase) (x : Float) : Float :=
   -- expm1b_kernel: r * evalpoly(r, (c0, c1, c2, c3)) (Horner with muladd)
   let kern := r * Float.fma r (Float.fma r (Float.fma r c.c3 c.c2) c.c1) c.c0
   let smallPart := Float.fma jU kern jL + jU
+  -- `reinterpret(T, (k << 52) + reinterpret(Int64, small_part))`: wrapping
+  -- 64-bit integer arithmetic
   let assemble (k : Int) : Float :=
-    let bits : Int := (smallPart.toBits.toNat : Int) + k * 2 ^ 52
-    Float.ofBits (bits % 2 ^ 64).toNat.toUInt64
+    Float.ofBits (smallPart.toBits + (k.toInt64.toUInt64 <<< 52))
   if !(x.abs ≤ c.subnormExp) then
     if x.isNaN then x
     else if x ≥ c.maxExp then inf
     else if x ≤ c.minExp then 0.0
-    else if k ≤ -53 then assemble (k + 53) * Float.ofBits 0x3CA0000000000000
+    else if k ≤ -53 then assemble (k + 53) * twoPowMinus53
     else assemble k
   else assemble k
 

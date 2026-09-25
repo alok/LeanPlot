@@ -35,7 +35,7 @@ def toF32 (c : RGBA) : RGBA :=
 @[inline] def gray (v : Float) : RGBA := ⟨v, v, v, 1.0⟩
 
 /-- `N0f8`-to-`Float32` conversion of an 8-bit channel (`u / 255`). -/
-@[inline] def unit8 (u : UInt8) : Float := (u.toNat.toFloat / 255.0).toFloat32.toFloat
+@[inline] def unit8 (u : UInt8) : Float := (u.toUInt64.toFloat / f255).toFloat32.toFloat
 
 /-- Colour from 8-bit channels, with Makie's `RGBAf` rounding. -/
 def ofRGB8 (r g b : UInt8) (a : UInt8 := 255) : RGBA :=
@@ -45,7 +45,7 @@ def ofRGB8 (r g b : UInt8) (a : UInt8 := 255) : RGBA :=
 to even. NaN maps to 0. -/
 @[inline] def to8 (x : Float) : UInt8 :=
   if x.isNaN then 0 else
-  let y := roundEven (clamp01 x * 255.0)
+  let y := roundEven (clamp01 x * f255)
   y.toUInt8
 
 /-- Pack into `0xRRGGBBAA`. -/
